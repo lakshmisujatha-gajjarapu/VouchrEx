@@ -1,0 +1,15 @@
+node_modules
+.git
+.env
+.env.*
+!.env.example
+.expo
+.yarn/install-state.gz
+package-lock.json
+pnpm-lock.yaml
+apps/api/dist
+apps/worker/dist
+apps/mobile/.expo
+apps/mobile/.git
+CouponBazaar
+HLD

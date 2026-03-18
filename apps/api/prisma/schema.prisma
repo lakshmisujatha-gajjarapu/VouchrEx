@@ -1,0 +1,296 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  BLOCKED
+}
+
+enum OtpPurpose {
+  LOGIN
+}
+
+enum ListingStatus {
+  DRAFT
+  VERIFYING
+  ACTIVE
+  RESERVED
+  SOLD
+  DISPUTED
+  REFUNDED
+  EXPIRED
+  REJECTED
+}
+
+enum VerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  MANUAL_REVIEW
+}
+
+enum OrderStatus {
+  INITIATED
+  PAYMENT_PENDING
+  ESCROW_ACTIVE
+  CODE_REVEALED
+  CONFIRMED
+  AUTO_CONFIRMED
+  DISPUTED
+  CANCELLED
+  PAYMENT_FAILED
+}
+
+enum PaymentStatus {
+  PENDING
+  CAPTURED
+  REFUNDED
+  FAILED
+}
+
+enum EscrowStatus {
+  PENDING
+  ACTIVE
+  RELEASED
+  REFUNDED
+  CANCELLED
+}
+
+enum PaymentProvider {
+  MOCK
+  RAZORPAY
+}
+
+enum DisputeStatus {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED
+  REJECTED
+}
+
+enum DisputeResolution {
+  REFUND_BUYER
+  RELEASE_TO_SELLER
+}
+
+enum NotificationChannel {
+  SMS
+  PUSH
+  IN_APP
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+  READ
+}
+
+model User {
+  id          String           @id @default(cuid())
+  phone       String           @unique
+  name        String
+  email       String?          @unique
+  trustScore  Int              @default(30)
+  tier        String           @default("BRONZE")
+  status      UserStatus       @default(ACTIVE)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  listings    VoucherListing[] @relation("SellerListings")
+  purchases   Order[]          @relation("BuyerOrders")
+  sales       Order[]          @relation("SellerOrders")
+  disputes    Dispute[]        @relation("RaisedDisputes")
+  sessions    UserSession[]
+  notifications Notification[]
+}
+
+model Brand {
+  id                      String           @id @default(cuid())
+  name                    String           @unique
+  normalizedName          String           @unique
+  category                String
+  logoUrl                 String?
+  autoVerifyEnabled       Boolean          @default(false)
+  avgDiscountPercent      Int              @default(20)
+  verificationWindowHours Int              @default(2)
+  active                  Boolean          @default(true)
+  createdAt               DateTime         @default(now())
+  updatedAt               DateTime         @updatedAt
+  listings                VoucherListing[]
+}
+
+model VoucherListing {
+  id                 String             @id @default(cuid())
+  sellerId           String
+  brandId            String
+  voucherType        String
+  faceValue          Int
+  sellingPrice       Int
+  discountPercent    Float
+  status             ListingStatus      @default(ACTIVE)
+  verificationStatus VerificationStatus @default(PENDING)
+  expiryDate         DateTime
+  proofUrl           String?
+  buyerId            String?
+  soldAt             DateTime?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  seller             User               @relation("SellerListings", fields: [sellerId], references: [id])
+  brand              Brand              @relation(fields: [brandId], references: [id])
+  codeVault          CodeVault?
+  order              Order?
+  notifications      Notification[]
+
+  @@index([status, brandId])
+  @@index([sellerId, createdAt])
+}
+
+model CodeVault {
+  id             String         @id @default(cuid())
+  listingId      String         @unique
+  encryptedCode  String
+  encryptionIv   String
+  encryptionTag  String
+  codeHash       String         @unique
+  viewCount      Int            @default(0)
+  firstViewedAt  DateTime?
+  lastViewedAt   DateTime?
+  createdAt      DateTime       @default(now())
+  listing        VoucherListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+}
+
+model Order {
+  id                   String       @id @default(cuid())
+  listingId            String       @unique
+  buyerId              String
+  sellerId             String
+  amount               Int
+  platformFee          Int
+  commission           Int
+  sellerPayout         Int
+  status               OrderStatus  @default(PAYMENT_PENDING)
+  codeRevealedAt       DateTime?
+  verificationDeadline DateTime?
+  confirmedAt          DateTime?
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+  listing              VoucherListing @relation(fields: [listingId], references: [id])
+  buyer                User           @relation("BuyerOrders", fields: [buyerId], references: [id])
+  seller               User           @relation("SellerOrders", fields: [sellerId], references: [id])
+  payment              Payment?
+  dispute              Dispute?
+  notifications        Notification[]
+
+  @@index([buyerId, createdAt])
+  @@index([sellerId, createdAt])
+  @@index([status, verificationDeadline])
+}
+
+model Payment {
+  id                 String        @id @default(cuid())
+  orderId            String        @unique
+  razorpayPaymentId  String?
+  amount             Int
+  method             String
+  status             PaymentStatus @default(PENDING)
+  escrowStatus       EscrowStatus  @default(PENDING)
+  payoutCompletedAt  DateTime?
+  refundCompletedAt  DateTime?
+  provider           PaymentProvider @default(MOCK)
+  currency           String          @default("INR")
+  razorpayOrderId        String?
+  razorpayPaymentLinkId  String?
+  razorpaySignature      String?
+  capturedAt         DateTime?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  order              Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+model Dispute {
+  id            String             @id @default(cuid())
+  orderId       String             @unique
+  raisedById    String
+  reason        String
+  description   String
+  evidenceUrls  String[]
+  sellerResponse String?
+  resolution    DisputeResolution?
+  status        DisputeStatus      @default(OPEN)
+  resolvedAt    DateTime?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  order         Order              @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  raisedBy      User               @relation("RaisedDisputes", fields: [raisedById], references: [id])
+}
+
+model OtpChallenge {
+  id         String     @id @default(cuid())
+  phone      String
+  purpose    OtpPurpose @default(LOGIN)
+  provider   String     @default("DEV")
+  providerRequestId String?
+  codeHash   String
+  expiresAt  DateTime
+  consumedAt DateTime?
+  attempts   Int        @default(0)
+  createdAt  DateTime   @default(now())
+
+  @@index([phone, createdAt])
+  @@index([expiresAt])
+}
+
+model UserSession {
+  id         String    @id @default(cuid())
+  userId     String
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  lastUsedAt DateTime?
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([expiresAt])
+}
+
+model Notification {
+  id        String              @id @default(cuid())
+  userId    String?
+  orderId   String?
+  listingId String?
+  eventType String
+  title     String
+  message   String
+  channel   NotificationChannel @default(PUSH)
+  status    NotificationStatus  @default(PENDING)
+  metadata  Json?
+  readAt    DateTime?
+  sentAt    DateTime?
+  createdAt DateTime            @default(now())
+  user      User?               @relation(fields: [userId], references: [id], onDelete: SetNull)
+  order     Order?              @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  listing   VoucherListing?     @relation(fields: [listingId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([orderId, createdAt])
+  @@index([listingId, createdAt])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  entityType String
+  entityId   String
+  action     String
+  actorId    String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId, createdAt])
+}

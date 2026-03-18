@@ -1,0 +1,33 @@
+{
+  "name": "couponbazaar",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "yarn@4.12.0",
+  "engines": {
+    "node": ">=22.21.1 <23"
+  },
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "preinstall": "node -e \"const ua = process.env.npm_config_user_agent || ''; if (!ua.startsWith('yarn/')) { console.error('This repo uses Yarn workspaces. Run `corepack enable && yarn install`.'); process.exit(1); }\"",
+    "build": "yarn workspaces foreach -Apt run build",
+    "check": "yarn lint && yarn typecheck && yarn test",
+    "clean": "yarn workspaces foreach -A run clean",
+    "lint": "yarn eslint .",
+    "lint:fix": "yarn eslint . --fix",
+    "mobile:start": "yarn workspace couponbazaar-mobile start",
+    "mobile:typecheck": "yarn workspace couponbazaar-mobile typecheck",
+    "test": "yarn workspace couponbazaar-api test",
+    "typecheck": "yarn workspaces foreach -Apt run typecheck"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^25.5.0",
+    "eslint": "^10.0.3",
+    "globals": "^17.4.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.57.0"
+  }
+}

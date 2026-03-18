@@ -1,0 +1,138 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    ports:
+      - "${PORT}:${PORT}"
+    environment:
+      PORT: ${PORT}
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+      CODE_ENCRYPTION_KEY: ${CODE_ENCRYPTION_KEY}
+      PAYMENT_PROVIDER: ${PAYMENT_PROVIDER}
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET}
+      RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET}
+      OTP_PROVIDER: ${OTP_PROVIDER}
+      OTP_FIXED_CODE: ${OTP_FIXED_CODE}
+      OTP_TTL_MINUTES: ${OTP_TTL_MINUTES}
+      OTP_MAX_ATTEMPTS: ${OTP_MAX_ATTEMPTS}
+      SESSION_TTL_HOURS: ${SESSION_TTL_HOURS}
+      EXOTEL_ACCOUNT_SID: ${EXOTEL_ACCOUNT_SID}
+      EXOTEL_APP_ID: ${EXOTEL_APP_ID}
+      EXOTEL_APP_SECRET: ${EXOTEL_APP_SECRET}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+
+  worker:
+    build:
+      context: .
+      dockerfile: apps/worker/Dockerfile
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
+  db:
+    image: postgres:16
+    ports:
+      - "127.0.0.1:5434:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "127.0.0.1:6380:6379"
+    volumes:
+      - redisdata:/data
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio
+    volumes:
+      - miniodata:/data
+    command: server /data --console-address ":9001"
+    ports:
+      - "127.0.0.1:9000:9000"   # localhost only — proxy via Nginx for external access
+      - "127.0.0.1:9001:9001"   # MinIO console — localhost only
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  prisma-studio:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    command: yarn exec prisma studio --port 5555 --browser none
+    ports:
+      - "127.0.0.1:5555:5555"   # localhost only — never expose to internet
+    environment:
+      PORT: ${PORT}
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      CODE_ENCRYPTION_KEY: ${CODE_ENCRYPTION_KEY}
+    depends_on:
+      db:
+        condition: service_healthy
+    profiles:
+      - dev  # only starts with: docker compose --profile dev up
+
+volumes:
+  pgdata:
+  redisdata:
+  miniodata:
