@@ -1,4 +1,3 @@
-import { Wallet } from 'lucide-react';
 import { getPendingPayouts } from '@/lib/api';
 import PayoutsView from './PayoutsView';
 import { formatCurrency } from '@/lib/utils';
@@ -13,16 +12,13 @@ export default async function PayoutsPage() {
 
   return (
     <div className="p-8 animate-slide-up">
-      <header className="mb-6 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-          <Wallet className="w-5 h-5 text-primary" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-bold">Pending Payouts</h1>
-          <p className="text-muted-foreground text-sm">
-            {payouts.length} pending — {formatCurrency(totalPending)} total
-          </p>
-        </div>
+      <header className="mb-8">
+        <h1 style={{ fontFamily: 'var(--font-headline)', fontSize: '2rem', fontWeight: 800, letterSpacing: '-0.04em', color: 'var(--color-foreground)', marginBottom: '0.25rem' }}>
+          Pending Payouts
+        </h1>
+        <p style={{ color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)', fontSize: '0.9375rem' }}>
+          {payouts.length} pending — {formatCurrency(totalPending)} total
+        </p>
       </header>
 
       <PayoutsView payouts={payouts} />

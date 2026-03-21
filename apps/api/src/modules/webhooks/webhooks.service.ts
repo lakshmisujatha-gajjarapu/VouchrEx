@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { createHmac } from 'node:crypto';
+import { createHmac, timingSafeEqual } from 'node:crypto';
 
 import { OrdersService } from '../orders/orders.service';
 
@@ -17,7 +17,9 @@ export class WebhooksService {
     }
 
     const expected = createHmac('sha256', webhookSecret).update(rawBody).digest('hex');
-    return expected === signature;
+    const expectedBuf = Buffer.from(expected);
+    const receivedBuf = Buffer.from(signature);
+    return expectedBuf.length === receivedBuf.length && timingSafeEqual(expectedBuf, receivedBuf);
   }
 
   async handleRazorpayEvent(body: unknown, eventId: string): Promise<void> {

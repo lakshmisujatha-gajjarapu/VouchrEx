@@ -123,13 +123,13 @@ export default function SignInScreen() {
                   style={{ backgroundColor: '#A78BFA' }}
                 />
               </View>
-              <Text className="font-display text-2xl font-extrabold tracking-[-0.3px] text-white">
+              <Text className="font-headline text-2xl font-extrabold tracking-[-0.3px] text-white">
                 CouponBazaar
               </Text>
             </View>
 
             <View className="mt-7 gap-2">
-              <Text className="font-display text-[34px] font-extrabold leading-[38px] tracking-[-0.8px] text-white">
+              <Text className="font-headline text-[34px] font-extrabold leading-[38px] tracking-[-0.8px] text-white">
                 {otpRequest ? 'Verify OTP' : 'Login or sign up'}
               </Text>
               <Text
@@ -167,7 +167,7 @@ export default function SignInScreen() {
                 }}
               />
 
-              <Text className="font-display text-title font-extrabold text-white">
+              <Text className="font-headline text-title font-extrabold text-white">
                 {!otpRequest ? 'Continue with mobile' : isNewUser ? 'Create your account' : 'Welcome back'}
               </Text>
               <Text
@@ -206,7 +206,7 @@ export default function SignInScreen() {
                 <View className="gap-3">
                   <View className="gap-1">
                     <Text
-                      className="font-ui text-caption font-extrabold uppercase tracking-[0.6px]"
+                      className="font-label text-caption font-extrabold uppercase tracking-[0.6px]"
                       style={{ color: 'rgba(255,255,255,0.55)' }}>
                       Mobile
                     </Text>

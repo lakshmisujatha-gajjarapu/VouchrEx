@@ -50,7 +50,7 @@ export function DateField({
   return (
     <View className="gap-2">
       <Text
-        className="font-ui text-caption font-bold uppercase tracking-[0.6px]"
+        className="font-label text-caption font-bold uppercase tracking-[0.6px]"
         style={{ color: theme.colors.inkMuted }}>
         {label}
       </Text>
@@ -72,7 +72,7 @@ export function DateField({
           size={20}
         />
         <Text
-          className="flex-1 font-ui text-body"
+          className="flex-1 font-label text-body"
           style={{ color: hasValue ? theme.colors.ink : theme.colors.inkMuted }}>
           {hasValue ? value : 'Select date'}
         </Text>
@@ -117,18 +117,18 @@ export function DateField({
               className="flex-row items-center justify-between px-5 py-3"
               style={{ borderBottomWidth: 1, borderBottomColor: theme.colors.border }}>
               <Text
-                className="font-ui text-body font-bold"
+                className="font-label text-body font-bold"
                 style={{ color: theme.colors.inkMuted }}
                 onPress={() => { setShowPicker(false); }}>
                 Cancel
               </Text>
               <Text
-                className="font-ui text-[15px] font-bold"
+                className="font-label text-[15px] font-bold"
                 style={{ color: theme.colors.brand }}>
                 {label}
               </Text>
               <Text
-                className="font-ui text-body font-bold"
+                className="font-label text-body font-bold"
                 style={{ color: theme.colors.brand }}
                 onPress={handleIosDone}>
                 Done

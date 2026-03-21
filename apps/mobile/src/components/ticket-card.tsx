@@ -36,52 +36,39 @@ export function TicketCard({
     tone === 'ink' ? 'brand' :
     tone;
 
+  // Card background — semantic tones get a tinted bg; neutral/brand use white/surface
   const toneStyle =
-    resolvedTone === 'brand'
-      ? { backgroundColor: theme.colors.brandSoft, borderColor: theme.colors.pillBrandBorder }
-      : resolvedTone === 'success'
-      ? {
-          backgroundColor: theme.colors.successSoft,
-          borderColor: theme.colors.pillSuccessBorder,
-        }
-      : resolvedTone === 'danger'
-        ? {
-            backgroundColor: theme.colors.dangerSoft,
-            borderColor: theme.colors.pillDangerBorder,
-          }
-        : resolvedTone === 'warning'
-          ? {
-              backgroundColor: theme.colors.warningSoft,
-              borderColor: theme.colors.pillWarnBorder,
-            }
-        : resolvedTone === 'premium'
-          ? { borderColor: theme.colors.gold }
+    resolvedTone === 'danger'
+      ? { backgroundColor: theme.colors.dangerSoft, borderColor: theme.colors.pillDangerBorder }
+      : resolvedTone === 'warning'
+        ? { backgroundColor: theme.colors.warningSoft, borderColor: theme.colors.pillWarnBorder }
+        : resolvedTone === 'success'
+          ? { backgroundColor: theme.colors.successSoft, borderColor: theme.colors.pillSuccessBorder }
           : undefined;
 
+  // Accent stripe colour — Stitch uses actionFixed (emerald) for brand/neutral, semantic for others
   const accentColor =
-    resolvedTone === 'brand' ? theme.colors.brand :
-    resolvedTone === 'success' ? theme.colors.success :
-    resolvedTone === 'danger' ? theme.colors.danger :
+    resolvedTone === 'danger'  ? theme.colors.danger :
     resolvedTone === 'warning' ? theme.colors.warning :
+    resolvedTone === 'success' ? theme.colors.success :
     resolvedTone === 'premium' ? theme.colors.gold :
-    theme.colors.border;
+    theme.colors.actionFixed; // emerald stripe for brand + neutral
+
+  // Eyebrow / meta label colour
+  const eyebrowColor =
+    resolvedTone === 'danger'  ? theme.colors.danger :
+    resolvedTone === 'warning' ? theme.colors.warning :
+    theme.colors.brand;
 
   const content = (
     <View className="flex-row">
-      <View className="w-1 self-stretch" style={{ backgroundColor: accentColor }} />
+      <View className="w-[6px] self-stretch" style={{ backgroundColor: accentColor }} />
       <View className="flex-1 gap-1 px-4 py-3">
         <View className="flex-row items-start justify-between gap-2">
           {eyebrow ? (
             <Text
-              className="font-ui text-caption font-extrabold tracking-[0.4px]"
-              style={{
-                color:
-                  resolvedTone === 'danger'
-                    ? theme.colors.danger
-                    : resolvedTone === 'warning'
-                      ? theme.colors.warning
-                      : theme.colors.brand,
-              }}>
+              className="font-label text-caption font-extrabold tracking-[0.4px]"
+              style={{ color: eyebrowColor }}>
               {eyebrow}
             </Text>
           ) : (
@@ -89,14 +76,14 @@ export function TicketCard({
           )}
           {meta ? (
             <Text
-              className="shrink pt-px font-ui text-caption font-bold tracking-[0.2px] text-right"
+              className="shrink pt-px font-label text-caption font-bold tracking-[0.2px] text-right"
               style={{ color: theme.colors.inkMuted }}>
               {meta}
             </Text>
           ) : null}
         </View>
         <Text
-          className="font-display text-heading font-bold leading-[22px]"
+          className="font-headline text-heading font-bold leading-[22px]"
           style={{ color: theme.colors.ink }}>
           {title}
         </Text>
@@ -114,11 +101,11 @@ export function TicketCard({
 
   const baseStyle = {
     backgroundColor: theme.colors.surface,
-    borderColor: theme.colors.border,
+    borderColor: resolvedTone === 'premium' ? theme.colors.gold : 'transparent',
     shadowColor: theme.colors.shadowStrong,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
+    shadowOpacity: 1,
+    shadowRadius: 40,
     elevation: 1,
   };
 
@@ -126,7 +113,7 @@ export function TicketCard({
     return (
       <Pressable
         onPress={onPress}
-        className="overflow-hidden rounded-app-lg border"
+        className="overflow-hidden rounded-app-lg"
         style={({ pressed }) => [
           baseStyle,
           toneStyle,
@@ -140,7 +127,7 @@ export function TicketCard({
 
   return (
     <View
-      className="overflow-hidden rounded-app-lg border"
+      className="overflow-hidden rounded-app-lg"
       style={[baseStyle, toneStyle, style]}>
       {content}
     </View>

@@ -8,7 +8,7 @@ import {
   PaymentProvider,
   PaymentStatus
 } from '@prisma/client';
-import { createHmac } from 'node:crypto';
+import { createHmac, timingSafeEqual } from 'node:crypto';
 
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -127,7 +127,9 @@ export class PaymentsService {
       .update(`${input.orderId}|${input.paymentId}`)
       .digest('hex');
 
-    return expectedSignature === input.signature;
+    const expectedBuf = Buffer.from(expectedSignature);
+    const receivedBuf = Buffer.from(input.signature);
+    return expectedBuf.length === receivedBuf.length && timingSafeEqual(expectedBuf, receivedBuf);
   }
 
   /**

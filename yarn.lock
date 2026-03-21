@@ -1391,6 +1391,27 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@expo-google-fonts/jetbrains-mono@npm:^0.4.1":
+  version: 0.4.1
+  resolution: "@expo-google-fonts/jetbrains-mono@npm:0.4.1"
+  checksum: 10c0/cd141277f9577803fb83d4ed0c74b92b3333ef6a60a0e46b3a38111914c0c8b42d6dc074bcc32f14b12b09bb3480248517afe27d8b227a7e362bd9d679102a30
+  languageName: node
+  linkType: hard
+
+"@expo-google-fonts/manrope@npm:^0.4.2":
+  version: 0.4.2
+  resolution: "@expo-google-fonts/manrope@npm:0.4.2"
+  checksum: 10c0/84985ce8a64c584147a702e3e6f0dd11eb3d53180192e50669a814de9d555e778d37f974ca434a7785c3580df8fb594ff6985f82537a8d6934f528feb5aeddc8
+  languageName: node
+  linkType: hard
+
+"@expo-google-fonts/work-sans@npm:^0.4.2":
+  version: 0.4.2
+  resolution: "@expo-google-fonts/work-sans@npm:0.4.2"
+  checksum: 10c0/71e0c9549cb9e5c81e9226f054098c306e009bfe4ab6d3c89bd99996b1c17799af921f71662043e12060af5e5442f846a8bff1ae6b56e6a39f9c9b9d2a242359
+  languageName: node
+  linkType: hard
+
 "@expo/cli@npm:54.0.23":
   version: 54.0.23
   resolution: "@expo/cli@npm:54.0.23"
@@ -2447,6 +2468,17 @@ __metadata:
     class-validator:
       optional: true
   checksum: 10c0/495bf5df95794da0e8a3eb4d2d93a54bec9d59bbcbe46c51de87be2ca23d0cc7e7572d9d43213aeaf18eae17e0b871acf2be5e07e971de899e87f70a01deac50
+  languageName: node
+  linkType: hard
+
+"@nestjs/throttler@npm:^6.5.0":
+  version: 6.5.0
+  resolution: "@nestjs/throttler@npm:6.5.0"
+  peerDependencies:
+    "@nestjs/common": ^7.0.0 || ^8.0.0 || ^9.0.0 || ^10.0.0 || ^11.0.0
+    "@nestjs/core": ^7.0.0 || ^8.0.0 || ^9.0.0 || ^10.0.0 || ^11.0.0
+    reflect-metadata: ^0.1.13 || ^0.2.0
+  checksum: 10c0/bd755e765d020189b24fd8cb8a5989b47d7856abdc8efc881d73dd76e71b8e6e4466e532464434fd1199a106bf4752bda3d0036ef4aa13aa61e9317f60658da8
   languageName: node
   linkType: hard
 
@@ -5843,12 +5875,14 @@ __metadata:
     "@nestjs/platform-express": "npm:^11.1.16"
     "@nestjs/schedule": "npm:^6.1.1"
     "@nestjs/swagger": "npm:^11.2.6"
+    "@nestjs/throttler": "npm:^6.5.0"
     "@prisma/adapter-pg": "npm:^7.5.0"
     "@prisma/client": "npm:^7.5.0"
     "@types/express": "npm:^5"
     "@types/node": "npm:^25.5.0"
     "@types/pg": "npm:^8"
     express: "npm:^5.2.1"
+    helmet: "npm:^8.1.0"
     nestjs-zod: "npm:^3.0.0"
     pg: "npm:^8.20.0"
     prisma: "npm:^7.5.0"
@@ -5867,6 +5901,9 @@ __metadata:
   dependencies:
     "@babel/core": "npm:^7.25.0"
     "@expo-google-fonts/ibm-plex-sans": "npm:^0.4.1"
+    "@expo-google-fonts/jetbrains-mono": "npm:^0.4.1"
+    "@expo-google-fonts/manrope": "npm:^0.4.2"
+    "@expo-google-fonts/work-sans": "npm:^0.4.2"
     "@react-native-community/datetimepicker": "npm:8.4.4"
     "@react-navigation/bottom-tabs": "npm:^7.7.3"
     "@react-navigation/elements": "npm:^2.8.1"
@@ -7957,6 +7994,13 @@ __metadata:
   dependencies:
     function-bind: "npm:^1.1.2"
   checksum: 10c0/3769d434703b8ac66b209a4cca0737519925bbdb61dd887f93a16372b14694c63ff4e797686d87c90f08168e81082248b9b028bad60d4da9e0d1148766f56eb9
+  languageName: node
+  linkType: hard
+
+"helmet@npm:^8.1.0":
+  version: 8.1.0
+  resolution: "helmet@npm:8.1.0"
+  checksum: 10c0/94d3a7ebc88dbda1421635bdf33f00724adb5252269e93c5ab296ec0db11336d01265659ad3739ab1a1e881fb23a686ff7e788aac6a5fb929285134f157df763
   languageName: node
   linkType: hard
 

@@ -29,35 +29,41 @@ export function TextField({
   const theme = useTheme();
   const [isFocused, setIsFocused] = React.useState(false);
   const hasError = Boolean(errorText);
-  const labelColor = hasError
-    ? theme.colors.danger
-    : isFocused
-      ? theme.colors.inkSecondary
-      : theme.colors.inkMuted;
-  const shellBorderColor = hasError
-    ? theme.colors.danger
-    : isFocused
-      ? theme.colors.borderStrong
-      : theme.colors.border;
 
   return (
-    <View className="gap-2">
+    <View style={{ gap: 6 }}>
+      {/* Stitch label: small uppercase Work Sans */}
       <Text
-        className="font-ui text-caption font-bold uppercase tracking-[0.6px]"
-        style={{ color: labelColor }}>
+        style={{
+          fontSize: 13,
+          fontWeight: '600',
+          fontFamily: theme.fontFamily.labelSemi,
+          color: hasError ? theme.colors.danger : theme.colors.inkSecondary,
+          textTransform: 'uppercase',
+          letterSpacing: 0.8,
+        }}>
         {label}
       </Text>
+
+      {/* Submerged input — Stitch style: surfaceHigh bg, no border, focus glow */}
       <View
-        className="rounded-app-lg border"
         style={{
-          borderColor: shellBorderColor,
-          borderWidth: isFocused || hasError ? 1.5 : 1,
-          backgroundColor: hasError ? theme.colors.dangerSoft : theme.colors.surfaceTray,
-          shadowColor: hasError ? theme.colors.danger : theme.colors.borderStrong,
+          borderRadius: 14,
+          backgroundColor: isFocused
+            ? theme.colors.surface
+            : hasError
+              ? theme.colors.dangerSoft
+              : theme.colors.surfaceHigh,
+          borderWidth: isFocused || hasError ? 1.5 : 0,
+          borderColor: hasError
+            ? theme.colors.danger
+            : isFocused
+              ? theme.colors.brand
+              : 'transparent',
+          shadowColor: hasError ? theme.colors.danger : theme.colors.brand,
           shadowOffset: { width: 0, height: 0 },
-          shadowOpacity: isFocused ? 0.2 : 0,
-          shadowRadius: 6,
-          elevation: isFocused ? 2 : 0,
+          shadowOpacity: isFocused ? 0.15 : 0,
+          shadowRadius: 8,
         }}>
         <TextInput
           autoCapitalize={autoCapitalize}
@@ -65,35 +71,35 @@ export function TextField({
           keyboardType={keyboardType}
           multiline={multiline}
           numberOfLines={multiline ? 4 : 1}
-          onBlur={() => {
-            setIsFocused(false);
-          }}
+          onBlur={() => { setIsFocused(false); }}
           onChangeText={onChangeText}
-          onFocus={() => {
-            setIsFocused(true);
-          }}
+          onFocus={() => { setIsFocused(true); }}
           placeholder={placeholder}
           placeholderTextColor={theme.colors.inkMuted}
           secureTextEntry={secureTextEntry}
-          className={multiline ? 'min-h-28 px-4 pb-3 pt-3 font-ui text-body' : 'min-h-[52px] px-4 py-3 font-ui text-body'}
           style={[
-            { color: theme.colors.ink, backgroundColor: 'transparent' },
+            {
+              minHeight: multiline ? 112 : 56,
+              paddingHorizontal: 16,
+              paddingVertical: 12,
+              fontSize: 15,
+              fontFamily: theme.fontFamily.body,
+              color: theme.colors.ink,
+              backgroundColor: 'transparent',
+            },
             multiline ? { textAlignVertical: 'top' } : null,
           ]}
           value={value}
         />
       </View>
+
       {errorText ? (
-        <Text
-          className="text-caption font-semibold leading-4"
-          style={{ color: theme.colors.danger }}>
+        <Text style={{ fontSize: 12, fontFamily: theme.fontFamily.label, color: theme.colors.danger }}>
           {errorText}
         </Text>
       ) : null}
       {!errorText && helperText ? (
-        <Text
-          className="text-caption leading-4"
-          style={{ color: theme.colors.inkMuted }}>
+        <Text style={{ fontSize: 12, fontFamily: theme.fontFamily.label, color: theme.colors.inkMuted, fontStyle: 'italic' }}>
           {helperText}
         </Text>
       ) : null}

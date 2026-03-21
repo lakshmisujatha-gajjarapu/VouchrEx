@@ -1,3 +1,4 @@
+import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
@@ -18,23 +19,45 @@ export function PrimaryButton({
 }) {
   const theme = useTheme();
 
-  const enabledCfg =
-    tone === 'secondary'
-      ? { bg: theme.colors.brandSoft, border: theme.colors.brandBright, text: theme.colors.brand, shadow: theme.colors.shadowStrong }
-      : tone === 'danger'
-        ? { bg: theme.colors.danger, border: theme.colors.danger, text: theme.colors.white, shadow: theme.colors.danger }
-        : tone === 'brand'
-          ? { bg: theme.colors.brandBright, border: theme.colors.brandBright, text: theme.colors.white, shadow: theme.colors.brandBright }
-          : { bg: theme.colors.actionBright, border: theme.colors.actionBright, text: theme.colors.white, shadow: theme.colors.actionBright };
-
   const disabledCfg = {
     bg: theme.colors.surfaceTray,
     border: theme.colors.border,
     text: theme.colors.inkMuted,
-    shadow: 'transparent',
   };
 
-  const cfg = disabled ? disabledCfg : enabledCfg;
+  // Gradient configs for brand/action tones
+  const gradientColors: Record<string, readonly [string, string]> = {
+    brand: [theme.colors.brandBright, theme.colors.brand],
+    action: [theme.colors.actionBright, theme.colors.action],
+  };
+
+  const flatCfg =
+    tone === 'secondary'
+      ? { bg: theme.colors.brandSoft, border: theme.colors.brandBright, text: theme.colors.brand }
+      : tone === 'danger'
+        ? { bg: theme.colors.danger, border: theme.colors.danger, text: theme.colors.white }
+        : null; // brand/action use gradient
+
+  const cfg = disabled ? disabledCfg : flatCfg;
+  const useGradient = !disabled && (tone === 'brand' || tone === 'action');
+
+  const textColor = disabled
+    ? disabledCfg.text
+    : tone === 'secondary'
+      ? theme.colors.brand
+      : tone === 'danger'
+        ? theme.colors.white
+        : theme.colors.white;
+
+  const shadowColor = disabled
+    ? 'transparent'
+    : tone === 'brand'
+      ? theme.colors.brand
+      : tone === 'action'
+        ? theme.colors.action
+        : tone === 'danger'
+          ? theme.colors.danger
+          : theme.colors.shadowStrong;
 
   return (
     <Pressable
@@ -43,15 +66,38 @@ export function PrimaryButton({
       onPress={onPress}
       style={({ pressed }) => ({
         width: '100%',
-        shadowColor: cfg.shadow,
+        shadowColor,
         shadowOffset: { width: 0, height: disabled ? 0 : 10 },
         shadowOpacity: disabled ? 0 : tone === 'secondary' ? 0.12 : 0.28,
         shadowRadius: disabled ? 0 : tone === 'secondary' ? 16 : 20,
         elevation: disabled ? 0 : tone === 'secondary' ? 2 : 5,
         opacity: loading ? 0.6 : pressed ? 0.88 : 1,
         transform: [{ scale: pressed && !disabled && !loading ? 0.985 : 1 }],
+        borderRadius: 16,
+        overflow: 'hidden',
       })}>
-      {({ pressed }) => (
+      {useGradient ? (
+        <LinearGradient
+          colors={gradientColors[tone] ?? [theme.colors.brandBright, theme.colors.brand]}
+          end={{ x: 1, y: 1 }}
+          start={{ x: 0, y: 0 }}
+          style={{
+            minHeight: 56,
+            width: '100%',
+            borderRadius: 16,
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingHorizontal: 16,
+          }}>
+          {loading
+            ? <ActivityIndicator color={theme.colors.white} />
+            : (
+                <Text style={{ color: theme.colors.white, fontSize: 16, fontWeight: '700', fontFamily: 'WorkSans_600SemiBold', letterSpacing: 0.1 }}>
+                  {label}
+                </Text>
+              )}
+        </LinearGradient>
+      ) : (
         <View
           style={{
             minHeight: 56,
@@ -61,25 +107,13 @@ export function PrimaryButton({
             paddingHorizontal: 16,
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor:
-              disabled
-                ? disabledCfg.bg
-                : pressed && tone === 'brand'
-                  ? theme.colors.brand
-                  : pressed && tone === 'action'
-                    ? theme.colors.action
-                    : pressed && tone === 'danger'
-                      ? '#dc2626'
-                      : pressed && tone === 'secondary'
-                        ? theme.colors.surfaceRaised
-                        : cfg.bg,
-            borderColor: cfg.border,
+            backgroundColor: cfg?.bg ?? theme.colors.surfaceTray,
+            borderColor: cfg?.border ?? theme.colors.border,
           }}>
           {loading
-            ? <ActivityIndicator color={cfg.text} />
+            ? <ActivityIndicator color={textColor} />
             : (
-                <Text
-                  style={{ color: cfg.text, fontSize: 16, fontWeight: '700', letterSpacing: 0.1 }}>
+                <Text style={{ color: textColor, fontSize: 16, fontWeight: '700', letterSpacing: 0.1 }}>
                   {label}
                 </Text>
               )}

@@ -91,6 +91,20 @@ export class OrdersController {
     required: true,
     description: 'Session token returned from OTP verification.'
   })
+  @Post(':id/payments/sync')
+  async syncPaymentStatus(
+    @Param('id') id: string,
+    @Headers(sessionHeaderName) sessionToken?: string
+  ) {
+    const buyer = await this.authService.requireSessionUser(sessionToken);
+    return this.ordersService.syncPaymentStatus(id, buyer.id);
+  }
+
+  @ApiHeader({
+    name: sessionHeaderName,
+    required: true,
+    description: 'Session token returned from OTP verification.'
+  })
   @Post(':id/reveal')
   async revealCode(@Param('id') id: string, @Headers(sessionHeaderName) sessionToken?: string) {
     const buyer = await this.authService.requireSessionUser(sessionToken);

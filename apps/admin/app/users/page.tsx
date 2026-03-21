@@ -6,8 +6,8 @@ import type { Metadata } from 'next';
 export const metadata: Metadata = { title: 'Users | CouponBazaar Admin' };
 
 const TABS = [
-  { label: 'All', value: undefined },
-  { label: 'Active', value: 'ACTIVE' },
+  { label: 'All',       value: undefined },
+  { label: 'Active',    value: 'ACTIVE' },
   { label: 'Suspended', value: 'SUSPENDED' },
 ] as const;
 
@@ -21,14 +21,13 @@ export default async function UsersPage({ searchParams }: PageProps) {
 
   return (
     <div className="p-8 animate-slide-up">
-      <header className="mb-6 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-          <Users className="w-5 h-5 text-primary" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-bold">Users</h1>
-          <p className="text-muted-foreground text-sm">{users.length} users</p>
-        </div>
+      <header className="mb-8">
+        <h1 style={{ fontFamily: 'var(--font-headline)', fontSize: '2rem', fontWeight: 800, letterSpacing: '-0.04em', color: 'var(--color-foreground)', marginBottom: '0.25rem' }}>
+          Users
+        </h1>
+        <p style={{ color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)', fontSize: '0.9375rem' }}>
+          {users.length} users
+        </p>
       </header>
 
       <div className="flex gap-2 mb-6">
@@ -38,11 +37,11 @@ export default async function UsersPage({ searchParams }: PageProps) {
             <a
               key={tab.label}
               href={tab.value ? `?status=${tab.value}` : '/users'}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                active
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-card border border-border text-foreground hover:bg-muted'
-              }`}
+              className="px-4 py-2 rounded-xl text-sm font-medium transition-colors"
+              style={active
+                ? { backgroundColor: 'var(--color-primary-soft)', color: 'var(--color-primary)', fontFamily: 'var(--font-body)' }
+                : { backgroundColor: 'var(--color-surface-high)', color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }
+              }
             >
               {tab.label}
             </a>

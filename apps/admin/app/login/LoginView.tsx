@@ -2,9 +2,6 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { ROUTES } from '@/lib/routes';
 
 export default function LoginView() {
@@ -16,11 +13,7 @@ export default function LoginView() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-
-    if (!token.trim()) {
-      setError('Please enter the admin token.');
-      return;
-    }
+    if (!token.trim()) { setError('Please enter the admin token.'); return; }
 
     setLoading(true);
     try {
@@ -29,14 +22,8 @@ export default function LoginView() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token: token.trim() }),
       });
-
       const data = (await res.json()) as { success?: boolean; error?: string };
-
-      if (!res.ok || !data.success) {
-        setError(data.error ?? 'Invalid token. Please try again.');
-        return;
-      }
-
+      if (!res.ok || !data.success) { setError(data.error ?? 'Invalid token. Please try again.'); return; }
       router.push(ROUTES.DASHBOARD);
       router.refresh();
     } catch {
@@ -47,28 +34,47 @@ export default function LoginView() {
   };
 
   return (
-    <div className="min-h-screen flex">
-      {/* Left hero */}
-      <div className="hidden lg:flex lg:w-1/2 bg-primary flex-col justify-center px-16">
-        <div className="text-white">
-          <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center text-white font-bold text-xl mb-6">
-            CB
+    <div className="min-h-screen flex" style={{ backgroundColor: 'var(--color-background)' }}>
+
+      {/* ── Left hero panel ── */}
+      <div className="hidden lg:flex lg:w-1/2 flex-col justify-center px-16 relative overflow-hidden"
+        style={{ background: 'linear-gradient(135deg, #2E1F6B 0%, #0D0B1E 100%)' }}>
+        {/* Decorative orbs */}
+        <div className="absolute top-[-80px] right-[-60px] w-72 h-72 rounded-full opacity-20"
+          style={{ backgroundColor: '#A78BFA' }} />
+        <div className="absolute bottom-[-60px] left-[-40px] w-56 h-56 rounded-full opacity-10"
+          style={{ backgroundColor: '#85F8C4' }} />
+
+        <div className="relative z-10">
+          <div className="flex items-center gap-3 mb-10">
+            <div className="w-11 h-11 rounded-xl flex items-center justify-center"
+              style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)' }}>
+              <span className="text-white font-bold text-sm" style={{ fontFamily: 'var(--font-headline)' }}>CB</span>
+            </div>
+            <h1 className="text-white" style={{ fontFamily: 'var(--font-headline)', fontSize: '1.5rem', fontWeight: 800 }}>
+              CouponBazaar
+            </h1>
           </div>
-          <h1 className="text-4xl font-bold mb-4">CouponBazaar</h1>
-          <p className="text-primary-foreground/80 text-lg mb-8">
-            Admin Console — Manage disputes, orders, users, and payouts.
+
+          <h2 style={{ fontFamily: 'var(--font-headline)', fontSize: '2.5rem', fontWeight: 800, color: '#fff', letterSpacing: '-0.04em', lineHeight: 1.1, marginBottom: '1rem' }}>
+            Admin Console
+          </h2>
+          <p style={{ color: 'rgba(255,255,255,0.65)', fontFamily: 'var(--font-body)', fontSize: '1rem', marginBottom: '2.5rem', maxWidth: '380px' }}>
+            Manage disputes, orders, users, and payouts for the CouponBazaar platform.
           </p>
-          <div className="space-y-4">
+
+          <div className="space-y-3">
             {[
               { title: 'Dispute Resolution', desc: 'Triage and resolve buyer/seller disputes' },
-              { title: 'Payout Management', desc: 'Track and complete seller payouts' },
-              { title: 'Platform Metrics', desc: 'Live GMV, escrow, and operational stats' },
+              { title: 'Payout Management',  desc: 'Track and complete seller payouts' },
+              { title: 'Platform Metrics',   desc: 'Live GMV, escrow, and operational stats' },
             ].map((f) => (
-              <div key={f.title} className="flex items-start gap-3 bg-white/10 rounded-lg p-4">
-                <div className="w-2 h-2 rounded-full bg-white mt-1.5 flex-shrink-0" />
+              <div key={f.title} className="flex items-start gap-3 rounded-xl p-4"
+                style={{ backgroundColor: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)' }}>
+                <div className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0" style={{ backgroundColor: '#85F8C4' }} />
                 <div>
-                  <p className="font-semibold text-white">{f.title}</p>
-                  <p className="text-sm text-white/70">{f.desc}</p>
+                  <p className="font-semibold text-white text-sm" style={{ fontFamily: 'var(--font-headline)' }}>{f.title}</p>
+                  <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.55)', fontFamily: 'var(--font-body)' }}>{f.desc}</p>
                 </div>
               </div>
             ))}
@@ -76,21 +82,37 @@ export default function LoginView() {
         </div>
       </div>
 
-      {/* Right form */}
+      {/* ── Right login form ── */}
       <div className="flex-1 flex items-center justify-center px-6 py-12">
         <div className="w-full max-w-sm">
-          <div className="mb-8">
-            <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center text-white font-bold mb-4 lg:hidden">
-              CB
+
+          {/* Mobile logo */}
+          <div className="flex items-center gap-3 mb-8 lg:hidden">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center"
+              style={{ background: 'linear-gradient(135deg, #8856E5, #6E3ACA)' }}>
+              <span className="text-white font-bold text-sm" style={{ fontFamily: 'var(--font-headline)' }}>CB</span>
             </div>
-            <h2 className="text-2xl font-bold">Admin Login</h2>
-            <p className="text-muted-foreground mt-1">Enter your admin token to continue.</p>
+            <span className="font-bold text-lg" style={{ fontFamily: 'var(--font-headline)', color: 'var(--color-primary)' }}>
+              CouponBazaar
+            </span>
+          </div>
+
+          <div className="mb-8">
+            <h2 style={{ fontFamily: 'var(--font-headline)', fontSize: '1.75rem', fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--color-foreground)' }}>
+              Admin Login
+            </h2>
+            <p className="mt-1 text-sm" style={{ color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}>
+              Enter your admin token to continue.
+            </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="token">Admin Token</Label>
-              <Input
+              <label htmlFor="token" className="block text-xs font-semibold uppercase tracking-widest"
+                style={{ color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}>
+                Admin Token
+              </label>
+              <input
                 id="token"
                 type="password"
                 placeholder="Paste your ADMIN_API_TOKEN"
@@ -98,21 +120,46 @@ export default function LoginView() {
                 onChange={(e) => setToken(e.target.value)}
                 autoFocus
                 autoComplete="current-password"
+                className="w-full h-14 rounded-2xl px-4 text-sm transition-all outline-none"
+                style={{
+                  backgroundColor: 'var(--color-surface-high)',
+                  border: 'none',
+                  color: 'var(--color-foreground)',
+                  fontFamily: 'var(--font-body)',
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.boxShadow = '0 0 0 2px var(--color-primary)';
+                  e.currentTarget.style.backgroundColor = 'var(--color-card)';
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.boxShadow = 'none';
+                  e.currentTarget.style.backgroundColor = 'var(--color-surface-high)';
+                }}
               />
             </div>
 
             {error && (
-              <p className="text-sm text-destructive bg-destructive/10 rounded-md px-3 py-2">
+              <div className="rounded-xl px-4 py-3 text-sm"
+                style={{ backgroundColor: 'var(--color-destructive-soft)', color: 'var(--color-destructive)', fontFamily: 'var(--font-body)' }}>
                 {error}
-              </p>
+              </div>
             )}
 
-            <Button type="submit" className="w-full" disabled={loading}>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full h-14 rounded-2xl font-semibold text-white text-base transition-all disabled:opacity-50"
+              style={{
+                background: 'linear-gradient(135deg, #8856E5, #6E3ACA)',
+                boxShadow: '0 10px 28px rgba(110,58,202,0.28)',
+                fontFamily: 'var(--font-body)',
+              }}
+            >
               {loading ? 'Verifying…' : 'Sign In'}
-            </Button>
+            </button>
           </form>
 
-          <p className="text-xs text-muted-foreground text-center mt-6">
+          <p className="text-xs text-center mt-6" style={{ color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}>
             Token is stored as a secure httpOnly cookie.
           </p>
         </div>

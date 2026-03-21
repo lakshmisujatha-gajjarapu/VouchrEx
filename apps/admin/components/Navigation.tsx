@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { ROUTES } from '@/lib/routes';
 import { cn } from '@/lib/utils';
-import { AUTH_CONFIG } from '@/lib/constants';
 import { useTheme } from 'next-themes';
 import {
   Dialog,
@@ -27,10 +26,10 @@ import {
 
 const navItems = [
   { name: 'Dashboard', href: ROUTES.DASHBOARD, icon: LayoutDashboard },
-  { name: 'Disputes', href: ROUTES.DISPUTES, icon: MessageSquareWarning },
-  { name: 'Orders', href: ROUTES.ORDERS, icon: ClipboardList },
-  { name: 'Users', href: ROUTES.USERS, icon: Users },
-  { name: 'Payouts', href: ROUTES.PAYOUTS, icon: Wallet },
+  { name: 'Disputes',  href: ROUTES.DISPUTES,  icon: MessageSquareWarning },
+  { name: 'Orders',    href: ROUTES.ORDERS,    icon: ClipboardList },
+  { name: 'Users',     href: ROUTES.USERS,     icon: Users },
+  { name: 'Payouts',   href: ROUTES.PAYOUTS,   icon: Wallet },
 ];
 
 export function Navigation() {
@@ -39,9 +38,7 @@ export function Navigation() {
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   const { theme, setTheme } = useTheme();
 
-  if (pathname === ROUTES.LOGIN || pathname === ROUTES.HOME) {
-    return null;
-  }
+  if (pathname === ROUTES.LOGIN || pathname === ROUTES.HOME) return null;
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
@@ -50,56 +47,76 @@ export function Navigation() {
 
   return (
     <>
-      <aside className="fixed left-0 top-0 w-60 h-screen bg-background border-r border-border flex flex-col z-50">
-        <div className="px-6 py-6 border-b border-border">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white font-bold text-sm">
-              CB
+      <aside className="fixed left-0 top-0 w-60 h-screen flex flex-col z-50"
+        style={{ backgroundColor: 'var(--color-card)', borderRight: '1px solid var(--color-surface-high)' }}>
+
+        {/* Logo */}
+        <div className="px-6 py-6" style={{ borderBottom: '1px solid var(--color-surface-high)' }}>
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center"
+              style={{ background: 'linear-gradient(135deg, #8856E5, #6E3ACA)' }}>
+              <span className="text-white font-bold text-sm" style={{ fontFamily: 'var(--font-headline)' }}>CB</span>
             </div>
             <div>
-              <h2 className="text-xl font-bold text-primary">CouponBazaar</h2>
-              <p className="text-xs text-muted-foreground mt-0.5">Admin Console</p>
+              <p className="font-bold text-base leading-tight" style={{ fontFamily: 'var(--font-headline)', color: 'var(--color-primary)' }}>
+                CouponBazaar
+              </p>
+              <p className="text-xs" style={{ color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}>
+                Admin Console
+              </p>
             </div>
           </div>
         </div>
 
-        <nav className="flex-1 px-3 py-4 overflow-y-auto">
+        {/* Nav items */}
+        <nav className="flex-1 px-3 py-4 overflow-y-auto space-y-0.5">
           {navItems.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
             const Icon = item.icon;
-
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  'flex items-center gap-3 h-12 px-4 rounded-lg mb-1 border-l-4 transition-all duration-150',
-                  isActive
-                    ? 'bg-primary/10 text-primary border-primary shadow-sm'
-                    : 'border-transparent text-foreground/80 hover:bg-muted/80 hover:text-foreground'
+                  'flex items-center gap-3 h-11 px-4 rounded-xl transition-all duration-150 group',
+                  isActive ? '' : 'hover:opacity-80'
                 )}
+                style={isActive
+                  ? { backgroundColor: 'var(--color-primary-soft)', color: 'var(--color-primary)' }
+                  : { color: 'var(--color-muted-foreground)' }}
               >
-                <Icon className="w-5 h-5" />
-                <span className="text-sm font-medium">{item.name}</span>
+                {/* Active indicator stripe */}
+                <div className="w-1 h-5 rounded-full flex-shrink-0 transition-all"
+                  style={{ backgroundColor: isActive ? 'var(--color-primary)' : 'transparent' }} />
+                <Icon className="w-4 h-4 flex-shrink-0" />
+                <span className="text-sm font-medium" style={{ fontFamily: 'var(--font-body)' }}>
+                  {item.name}
+                </span>
               </Link>
             );
           })}
         </nav>
 
-        <div className="px-3 py-4 border-t border-border">
-          <div className="mb-3">
-            <label
-              htmlFor="cb-theme-selector"
-              className="px-1 pb-1 block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"
-            >
+        {/* Bottom: theme + logout */}
+        <div className="px-3 py-4 space-y-2" style={{ borderTop: '1px solid var(--color-surface-high)' }}>
+          <div>
+            <label htmlFor="cb-theme"
+              className="px-1 pb-1 block text-[10px] font-semibold uppercase tracking-widest"
+              style={{ color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}>
               Theme
             </label>
             <select
-              id="cb-theme-selector"
+              id="cb-theme"
               suppressHydrationWarning
               value={theme ?? 'system'}
               onChange={(e) => setTheme(e.target.value)}
-              className="w-full h-10 rounded-lg border border-border bg-background px-3 text-sm text-foreground transition-colors hover:bg-muted/60 focus:outline-none focus:ring-2 focus:ring-primary/40"
+              className="w-full h-9 rounded-xl px-3 text-sm transition-colors focus:outline-none"
+              style={{
+                border: 'none',
+                backgroundColor: 'var(--color-surface-high)',
+                color: 'var(--color-foreground)',
+                fontFamily: 'var(--font-body)',
+              }}
             >
               <option value="system">Auto</option>
               <option value="light">Light</option>
@@ -108,9 +125,10 @@ export function Navigation() {
           </div>
           <button
             onClick={() => setLogoutDialogOpen(true)}
-            className="flex items-center gap-3 w-full h-12 px-4 rounded-lg text-foreground/80 hover:bg-muted/80 hover:text-foreground transition-colors"
+            className="flex items-center gap-3 w-full h-11 px-4 rounded-xl transition-colors hover:opacity-80"
+            style={{ color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}
           >
-            <LogOut className="w-5 h-5" />
+            <LogOut className="w-4 h-4" />
             <span className="text-sm font-medium">Logout</span>
           </button>
         </div>
@@ -121,20 +139,15 @@ export function Navigation() {
           <DialogHeader>
             <DialogTitle>Confirm Logout</DialogTitle>
             <DialogDescription>
-              Are you sure you want to logout? You&apos;ll need to enter the admin token again to access the console.
+              You&apos;ll need to enter the admin token again to access the console.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex gap-3">
-            <Button variant="outline" onClick={() => setLogoutDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleLogout}>
-              Logout
-            </Button>
+            <Button variant="outline" onClick={() => setLogoutDialogOpen(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleLogout}>Logout</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
   );
 }
-

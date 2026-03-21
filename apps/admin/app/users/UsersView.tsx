@@ -3,7 +3,6 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import type { AdminUser } from '@/lib/types';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -17,6 +16,12 @@ import { formatPhone, formatDate } from '@/lib/utils';
 
 interface UsersViewProps {
   users: AdminUser[];
+}
+
+function statusStyle(status: string): { bg: string; color: string } {
+  if (status === 'ACTIVE')    return { bg: 'var(--color-success-soft)',     color: 'var(--color-success)' };
+  if (status === 'SUSPENDED') return { bg: 'var(--color-destructive-soft)', color: 'var(--color-destructive)' };
+  return                             { bg: 'var(--color-surface-high)',      color: 'var(--color-muted-foreground)' };
 }
 
 export default function UsersView({ users }: UsersViewProps) {
@@ -50,90 +55,100 @@ export default function UsersView({ users }: UsersViewProps) {
 
   if (users.length === 0) {
     return (
-      <div className="text-center py-16 text-muted-foreground">
-        <p className="text-lg font-medium">No users found</p>
+      <div className="text-center py-16">
+        <p className="text-lg font-semibold" style={{ fontFamily: 'var(--font-headline)', color: 'var(--color-foreground)' }}>
+          No users found
+        </p>
       </div>
     );
   }
 
   return (
     <>
-      <div className="overflow-x-auto rounded-xl border border-border bg-card">
-        <table className="w-full text-sm">
-          <thead className="bg-muted/50">
-            <tr>
-              {['Name', 'Phone', 'Tier', 'Trust Score', 'Status', 'Joined', ''].map((h) => (
-                <th key={h} className="text-left px-4 py-3 font-medium text-muted-foreground whitespace-nowrap">
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {users.map((u) => (
-              <tr key={u.id} className="hover:bg-muted/30 transition-colors">
-                <td className="px-4 py-3 font-medium">{u.name ?? '—'}</td>
-                <td className="px-4 py-3">{formatPhone(u.phone)}</td>
-                <td className="px-4 py-3">
-                  <span className="text-xs font-medium uppercase tracking-wide">{u.tier}</span>
-                </td>
-                <td className="px-4 py-3 tabular-nums">{u.trustScore}</td>
-                <td className="px-4 py-3">
-                  <Badge
-                    variant={
-                      u.status === 'ACTIVE'
-                        ? 'success'
-                        : u.status === 'SUSPENDED'
-                        ? 'destructive'
-                        : 'secondary'
-                    }
-                  >
-                    {u.status}
-                  </Badge>
-                </td>
-                <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
-                  {formatDate(u.createdAt)}
-                </td>
-                <td className="px-4 py-3">
-                  {u.status === 'ACTIVE' ? (
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => setConfirm({ user: u, action: 'suspend' })}
-                    >
-                      Suspend
-                    </Button>
-                  ) : u.status === 'SUSPENDED' ? (
-                    <Button
-                      size="sm"
-                      variant="success"
-                      onClick={() => setConfirm({ user: u, action: 'reactivate' })}
-                    >
-                      Reactivate
-                    </Button>
-                  ) : null}
-                </td>
+      <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: 'var(--color-card)', boxShadow: '0 0 40px rgba(26,27,33,0.06)' }}>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr style={{ backgroundColor: 'var(--color-surface-raised)' }}>
+                {['Name', 'Phone', 'Tier', 'Trust Score', 'Status', 'Joined', ''].map((h) => (
+                  <th key={h} className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-widest whitespace-nowrap"
+                    style={{ color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}>
+                    {h}
+                  </th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {users.map((u) => {
+                const s = statusStyle(u.status);
+                return (
+                  <tr key={u.id} className="transition-opacity hover:opacity-90"
+                    style={{ borderTop: '1px solid var(--color-surface-high)' }}>
+                    <td className="px-5 py-3.5 font-medium" style={{ fontFamily: 'var(--font-body)', color: 'var(--color-foreground)' }}>
+                      {u.name ?? '—'}
+                    </td>
+                    <td className="px-5 py-3.5" style={{ fontFamily: 'var(--font-body)', color: 'var(--color-foreground)' }}>
+                      {formatPhone(u.phone)}
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <span className="text-xs font-semibold uppercase tracking-wide"
+                        style={{ fontFamily: 'var(--font-body)', color: 'var(--color-muted-foreground)' }}>
+                        {u.tier}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3.5 tabular-nums" style={{ fontFamily: 'var(--font-mono)', color: 'var(--color-foreground)' }}>
+                      {u.trustScore}
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <span className="status-badge" style={{ backgroundColor: s.bg, color: s.color }}>
+                        {u.status}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3.5 whitespace-nowrap" style={{ color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}>
+                      {formatDate(u.createdAt)}
+                    </td>
+                    <td className="px-5 py-3.5">
+                      {u.status === 'ACTIVE' ? (
+                        <button
+                          onClick={() => setConfirm({ user: u, action: 'suspend' })}
+                          className="rounded-xl px-3 py-1.5 text-xs font-semibold transition-colors"
+                          style={{ backgroundColor: 'var(--color-destructive-soft)', color: 'var(--color-destructive)', fontFamily: 'var(--font-body)' }}
+                        >
+                          Suspend
+                        </button>
+                      ) : u.status === 'SUSPENDED' ? (
+                        <button
+                          onClick={() => setConfirm({ user: u, action: 'reactivate' })}
+                          className="rounded-xl px-3 py-1.5 text-xs font-semibold transition-colors"
+                          style={{ backgroundColor: 'var(--color-success-soft)', color: 'var(--color-success)', fontFamily: 'var(--font-body)' }}
+                        >
+                          Reactivate
+                        </button>
+                      ) : null}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {confirm && (
         <Dialog open onOpenChange={() => setConfirm(null)}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>
+              <DialogTitle style={{ fontFamily: 'var(--font-headline)', fontWeight: 800 }}>
                 {confirm.action === 'suspend' ? 'Suspend User' : 'Reactivate User'}
               </DialogTitle>
-              <DialogDescription>
+              <DialogDescription style={{ fontFamily: 'var(--font-body)' }}>
                 {confirm.action === 'suspend'
                   ? `Are you sure you want to suspend ${formatPhone(confirm.user.phone)}? All their sessions will be invalidated.`
                   : `Are you sure you want to reactivate ${formatPhone(confirm.user.phone)}?`}
               </DialogDescription>
             </DialogHeader>
             {error && (
-              <p className="text-sm text-destructive bg-destructive/10 rounded-md px-3 py-2">
+              <p className="rounded-xl px-4 py-3 text-sm" style={{ backgroundColor: 'var(--color-destructive-soft)', color: 'var(--color-destructive)', fontFamily: 'var(--font-body)' }}>
                 {error}
               </p>
             )}

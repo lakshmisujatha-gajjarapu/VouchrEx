@@ -1,7 +1,13 @@
 const fontFamily = {
-  display: 'IBMPlexSans_700Bold',
-  ui: 'IBMPlexSans_400Regular',
-  mono: 'IBMPlexSans_600SemiBold',
+  headline: 'Manrope_700Bold',
+  headlineExtra: 'Manrope_800ExtraBold',
+  body: 'WorkSans_400Regular',
+  label: 'WorkSans_500Medium',
+  labelSemi: 'WorkSans_600SemiBold',
+  mono: 'JetBrainsMono_500Medium',
+  // Legacy aliases so existing inline style refs continue to resolve
+  display: 'Manrope_700Bold',
+  ui: 'WorkSans_400Regular',
 } as const;
 
 const spacing = { 1: 4, 2: 8, 3: 12, 4: 16, 5: 20, 6: 24, 7: 28, 8: 32 } as const;
@@ -10,49 +16,64 @@ const fontSize = { display: 32, title: 22, heading: 18, body: 15, label: 13, cap
 
 export const lightTheme = {
   colors: {
-    background: '#F8F7FF',
+    // Backgrounds
+    background: '#FAF8FF',
     surface: '#FFFFFF',
-    surfaceRaised: '#F3F1FF',
-    surfaceTray: '#EDE9FE',
+    surfaceRaised: '#F4F3FB',   // surface-container-low
+    surfaceTray: '#EEEDF5',     // surface-container
+    surfaceHigh: '#E8E7EF',     // surface-container-high (inputs, chips unselected)
+    surfaceHighest: '#E2E2E9',  // surface-container-highest
 
-    brand: '#5B21B6',
-    brandBright: '#7C3AED',
-    brandSoft: '#EDE9FE',
+    // Brand (violet / secondary)
+    brand: '#6E3ACA',
+    brandBright: '#8856E5',
+    brandSoft: '#EBDDFF',       // secondary-fixed
 
+    // Action (emerald / primary)
     action: '#059669',
     actionBright: '#10B981',
     actionSoft: '#D1FAE5',
+    actionFixed: '#85F8C4',     // primary-fixed — card accent stripe in light
 
-    ink: '#1E1B4B',
-    inkSecondary: '#4338CA',
-    inkMuted: '#6B7280',
+    // Text
+    ink: '#1A1B21',             // on-surface
+    inkSecondary: '#4A4453',    // on-surface-variant
+    inkMuted: '#7B7485',        // outline
 
-    border: '#DDD6FE',
-    borderStrong: '#A78BFA',
+    // Borders
+    border: '#CCC3D6',          // outline-variant
+    borderStrong: '#6E3ACA',    // brand color as strong border
 
-    danger: '#DC2626',
-    dangerSoft: '#FEE2E2',
-    success: '#059669',
+    // Semantic
+    danger: '#BA1A1A',
+    dangerSoft: '#FFDAD6',
+    success: '#59CD9C',         // on-primary-container
     successSoft: '#D1FAE5',
     warning: '#D97706',
     warningSoft: '#FEF3C7',
 
+    // Badges
     gold: '#F59E0B',
     silver: '#94A3B8',
     bronze: '#B45309',
 
+    // Glass (sign-in screen only)
     glassSurface: 'rgba(255,255,255,0.08)',
     glassBorder: 'rgba(255,255,255,0.18)',
+
+    // Timer
     countdown: '#D97706',
     countdownSoft: '#FEF3C7',
 
+    // Pill borders
     pillBrandBorder: '#C4B5FD',
     pillSuccessBorder: '#6EE7B7',
     pillDangerBorder: '#FCA5A5',
     pillWarnBorder: '#FDE68A',
 
-    shadow: 'rgba(91, 33, 182, 0.08)',
-    shadowStrong: 'rgba(91, 33, 182, 0.16)',
+    // Shadows (ambient, low-opacity tinted)
+    shadow: 'rgba(26,27,33,0.04)',
+    shadowStrong: 'rgba(26,27,33,0.10)',
     white: '#FFFFFF',
   },
   spacing,
@@ -63,49 +84,64 @@ export const lightTheme = {
 
 export const darkTheme = {
   colors: {
+    // Backgrounds
     background: '#0D0B1E',
-    surface: '#13102B',
-    surfaceRaised: '#1A1640',
-    surfaceTray: '#221E4A',
+    surface: '#13102B',         // surface-container
+    surfaceRaised: '#1A173D',   // surface-container-low
+    surfaceTray: '#13102B',     // surface-container
+    surfaceHigh: '#1C1935',     // surface-container-high
+    surfaceHighest: '#272445',  // surface-container-highest
 
+    // Brand (violet — primary in dark)
     brand: '#A78BFA',
     brandBright: '#C4B5FD',
-    brandSoft: '#2E1F6B',
+    brandSoft: '#4A3199',       // secondary-container dark
 
-    action: '#10B981',
+    // Action (emerald)
+    action: '#34D399',
     actionBright: '#34D399',
     actionSoft: '#064E3B',
+    actionFixed: '#68DBA9',     // primary-fixed-dim — card accent stripe in dark
 
-    ink: '#F5F3FF',
-    inkSecondary: '#C4B5FD',
-    inkMuted: '#9CA3AF',
+    // Text
+    ink: '#E2E2E9',             // on-surface dark
+    inkSecondary: '#C4C5D0',    // on-surface-variant dark
+    inkMuted: '#938F99',        // outline dark
 
-    border: '#2E2A5E',
-    borderStrong: '#4C3D8F',
+    // Borders
+    border: '#4A4453',          // outline-variant dark
+    borderStrong: '#938F99',    // outline dark
 
-    danger: '#F87171',
-    dangerSoft: '#450A0A',
-    success: '#34D399',
+    // Semantic
+    danger: '#FFB4AB',
+    dangerSoft: '#93000A',
+    success: '#68DBA9',
     successSoft: '#064E3B',
     warning: '#FCD34D',
     warningSoft: '#451A03',
 
+    // Badges
     gold: '#F59E0B',
     silver: '#94A3B8',
     bronze: '#B45309',
 
+    // Glass
     glassSurface: 'rgba(255,255,255,0.08)',
     glassBorder: 'rgba(255,255,255,0.18)',
+
+    // Timer
     countdown: '#FCD34D',
     countdownSoft: '#451A03',
 
+    // Pill borders
     pillBrandBorder: '#4C3D8F',
     pillSuccessBorder: '#065F46',
     pillDangerBorder: '#7F1D1D',
     pillWarnBorder: '#78350F',
 
-    shadow: 'rgba(0, 0, 0, 0.40)',
-    shadowStrong: 'rgba(0, 0, 0, 0.60)',
+    // Shadows
+    shadow: 'rgba(0,0,0,0.30)',
+    shadowStrong: 'rgba(0,0,0,0.50)',
     white: '#FFFFFF',
   },
   spacing,

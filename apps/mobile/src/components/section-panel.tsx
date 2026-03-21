@@ -38,13 +38,13 @@ export function SectionPanel({
           className="gap-1 border-b px-4 pb-2 pt-3"
           style={{ borderBottomColor: theme.colors.border }}>
           {eyebrow ? (
-            <Text className="font-ui text-caption font-extrabold uppercase tracking-[0.5px]" style={{ color: theme.colors.brand }}>
+            <Text className="font-label text-caption font-extrabold uppercase tracking-[0.5px]" style={{ color: theme.colors.brand }}>
               {eyebrow}
             </Text>
           ) : null}
           {title ? (
             <Text
-              className="font-ui text-[16px] font-bold"
+              className="font-label text-[16px] font-bold"
               style={{ color: theme.colors.ink }}>
               {title}
             </Text>

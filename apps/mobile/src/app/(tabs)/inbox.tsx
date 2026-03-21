@@ -111,7 +111,7 @@ export default function InboxScreen() {
             title={notification.title}
             tone={notification.status === 'READ' ? 'neutral' : 'brand'}>
             <Text
-              className="font-ui text-caption font-bold"
+              className="font-label text-caption font-bold"
               style={{ color: notification.status === 'READ' ? theme.colors.inkMuted : theme.colors.brand }}>
               {notification.status === 'READ' ? 'Opened' : 'Tap to mark read'}
             </Text>

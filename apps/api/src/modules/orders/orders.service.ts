@@ -74,7 +74,10 @@ export class OrdersService {
       include: {
         listing: {
           include: {
-            brand: true
+            brand: true,
+            seller: {
+              select: { id: true, name: true }
+            }
           }
         },
         buyer: {
@@ -353,6 +356,50 @@ export class OrdersService {
       ...(dto.razorpayPaymentId ? { razorpayPaymentId: dto.razorpayPaymentId } : {}),
       ...(dto.razorpaySignature ? { razorpaySignature: dto.razorpaySignature } : {})
     });
+  }
+
+  /**
+   * Called by the mobile app after the buyer returns from the Razorpay payment page.
+   * Proactively fetches the payment link status from Razorpay and activates escrow if paid,
+   * without waiting for Razorpay's webhook (which can lag 30s–2min).
+   */
+  async syncPaymentStatus(orderId: string, buyerUserId: string) {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: { payment: true }
+    });
+
+    if (!order) {
+      throw new NotFoundException(`Order ${orderId} was not found.`);
+    }
+
+    if (order.buyerId !== buyerUserId) {
+      throw new BadRequestException('Only the buyer can sync payment status.');
+    }
+
+    // If already past PAYMENT_PENDING, nothing to do — return current state.
+    if (order.status !== OrderStatus.PAYMENT_PENDING) {
+      return { synced: false, status: order.status };
+    }
+
+    const linkId = order.payment?.razorpayPaymentLinkId;
+    if (!linkId) {
+      // MOCK provider or no link yet — nothing to pull from Razorpay.
+      return { synced: false, status: order.status };
+    }
+
+    const { paid, razorpayPaymentId } = await this.paymentsService.checkPaymentLinkStatus(linkId);
+
+    if (!paid) {
+      return { synced: false, status: order.status };
+    }
+
+    this.logger.log(`syncPaymentStatus: payment confirmed via pull for order=${orderId}, activating escrow.`);
+    await this.activateEscrowForPaymentLink(linkId, razorpayPaymentId);
+
+    // Reload and return the updated status.
+    const updated = await this.prisma.order.findUnique({ where: { id: orderId } });
+    return { synced: true, status: updated?.status ?? order.status };
   }
 
   async activateEscrowForPaymentLink(paymentLinkId: string, razorpayPaymentId?: string) {

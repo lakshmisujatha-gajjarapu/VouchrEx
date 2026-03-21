@@ -1,10 +1,12 @@
 import { Controller, Headers, Logger, Post, Req, UnauthorizedException } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import { SkipThrottle } from '@nestjs/throttler';
 import type { RawBodyRequest } from '@nestjs/common';
 import type { Request } from 'express';
 
 import { WebhooksService } from './webhooks.service';
 
+@SkipThrottle()
 @ApiTags('webhooks')
 @Controller('webhooks')
 export class WebhooksController {

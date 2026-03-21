@@ -10,7 +10,7 @@ export function LoadingScreen({ label }: { readonly label: string }) {
     <View className="flex-1 items-center justify-center gap-3 bg-background dark:bg-background-dark">
       <ActivityIndicator color={theme.colors.brand} size="large" />
       <Text
-        className="font-ui text-body font-semibold"
+        className="font-body text-body font-semibold"
         style={{ color: theme.colors.inkMuted }}>
         {label}
       </Text>

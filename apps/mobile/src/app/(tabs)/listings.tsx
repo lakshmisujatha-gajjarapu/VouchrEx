@@ -354,7 +354,7 @@ export default function ListingsScreen() {
         ]}>
         <Ionicons color={theme.colors.inkMuted} name="search-outline" size={18} />
         <TextInput
-          className="flex-1 font-ui text-body"
+          className="flex-1 font-label text-body"
           onChangeText={setSearchQuery}
           placeholder="Search by brand or type"
           placeholderTextColor={theme.colors.inkMuted}
@@ -388,7 +388,7 @@ export default function ListingsScreen() {
             size={13}
           />
           <Text
-            className="font-ui text-caption font-bold"
+            className="font-label text-caption font-bold"
             style={{ color: tab === 'live' ? theme.colors.brand : theme.colors.inkMuted }}>
             {tab === 'live' ? 'Live' : 'History'}
           </Text>

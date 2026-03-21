@@ -219,10 +219,10 @@ export default function EditListingScreen() {
       <View className="flex-1" style={{ backgroundColor: theme.colors.background }}>
         <SafeAreaView className="flex-1" edges={['top', 'left', 'right']}>
           <View style={{ flex: 1, paddingHorizontal: 20, paddingTop: 12, gap: 12 }}>
-            <Text className="font-ui text-caption font-extrabold uppercase tracking-[0.6px]" style={{ color: theme.colors.brand }}>
+            <Text className="font-label text-caption font-extrabold uppercase tracking-[0.6px]" style={{ color: theme.colors.brand }}>
               Listings
             </Text>
-            <Text className="font-display text-[26px] font-bold leading-[30px]" style={{ color: theme.colors.ink }}>
+            <Text className="font-headline text-[26px] font-bold leading-[30px]" style={{ color: theme.colors.ink }}>
               Edit listing
             </Text>
             <Text className="text-body" style={{ color: theme.colors.danger }}>
@@ -251,10 +251,10 @@ export default function EditListingScreen() {
             showsVerticalScrollIndicator={false}>
             <View style={{ flex: 1, paddingHorizontal: 20, paddingTop: 8, paddingBottom: 16, gap: 12 }}>
               <View>
-                <Text className="font-ui text-caption font-extrabold uppercase tracking-[0.6px]" style={{ color: theme.colors.brand }}>
+                <Text className="font-label text-caption font-extrabold uppercase tracking-[0.6px]" style={{ color: theme.colors.brand }}>
                   Listings
                 </Text>
-                <Text className="font-display text-[26px] font-bold leading-[30px]" style={{ color: theme.colors.ink }}>
+                <Text className="font-headline text-[26px] font-bold leading-[30px]" style={{ color: theme.colors.ink }}>
                   Edit listing
                 </Text>
                 <Text className="mt-1 text-caption" style={{ color: theme.colors.inkMuted }}>
@@ -275,7 +275,7 @@ export default function EditListingScreen() {
                   elevation: 2,
                   padding: 16,
                 }}>
-                <Text className="mb-2 font-ui text-caption font-extrabold uppercase tracking-[0.5px]" style={{ color: theme.colors.brand }}>
+                <Text className="mb-2 font-label text-caption font-extrabold uppercase tracking-[0.5px]" style={{ color: theme.colors.brand }}>
                   Brand {brandName.trim() ? `· ${brandName.trim()}` : ''}
                 </Text>
                 <View
@@ -290,7 +290,7 @@ export default function EditListingScreen() {
                   }}>
                   <Ionicons color={theme.colors.inkMuted} name="search-outline" size={15} />
                   <TextInput
-                    className="flex-1 font-ui"
+                    className="flex-1 font-label"
                     onChangeText={setBrandName}
                     placeholder="Enter brand name"
                     placeholderTextColor={theme.colors.inkMuted}
@@ -335,7 +335,7 @@ export default function EditListingScreen() {
 
                 {divider}
 
-                <Text className="mb-2 font-ui text-caption font-extrabold uppercase tracking-[0.5px]" style={{ color: theme.colors.brand }}>
+                <Text className="mb-2 font-label text-caption font-extrabold uppercase tracking-[0.5px]" style={{ color: theme.colors.brand }}>
                   Type
                 </Text>
                 <View className="flex-row flex-wrap gap-1">
@@ -353,7 +353,7 @@ export default function EditListingScreen() {
 
                 {divider}
 
-                <Text className="mb-2 font-ui text-caption font-extrabold uppercase tracking-[0.5px]" style={{ color: theme.colors.brand }}>
+                <Text className="mb-2 font-label text-caption font-extrabold uppercase tracking-[0.5px]" style={{ color: theme.colors.brand }}>
                   Pricing {discount > 0 ? `· ${String(discount)}% off` : ''}
                 </Text>
                 <View className="mb-2 flex-row gap-2">

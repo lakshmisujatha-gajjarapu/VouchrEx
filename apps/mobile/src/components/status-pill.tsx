@@ -44,7 +44,7 @@ export function StatusPill({
                   color: theme.colors.warning,
                 }
               : {
-                  backgroundColor: theme.colors.surfaceRaised,
+                  backgroundColor: theme.colors.surfaceHigh,
                   borderColor: theme.colors.border,
                   color: theme.colors.inkMuted,
                 };
@@ -57,7 +57,7 @@ export function StatusPill({
         borderColor: palette.borderColor,
       }}>
       <Text
-        className="font-ui text-caption font-bold tracking-[0.2px]"
+        className="font-label text-caption font-bold tracking-[0.2px]"
         style={{ color: palette.color }}>
         {label}
       </Text>

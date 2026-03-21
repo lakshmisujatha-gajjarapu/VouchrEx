@@ -167,6 +167,8 @@ function resolveApiBaseUrl() {
 
 export const apiBaseUrl = resolveApiBaseUrl();
 
+const REQUEST_TIMEOUT_MS = 15_000;
+
 async function apiRequest<T>(path: string, options: RequestOptions = {}) {
   const query = new URLSearchParams();
   for (const [key, value] of Object.entries(options.query ?? {})) {
@@ -175,18 +177,32 @@ async function apiRequest<T>(path: string, options: RequestOptions = {}) {
     }
   }
 
-  const response = await fetch(
-    `${apiBaseUrl}${path}${query.size > 0 ? `?${query.toString()}` : ''}`,
-    {
-      method: options.method ?? 'GET',
-      headers: {
-        Accept: 'application/json',
-        ...(options.body ? { 'Content-Type': 'application/json' } : {}),
-        ...(options.sessionToken ? { [sessionHeaderName]: options.sessionToken } : {})
-      },
-      ...(options.body ? { body: JSON.stringify(options.body) } : {})
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => { controller.abort(); }, REQUEST_TIMEOUT_MS);
+
+  let response: Response;
+  try {
+    response = await fetch(
+      `${apiBaseUrl}${path}${query.size > 0 ? `?${query.toString()}` : ''}`,
+      {
+        method: options.method ?? 'GET',
+        headers: {
+          Accept: 'application/json',
+          ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+          ...(options.sessionToken ? { [sessionHeaderName]: options.sessionToken } : {})
+        },
+        ...(options.body ? { body: JSON.stringify(options.body) } : {}),
+        signal: controller.signal,
+      }
+    );
+  } catch (e) {
+    if (e instanceof Error && e.name === 'AbortError') {
+      throw new ApiError('Request timed out. Check your connection and try again.', 408);
     }
-  );
+    throw new ApiError('Could not reach the server. Check your connection.', 0);
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   const payload = (await response.json().catch(() => null)) as
     | { readonly message?: string | readonly string[] }
@@ -349,6 +365,12 @@ export const api = {
       method: 'POST',
       sessionToken,
       body: input
+    });
+  },
+  syncPayment(sessionToken: string, orderId: string) {
+    return apiRequest<{ readonly synced: boolean; readonly status: string }>(`/orders/${orderId}/payments/sync`, {
+      method: 'POST',
+      sessionToken
     });
   },
   revealCode(sessionToken: string, orderId: string) {

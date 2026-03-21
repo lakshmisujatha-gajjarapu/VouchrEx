@@ -2,6 +2,7 @@ import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ZodValidationPipe, patchNestJsSwagger } from 'nestjs-zod';
+import helmet from 'helmet';
 
 import { AppModule } from './modules/app.module';
 
@@ -32,6 +33,35 @@ async function bootstrap() {
   patchNestJsSwagger();
 
   const app = await NestFactory.create(AppModule, { rawBody: true });
+
+  // Trust Nginx reverse proxy — required for correct client IP in throttler/logs
+  const expressApp = app.getHttpAdapter().getInstance() as { set: (key: string, value: unknown) => void };
+  expressApp.set('trust proxy', 'loopback');
+
+  // Security headers — tuned for a JSON API (no browser rendering)
+  app.use(helmet({
+    contentSecurityPolicy: false,      // irrelevant for JSON API
+    crossOriginEmbedderPolicy: false,  // would break Swagger UI
+    hsts: {
+      maxAge: 31536000,                // 1 year
+      includeSubDomains: true,
+      preload: true,
+    },
+  }));
+
+  // CORS — allow the mobile app origins; tighten ALLOWED_ORIGINS in prod
+  const rawOrigins = process.env.ALLOWED_ORIGINS ?? '';
+  const allowedOrigins = rawOrigins
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean);
+
+  app.enableCors({
+    origin: allowedOrigins.length > 0 ? allowedOrigins : false,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'x-session-token', 'x-admin-token'],
+    credentials: false,
+  });
 
   app.useGlobalPipes(new ZodValidationPipe());
 

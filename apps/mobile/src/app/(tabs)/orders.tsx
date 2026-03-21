@@ -18,9 +18,39 @@ function nextStepForOrder(status: string, segment: 'buying' | 'selling') {
   if (status === 'PAYMENT_PENDING')  return segment === 'buying' ? 'Pay to secure your order' : 'Waiting for buyer payment';
   if (status === 'ESCROW_ACTIVE')    return segment === 'buying' ? 'Reveal the voucher' : 'Payment secured';
   if (status === 'CODE_REVEALED')    return segment === 'buying' ? 'Verify or dispute' : 'Waiting for buyer confirmation';
-  if (status === 'DISPUTED')         return 'Awaiting dispute resolution';
-  if (status === 'CONFIRMED' || status === 'AUTO_CONFIRMED') return 'Payment sent to seller';
+  if (status === 'DISPUTED')         return 'Dispute in review';
+  if (status === 'CONFIRMED' || status === 'AUTO_CONFIRMED') return segment === 'buying' ? 'Order settled' : 'Payout released';
+  if (status === 'CANCELLED')        return 'Order cancelled';
+  if (status === 'PAYMENT_FAILED')   return 'Payment failed';
   return 'No action required';
+}
+
+function escrowPillLabel(status: string): string {
+  if (status === 'PAYMENT_PENDING')  return 'Awaiting payment';
+  if (status === 'ESCROW_ACTIVE')    return 'Funds secured';
+  if (status === 'CODE_REVEALED')    return 'Code revealed';
+  if (status === 'DISPUTED')         return 'Dispute open';
+  if (status === 'CONFIRMED')        return 'Settled';
+  if (status === 'AUTO_CONFIRMED')   return 'Auto-settled';
+  if (status === 'CANCELLED')        return 'Cancelled';
+  if (status === 'PAYMENT_FAILED')   return 'Payment failed';
+  return 'Pending';
+}
+
+function escrowPillTone(status: string): 'neutral' | 'brand' | 'success' | 'danger' | 'warning' | 'trust' {
+  if (status === 'CANCELLED' || status === 'PAYMENT_FAILED' || status === 'DISPUTED') return 'danger';
+  if (status === 'CONFIRMED' || status === 'AUTO_CONFIRMED') return 'success';
+  if (status === 'ESCROW_ACTIVE' || status === 'CODE_REVEALED') return 'trust';
+  if (status === 'PAYMENT_PENDING') return 'warning';
+  return 'neutral';
+}
+
+function cardTone(status: string): 'neutral' | 'brand' | 'success' | 'danger' | 'warning' {
+  if (status === 'DISPUTED' || status === 'CANCELLED' || status === 'PAYMENT_FAILED') return 'danger';
+  if (status === 'CONFIRMED' || status === 'AUTO_CONFIRMED') return 'success';
+  if (status === 'PAYMENT_PENDING') return 'warning';
+  if (status === 'ESCROW_ACTIVE' || status === 'CODE_REVEALED') return 'brand';
+  return 'neutral';
 }
 
 export default function OrdersScreen() {
@@ -73,20 +103,15 @@ export default function OrdersScreen() {
         <TicketCard
           key={order.id}
           eyebrow={formatStatus(order.status)}
-          meta={formatCountdown(order.verificationDeadline)}
+          meta={order.status === 'CODE_REVEALED' ? formatCountdown(order.verificationDeadline) ?? 'Timer active' : undefined}
           onPress={() => { router.push(`/orders/${order.id}`); }}
           subtitle={`${order.listing.brand.name} • ${formatCurrency(order.amount)}`}
-          title={nextStepForOrder(order.status, segment === 'buying' ? 'buying' : 'selling')}
-          tone={
-            order.status === 'DISPUTED' ? 'danger' :
-            order.status === 'CONFIRMED' || order.status === 'AUTO_CONFIRMED' ? 'success' :
-            ['PAYMENT_PENDING', 'ESCROW_ACTIVE', 'CODE_REVEALED'].includes(order.status) ? 'brand' :
-            'neutral'
-          }>
+          title={nextStepForOrder(order.status, segment)}
+          tone={cardTone(order.status)}>
           <View className="mt-2 flex-row flex-wrap gap-2">
             <StatusPill
-              label={order.payment?.escrowStatus ? formatStatus(order.payment.escrowStatus) : 'Pending funding'}
-              tone={order.status === 'DISPUTED' ? 'danger' : 'trust'}
+              label={escrowPillLabel(order.status)}
+              tone={escrowPillTone(order.status)}
             />
             {segment === 'selling' ? <StatusPill label="Seller" tone="neutral" /> : null}
           </View>

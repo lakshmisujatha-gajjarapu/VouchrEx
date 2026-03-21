@@ -11,6 +11,7 @@ pnpm-lock.yaml
 apps/api/node_modules
 apps/mobile/node_modules
 apps/worker/node_modules
+apps/admin/node_modules
 apps/api/dist
 apps/mobile/dist
 apps/worker/dist
@@ -19,3 +20,23 @@ apps/api/generated
 **/.claude/
 .codex/
 *.tsbuildinfo
+
+# Next.js build output
+apps/admin/.next/
+apps/admin/out/
+
+# Expo / React Native build output
+apps/mobile/.expo/
+apps/mobile/android/
+apps/mobile/ios/
+apps/mobile/dist/
+
+# Design source files (Stitch tokens, HTML prototypes, screenshots)
+tokens_light/
+tokens_dark/
+
+# Terraform
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.backup
+terraform/environments/secrets.*.tfvars

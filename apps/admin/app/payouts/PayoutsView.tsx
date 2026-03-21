@@ -50,62 +50,84 @@ export default function PayoutsView({ payouts }: PayoutsViewProps) {
 
   if (payouts.length === 0) {
     return (
-      <div className="text-center py-16 text-muted-foreground">
-        <p className="text-lg font-medium">No pending payouts</p>
-        <p className="text-sm mt-1">All seller payouts have been processed.</p>
+      <div className="text-center py-16">
+        <p className="text-lg font-semibold" style={{ fontFamily: 'var(--font-headline)', color: 'var(--color-foreground)' }}>
+          No pending payouts
+        </p>
+        <p className="text-sm mt-1" style={{ color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}>
+          All seller payouts have been processed.
+        </p>
       </div>
     );
   }
 
   return (
     <>
-      <div className="overflow-x-auto rounded-xl border border-border bg-card">
-        <table className="w-full text-sm">
-          <thead className="bg-muted/50">
-            <tr>
-              {['Order ID', 'Seller', 'Brand', 'Seller Payout', 'Confirmed At', ''].map((h) => (
-                <th key={h} className="text-left px-4 py-3 font-medium text-muted-foreground whitespace-nowrap">
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {payouts.map((p) => (
-              <tr key={p.id} className="hover:bg-muted/30 transition-colors">
-                <td className="px-4 py-3 font-mono text-xs">{formatShortId(p.id)}</td>
-                <td className="px-4 py-3">{formatPhone(p.seller?.phone ?? '')}</td>
-                <td className="px-4 py-3 font-medium">{p.listing?.brand?.name ?? '—'}</td>
-                <td className="px-4 py-3 tabular-nums font-semibold">
-                  {formatCurrency(p.sellerPayout)}
-                </td>
-                <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
-                  {formatDate(p.createdAt)}
-                </td>
-                <td className="px-4 py-3">
-                  <Button size="sm" variant="success" onClick={() => setConfirm(p)}>
-                    Mark Paid
-                  </Button>
-                </td>
+      <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: 'var(--color-card)', boxShadow: '0 0 40px rgba(26,27,33,0.06)' }}>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr style={{ backgroundColor: 'var(--color-surface-raised)' }}>
+                {['Order ID', 'Seller', 'Brand', 'Seller Payout', 'Confirmed At', ''].map((h) => (
+                  <th key={h} className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-widest whitespace-nowrap"
+                    style={{ color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}>
+                    {h}
+                  </th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {payouts.map((p) => (
+                <tr key={p.id} className="transition-opacity hover:opacity-90"
+                  style={{ borderTop: '1px solid var(--color-surface-high)' }}>
+                  <td className="px-5 py-3.5 text-xs" style={{ fontFamily: 'var(--font-mono)', color: 'var(--color-muted-foreground)' }}>
+                    {formatShortId(p.id)}
+                  </td>
+                  <td className="px-5 py-3.5" style={{ fontFamily: 'var(--font-body)', color: 'var(--color-foreground)' }}>
+                    {formatPhone(p.seller?.phone ?? '')}
+                  </td>
+                  <td className="px-5 py-3.5 font-medium" style={{ fontFamily: 'var(--font-body)', color: 'var(--color-foreground)' }}>
+                    {p.listing?.brand?.name ?? '—'}
+                  </td>
+                  <td className="px-5 py-3.5 tabular-nums font-semibold" style={{ fontFamily: 'var(--font-mono)', color: 'var(--color-primary)' }}>
+                    {formatCurrency(p.sellerPayout)}
+                  </td>
+                  <td className="px-5 py-3.5 whitespace-nowrap" style={{ color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}>
+                    {formatDate(p.createdAt)}
+                  </td>
+                  <td className="px-5 py-3.5">
+                    <button
+                      onClick={() => setConfirm(p)}
+                      className="rounded-xl px-3 py-1.5 text-xs font-semibold transition-colors"
+                      style={{ backgroundColor: 'var(--color-success-soft)', color: 'var(--color-success)', fontFamily: 'var(--font-body)' }}
+                    >
+                      Mark Paid
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {confirm && (
         <Dialog open onOpenChange={() => setConfirm(null)}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>Confirm Payout</DialogTitle>
-              <DialogDescription>
-                Mark payout for order {formatShortId(confirm.id)} as complete?
+              <DialogTitle style={{ fontFamily: 'var(--font-headline)', fontWeight: 800 }}>
+                Confirm Payout
+              </DialogTitle>
+              <DialogDescription style={{ fontFamily: 'var(--font-body)' }}>
+                Mark payout for order {formatShortId(confirm.id)} as complete?{' '}
                 Seller: {formatPhone(confirm.seller?.phone ?? '')} —{' '}
-                {formatCurrency(confirm.sellerPayout)}
+                <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--color-primary)', fontWeight: 600 }}>
+                  {formatCurrency(confirm.sellerPayout)}
+                </span>
               </DialogDescription>
             </DialogHeader>
             {error && (
-              <p className="text-sm text-destructive bg-destructive/10 rounded-md px-3 py-2">
+              <p className="rounded-xl px-4 py-3 text-sm" style={{ backgroundColor: 'var(--color-destructive-soft)', color: 'var(--color-destructive)', fontFamily: 'var(--font-body)' }}>
                 {error}
               </p>
             )}

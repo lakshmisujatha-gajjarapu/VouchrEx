@@ -23,9 +23,9 @@ export function formatDateTime(value: string | Date) {
   }).format(new Date(value));
 }
 
-export function formatCountdown(value?: string | Date | null) {
+export function formatCountdown(value?: string | Date | null): string | undefined {
   if (!value) {
-    return 'Timer starts after reveal';
+    return undefined;
   }
 
   const msLeft = new Date(value).getTime() - Date.now();
