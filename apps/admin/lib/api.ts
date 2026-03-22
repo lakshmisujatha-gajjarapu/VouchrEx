@@ -23,13 +23,15 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
     headers: {
       'Content-Type': 'application/json',
       [ADMIN_HEADER]: token,
-      ...options?.headers,
+      ...(options?.headers instanceof Headers
+        ? Object.fromEntries(options.headers.entries())
+        : (options?.headers as Record<string, string> | undefined)),
     },
   });
 
   if (!res.ok) {
     const text = await res.text().catch(() => res.statusText);
-    throw new Error(`API ${res.status}: ${text}`);
+    throw new Error(`API ${String(res.status)}: ${text}`);
   }
 
   return res.json() as Promise<T>;

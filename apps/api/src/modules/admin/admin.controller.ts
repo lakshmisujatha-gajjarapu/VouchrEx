@@ -269,7 +269,8 @@ export class AdminController {
       return { success: false, message: 'Payout already processing — check Razorpay dashboard.' };
     }
 
-    const fundAccountId = order.seller.payoutAccount?.razorpayFundAccountId;
+    const payoutAccount = order.seller.payoutAccount;
+    const fundAccountId = payoutAccount?.razorpayFundAccountId;
     if (!fundAccountId) {
       return { success: false, message: 'Seller has no registered payout account.' };
     }
@@ -277,7 +278,9 @@ export class AdminController {
     try {
       const razorpayPayoutId = await this.paymentsService.executePayout(
         fundAccountId,
-        order.sellerPayout
+        order.sellerPayout,
+        orderId,
+        payoutAccount.type
       );
       const updated = await this.prisma.payment.update({
         where: { orderId },

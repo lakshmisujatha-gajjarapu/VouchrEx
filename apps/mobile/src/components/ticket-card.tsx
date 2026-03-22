@@ -52,7 +52,7 @@ export function TicketCard({
     resolvedTone === 'warning' ? theme.colors.warning :
     resolvedTone === 'success' ? theme.colors.success :
     resolvedTone === 'premium' ? theme.colors.gold :
-    theme.colors.actionFixed; // emerald stripe for brand + neutral
+    theme.colors.brand;
 
   // Eyebrow / meta label colour
   const eyebrowColor =

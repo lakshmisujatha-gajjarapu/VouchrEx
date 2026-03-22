@@ -284,6 +284,7 @@ export default function SignInScreen() {
                 loading={loading}
                 onPress={() => { void (otpRequest ? handleVerifyOtp() : handleRequestOtp()); }}
                 tone="brand"
+                variant="gradient"
               />
 
               {otpRequest ? (

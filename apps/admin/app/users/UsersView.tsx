@@ -110,7 +110,7 @@ export default function UsersView({ users }: UsersViewProps) {
                     <td className="px-5 py-3.5">
                       {u.status === 'ACTIVE' ? (
                         <button
-                          onClick={() => setConfirm({ user: u, action: 'suspend' })}
+                          onClick={() => { setConfirm({ user: u, action: 'suspend' }); }}
                           className="rounded-xl px-3 py-1.5 text-xs font-semibold transition-colors"
                           style={{ backgroundColor: 'var(--color-destructive-soft)', color: 'var(--color-destructive)', fontFamily: 'var(--font-body)' }}
                         >
@@ -118,7 +118,7 @@ export default function UsersView({ users }: UsersViewProps) {
                         </button>
                       ) : u.status === 'SUSPENDED' ? (
                         <button
-                          onClick={() => setConfirm({ user: u, action: 'reactivate' })}
+                          onClick={() => { setConfirm({ user: u, action: 'reactivate' }); }}
                           className="rounded-xl px-3 py-1.5 text-xs font-semibold transition-colors"
                           style={{ backgroundColor: 'var(--color-success-soft)', color: 'var(--color-success)', fontFamily: 'var(--font-body)' }}
                         >
@@ -135,7 +135,7 @@ export default function UsersView({ users }: UsersViewProps) {
       </div>
 
       {confirm && (
-        <Dialog open onOpenChange={() => setConfirm(null)}>
+        <Dialog open onOpenChange={() => { setConfirm(null); }}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle style={{ fontFamily: 'var(--font-headline)', fontWeight: 800 }}>
@@ -153,7 +153,7 @@ export default function UsersView({ users }: UsersViewProps) {
               </p>
             )}
             <DialogFooter className="gap-2">
-              <Button variant="outline" onClick={() => setConfirm(null)} disabled={isPending}>
+              <Button variant="outline" onClick={() => { setConfirm(null); }} disabled={isPending}>
                 Cancel
               </Button>
               <Button

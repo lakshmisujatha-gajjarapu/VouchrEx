@@ -90,10 +90,10 @@ export default async function OrdersPage({ searchParams }: PageProps) {
                       {formatShortId(o.id)}
                     </td>
                     <td className="px-5 py-3.5 font-medium" style={{ fontFamily: 'var(--font-body)', color: 'var(--color-foreground)' }}>
-                      {o.listing?.brand?.name ?? '—'}
+                      {o.listing.brand.name}
                     </td>
                     <td className="px-5 py-3.5" style={{ fontFamily: 'var(--font-body)', color: 'var(--color-foreground)' }}>
-                      {formatPhone(o.buyer?.phone ?? '')}
+                      {formatPhone(o.buyer.phone)}
                     </td>
                     <td className="px-5 py-3.5 tabular-nums" style={{ fontFamily: 'var(--font-mono)', color: 'var(--color-foreground)' }}>
                       {o.payment ? formatCurrency(o.payment.amount) : '—'}

@@ -1,4 +1,3 @@
-import { Users } from 'lucide-react';
 import { getUsers } from '@/lib/api';
 import UsersView from './UsersView';
 import type { Metadata } from 'next';

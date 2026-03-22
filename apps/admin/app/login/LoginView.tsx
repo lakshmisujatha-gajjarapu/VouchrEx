@@ -10,7 +10,7 @@ export default function LoginView() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     setError('');
     if (!token.trim()) { setError('Please enter the admin token.'); return; }
@@ -106,7 +106,7 @@ export default function LoginView() {
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={(e) => { void handleSubmit(e); }} className="space-y-4">
             <div className="space-y-2">
               <label htmlFor="token" className="block text-xs font-semibold uppercase tracking-widest"
                 style={{ color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}>
@@ -117,7 +117,7 @@ export default function LoginView() {
                 type="password"
                 placeholder="Paste your ADMIN_API_TOKEN"
                 value={token}
-                onChange={(e) => setToken(e.target.value)}
+                onChange={(e) => { setToken(e.target.value); }}
                 autoFocus
                 autoComplete="current-password"
                 className="w-full h-14 rounded-2xl px-4 text-sm transition-all outline-none"

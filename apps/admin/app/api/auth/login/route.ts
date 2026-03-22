@@ -5,7 +5,7 @@ import { AUTH_CONFIG, API_CONFIG, ADMIN_HEADER } from '@/lib/constants';
 export async function POST(request: NextRequest) {
   const { token } = (await request.json()) as { token: string };
 
-  if (!token?.trim()) {
+  if (!token.trim()) {
     return NextResponse.json({ error: 'Token is required' }, { status: 400 });
   }
 

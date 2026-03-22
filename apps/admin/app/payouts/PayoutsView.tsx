@@ -84,10 +84,10 @@ export default function PayoutsView({ payouts }: PayoutsViewProps) {
                     {formatShortId(p.id)}
                   </td>
                   <td className="px-5 py-3.5" style={{ fontFamily: 'var(--font-body)', color: 'var(--color-foreground)' }}>
-                    {formatPhone(p.seller?.phone ?? '')}
+                    {formatPhone(p.seller.phone)}
                   </td>
                   <td className="px-5 py-3.5 font-medium" style={{ fontFamily: 'var(--font-body)', color: 'var(--color-foreground)' }}>
-                    {p.listing?.brand?.name ?? '—'}
+                    {p.listing.brand.name}
                   </td>
                   <td className="px-5 py-3.5 tabular-nums font-semibold" style={{ fontFamily: 'var(--font-mono)', color: 'var(--color-primary)' }}>
                     {formatCurrency(p.sellerPayout)}
@@ -97,7 +97,7 @@ export default function PayoutsView({ payouts }: PayoutsViewProps) {
                   </td>
                   <td className="px-5 py-3.5">
                     <button
-                      onClick={() => setConfirm(p)}
+                      onClick={() => { setConfirm(p); }}
                       className="rounded-xl px-3 py-1.5 text-xs font-semibold transition-colors"
                       style={{ backgroundColor: 'var(--color-success-soft)', color: 'var(--color-success)', fontFamily: 'var(--font-body)' }}
                     >
@@ -112,7 +112,7 @@ export default function PayoutsView({ payouts }: PayoutsViewProps) {
       </div>
 
       {confirm && (
-        <Dialog open onOpenChange={() => setConfirm(null)}>
+        <Dialog open onOpenChange={() => { setConfirm(null); }}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle style={{ fontFamily: 'var(--font-headline)', fontWeight: 800 }}>
@@ -120,7 +120,7 @@ export default function PayoutsView({ payouts }: PayoutsViewProps) {
               </DialogTitle>
               <DialogDescription style={{ fontFamily: 'var(--font-body)' }}>
                 Mark payout for order {formatShortId(confirm.id)} as complete?{' '}
-                Seller: {formatPhone(confirm.seller?.phone ?? '')} —{' '}
+                Seller: {formatPhone(confirm.seller.phone)} —{' '}
                 <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--color-primary)', fontWeight: 600 }}>
                   {formatCurrency(confirm.sellerPayout)}
                 </span>
@@ -132,7 +132,7 @@ export default function PayoutsView({ payouts }: PayoutsViewProps) {
               </p>
             )}
             <DialogFooter className="gap-2">
-              <Button variant="outline" onClick={() => setConfirm(null)} disabled={isPending}>
+              <Button variant="outline" onClick={() => { setConfirm(null); }} disabled={isPending}>
                 Cancel
               </Button>
               <Button variant="success" onClick={markPaid} disabled={isPending}>

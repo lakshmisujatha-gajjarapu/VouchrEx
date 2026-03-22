@@ -88,26 +88,31 @@ export function FloatingTabBar() {
                 flex: 1,
                 alignItems: 'center',
                 justifyContent: 'center',
-                paddingVertical: 4,
                 opacity: pressed ? 0.6 : 1,
               })}>
-              <Ionicons
-                color={isActive ? theme.colors.brand : theme.colors.inkMuted}
-                name={isActive ? tab.iconActive : tab.icon}
-                size={22}
-              />
-              <Text
-                numberOfLines={1}
-                style={{
-                  fontSize: 10,
-                  fontWeight: '600',
-                  letterSpacing: 0,
-                  marginTop: 2,
-                  color: isActive ? theme.colors.brand : theme.colors.inkMuted,
-                  fontFamily: theme.fontFamily.label,
+              {isActive ? (
+                <View style={{
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  paddingVertical: 8,
+                  paddingHorizontal: 16,
+                  borderRadius: 9999,
+                  backgroundColor: theme.colors.brandSoft,
+                  gap: 2,
                 }}>
-                {tab.name}
-              </Text>
+                  <Ionicons color={theme.colors.brand} name={tab.iconActive} size={22} />
+                  <Text numberOfLines={1} style={{ fontSize: 10, fontWeight: '600', letterSpacing: 0, color: theme.colors.brand, fontFamily: theme.fontFamily.label }}>
+                    {tab.name}
+                  </Text>
+                </View>
+              ) : (
+                <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 8, paddingHorizontal: 16, gap: 2 }}>
+                  <Ionicons color={theme.colors.inkMuted} name={tab.icon} size={22} />
+                  <Text numberOfLines={1} style={{ fontSize: 10, fontWeight: '600', letterSpacing: 0, color: theme.colors.inkMuted, fontFamily: theme.fontFamily.label }}>
+                    {tab.name}
+                  </Text>
+                </View>
+              )}
             </Pressable>
           );
         })}

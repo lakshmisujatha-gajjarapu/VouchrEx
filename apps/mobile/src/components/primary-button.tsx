@@ -4,16 +4,22 @@ import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
 import { useTheme } from '@/theme/ThemeContext';
 
+/**
+ * variant='flat'     (default) — solid brand bg + dark text. Used for all in-app CTAs.
+ * variant='gradient' — deep-purple gradient + white text. Used on sign-in / onboarding only.
+ */
 export function PrimaryButton({
   label,
   onPress,
   tone = 'action',
+  variant = 'flat',
   disabled = false,
   loading = false,
 }: {
   readonly label: string;
   readonly onPress: () => void;
   readonly tone?: 'action' | 'brand' | 'secondary' | 'danger';
+  readonly variant?: 'flat' | 'gradient';
   readonly disabled?: boolean;
   readonly loading?: boolean;
 }) {
@@ -25,29 +31,28 @@ export function PrimaryButton({
     text: theme.colors.inkMuted,
   };
 
-  // Gradient configs for brand/action tones
-  const gradientColors: Record<string, readonly [string, string]> = {
-    brand: [theme.colors.brandBright, theme.colors.brand],
-    action: [theme.colors.actionBright, theme.colors.action],
-  };
+  // Flat configs per tone — brand/action use theme colors, secondary/danger have their own style
+  const flatBrandBg   = tone === 'action' ? theme.colors.action : theme.colors.brand;
+  // text on brand/action flat: use surface (dark in dark-mode, white in light-mode) for contrast
+  const flatBrandText = theme.colors.surface;
 
   const flatCfg =
     tone === 'secondary'
       ? { bg: theme.colors.brandSoft, border: theme.colors.brandBright, text: theme.colors.brand }
       : tone === 'danger'
         ? { bg: theme.colors.danger, border: theme.colors.danger, text: theme.colors.white }
-        : null; // brand/action use gradient
+        : { bg: flatBrandBg, border: 'transparent', text: flatBrandText }; // brand | action flat
 
-  const cfg = disabled ? disabledCfg : flatCfg;
-  const useGradient = !disabled && (tone === 'brand' || tone === 'action');
+  // Gradient configs (sign-in / gradient variant only)
+  const gradientColors: Record<string, readonly [string, string]> = {
+    brand:  ['#8B5CF6', '#6D28D9'],
+    action: [theme.colors.actionBright, theme.colors.action],
+  };
 
-  const textColor = disabled
-    ? disabledCfg.text
-    : tone === 'secondary'
-      ? theme.colors.brand
-      : tone === 'danger'
-        ? theme.colors.white
-        : theme.colors.white;
+  const useGradient = variant === 'gradient' && !disabled && (tone === 'brand' || tone === 'action');
+
+  const cfg       = disabled ? disabledCfg : flatCfg;
+  const textColor = disabled ? disabledCfg.text : cfg.text;
 
   const shadowColor = disabled
     ? 'transparent'
@@ -67,19 +72,19 @@ export function PrimaryButton({
       style={({ pressed }) => ({
         width: '100%',
         shadowColor,
-        shadowOffset: { width: 0, height: disabled ? 0 : 10 },
-        shadowOpacity: disabled ? 0 : tone === 'secondary' ? 0.12 : 0.28,
-        shadowRadius: disabled ? 0 : tone === 'secondary' ? 16 : 20,
-        elevation: disabled ? 0 : tone === 'secondary' ? 2 : 5,
-        opacity: loading ? 0.6 : pressed ? 0.88 : 1,
-        transform: [{ scale: pressed && !disabled && !loading ? 0.985 : 1 }],
+        shadowOffset: { width: 0, height: disabled ? 0 : 6 },
+        shadowOpacity: disabled ? 0 : tone === 'secondary' ? 0.12 : useGradient ? 0.38 : 0.22,
+        shadowRadius: disabled ? 0 : tone === 'secondary' ? 16 : useGradient ? 22 : 14,
+        elevation: disabled ? 0 : tone === 'secondary' ? 2 : 4,
+        opacity: loading ? 0.7 : pressed ? 0.88 : 1,
+        transform: [{ scale: pressed && !disabled && !loading ? 0.982 : 1 }],
         borderRadius: 16,
         overflow: 'hidden',
       })}>
       {useGradient ? (
         <LinearGradient
-          colors={gradientColors[tone] ?? [theme.colors.brandBright, theme.colors.brand]}
-          end={{ x: 1, y: 1 }}
+          colors={gradientColors[tone] ?? ['#8B5CF6', '#6D28D9']}
+          end={{ x: 0.6, y: 1 }}
           start={{ x: 0, y: 0 }}
           style={{
             minHeight: 56,
@@ -89,10 +94,21 @@ export function PrimaryButton({
             justifyContent: 'center',
             paddingHorizontal: 16,
           }}>
+          {/* Top sheen — glass highlight */}
+          <LinearGradient
+            colors={['rgba(255,255,255,0.18)', 'rgba(255,255,255,0)']}
+            end={{ x: 0.5, y: 1 }}
+            pointerEvents="none"
+            start={{ x: 0.5, y: 0 }}
+            style={{
+              position: 'absolute', top: 0, left: 0, right: 0, height: '55%',
+              borderTopLeftRadius: 16, borderTopRightRadius: 16,
+            }}
+          />
           {loading
             ? <ActivityIndicator color={theme.colors.white} />
             : (
-                <Text style={{ color: theme.colors.white, fontSize: 16, fontWeight: '700', fontFamily: 'WorkSans_600SemiBold', letterSpacing: 0.1 }}>
+                <Text style={{ color: theme.colors.white, fontSize: 16, fontWeight: '700', fontFamily: 'WorkSans_600SemiBold', letterSpacing: 0.2 }}>
                   {label}
                 </Text>
               )}
@@ -103,17 +119,17 @@ export function PrimaryButton({
             minHeight: 56,
             width: '100%',
             borderRadius: 16,
-            borderWidth: 1.5,
+            borderWidth: tone === 'secondary' || disabled ? 1.5 : 0,
             paddingHorizontal: 16,
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: cfg?.bg ?? theme.colors.surfaceTray,
-            borderColor: cfg?.border ?? theme.colors.border,
+            backgroundColor: cfg.bg,
+            borderColor: 'border' in cfg ? cfg.border : 'transparent',
           }}>
           {loading
             ? <ActivityIndicator color={textColor} />
             : (
-                <Text style={{ color: textColor, fontSize: 16, fontWeight: '700', letterSpacing: 0.1 }}>
+                <Text style={{ color: textColor, fontSize: 16, fontWeight: '700', fontFamily: 'WorkSans_600SemiBold', letterSpacing: 0.2 }}>
                   {label}
                 </Text>
               )}

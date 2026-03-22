@@ -46,14 +46,25 @@ export default function InboxScreen() {
   useRefetchOnFocus(useCallback(() => { void notificationsResource.reload(); }, [notificationsResource.reload]));
 
   async function handleMarkRead(id: string) {
-    if (!sessionToken) {
-      return;
-    }
-
+    if (!sessionToken) return;
     const next = await api.markNotificationRead(sessionToken, id);
     notificationsResource.setData((previous) =>
       previous?.map((item) => (item.id === id ? next : item)) ?? [next],
     );
+  }
+
+  async function handleMarkAllRead() {
+    if (!sessionToken) return;
+    await api.markAllNotificationsRead(sessionToken);
+    notificationsResource.setData((previous) =>
+      previous?.map((item) => ({ ...item, status: 'READ' as const })) ?? [],
+    );
+  }
+
+  async function handleClearAll() {
+    if (!sessionToken) return;
+    await api.clearAllNotifications(sessionToken);
+    notificationsResource.setData(() => []);
   }
 
   return (
@@ -103,6 +114,23 @@ export default function InboxScreen() {
 
       {notificationsResource.loading && !notificationsResource.data ? (
         <ActivityIndicator color={theme.colors.brand} />
+      ) : null}
+
+      {notificationsResource.data && notificationsResource.data.length > 0 ? (
+        <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 16 }}>
+          {notificationsResource.data.some((n) => n.status !== 'READ') ? (
+            <Pressable onPress={() => { void handleMarkAllRead(); }}>
+              <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 13, color: theme.colors.brand }}>
+                Mark all read
+              </Text>
+            </Pressable>
+          ) : null}
+          <Pressable onPress={() => { void handleClearAll(); }}>
+            <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 13, color: theme.colors.danger }}>
+              Clear all
+            </Text>
+          </Pressable>
+        </View>
       ) : null}
 
       {notificationsResource.data?.map((notification) => (

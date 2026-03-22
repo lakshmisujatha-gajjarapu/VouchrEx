@@ -109,7 +109,7 @@ export function Navigation() {
               id="cb-theme"
               suppressHydrationWarning
               value={theme ?? 'system'}
-              onChange={(e) => setTheme(e.target.value)}
+              onChange={(e) => { setTheme(e.target.value); }}
               className="w-full h-9 rounded-xl px-3 text-sm transition-colors focus:outline-none"
               style={{
                 border: 'none',
@@ -124,7 +124,7 @@ export function Navigation() {
             </select>
           </div>
           <button
-            onClick={() => setLogoutDialogOpen(true)}
+            onClick={() => { setLogoutDialogOpen(true); }}
             className="flex items-center gap-3 w-full h-11 px-4 rounded-xl transition-colors hover:opacity-80"
             style={{ color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}
           >
@@ -143,8 +143,8 @@ export function Navigation() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex gap-3">
-            <Button variant="outline" onClick={() => setLogoutDialogOpen(false)}>Cancel</Button>
-            <Button variant="destructive" onClick={handleLogout}>Logout</Button>
+            <Button variant="outline" onClick={() => { setLogoutDialogOpen(false); }}>Cancel</Button>
+            <Button variant="destructive" onClick={() => { void handleLogout(); }}>Logout</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

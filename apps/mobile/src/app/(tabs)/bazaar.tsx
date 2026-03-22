@@ -10,8 +10,6 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-import { StatusPill } from '@/components/status-pill';
 import { TrustBadge } from '@/components/trust-badge';
 import { useAsyncResource } from '@/hooks/use-async-resource';
 import { api } from '@/lib/api';
@@ -142,7 +140,7 @@ export default function BazaarScreen() {
                     fontFamily: theme.fontFamily.labelSemi,
                     fontSize: 13,
                     fontWeight: '600',
-                    color: active ? '#FFFFFF' : theme.colors.inkMuted,
+                    color: active ? '#2D1465' : theme.colors.inkMuted,
                   }}>
                     {sortLabel(option)}
                   </Text>
@@ -211,8 +209,8 @@ export default function BazaarScreen() {
                   elevation: 2,
                   opacity: pressed ? 0.92 : 1,
                 })}>
-                {/* Accent stripe — actionFixed (emerald #85F8C4) */}
-                <View style={{ position: 'absolute', left: 0, top: 24, bottom: 24, width: 6, backgroundColor: theme.colors.actionFixed, borderTopRightRadius: 6, borderBottomRightRadius: 6 }} />
+                {/* Accent stripe */}
+                <View style={{ position: 'absolute', left: 0, top: 24, bottom: 24, width: 6, backgroundColor: theme.colors.brand, borderTopRightRadius: 6, borderBottomRightRadius: 6 }} />
 
                 <View style={{ padding: 20 }}>
                   {/* Top row: icon + verified badge */}
@@ -228,11 +226,11 @@ export default function BazaarScreen() {
                     </View>
                     <View style={{
                       flexDirection: 'row', alignItems: 'center', gap: 4,
-                      backgroundColor: `${theme.colors.actionFixed}22`,
+                      backgroundColor: theme.colors.brandSoft,
                       paddingHorizontal: 10, paddingVertical: 4, borderRadius: 9999,
                     }}>
-                      <Ionicons name="checkmark-circle" size={12} color={theme.colors.action} />
-                      <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 10, fontWeight: '700', color: theme.colors.action, textTransform: 'uppercase', letterSpacing: 0.6 }}>
+                      <Ionicons name="checkmark-circle" size={12} color={theme.colors.brand} />
+                      <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 10, fontWeight: '700', color: theme.colors.brand, textTransform: 'uppercase', letterSpacing: 0.6 }}>
                         Verified
                       </Text>
                     </View>

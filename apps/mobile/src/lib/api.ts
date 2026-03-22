@@ -63,15 +63,9 @@ export type Listing = {
 };
 
 export type Checkout = {
-  readonly provider: 'MOCK' | 'RAZORPAY';
-  // MOCK fields
-  readonly orderId?: string;
-  readonly amount?: number;
-  readonly currency?: string;
-  readonly receipt?: string;
-  // RAZORPAY payment link fields
-  readonly paymentLinkUrl?: string;
-  readonly paymentLinkId?: string;
+  readonly provider: 'RAZORPAY';
+  readonly paymentLinkUrl: string;
+  readonly paymentLinkId: string;
 };
 
 export type Payment = {
@@ -80,7 +74,7 @@ export type Payment = {
   readonly method: string;
   readonly status: string;
   readonly escrowStatus: string;
-  readonly provider: 'MOCK' | 'RAZORPAY';
+  readonly provider: 'RAZORPAY';
   readonly currency: string;
   readonly razorpayOrderId?: string | null;
   readonly razorpayPaymentId?: string | null;
@@ -422,6 +416,12 @@ export const api = {
     return apiRequest<readonly NotificationItem[]>('/notifications', {
       sessionToken
     });
+  },
+  markAllNotificationsRead(sessionToken: string) {
+    return apiRequest<undefined>('/notifications/read-all', { method: 'POST', sessionToken });
+  },
+  clearAllNotifications(sessionToken: string) {
+    return apiRequest<undefined>('/notifications', { method: 'DELETE', sessionToken });
   },
   markNotificationRead(sessionToken: string, notificationId: string) {
     return apiRequest<NotificationItem>(`/notifications/${notificationId}/read`, {

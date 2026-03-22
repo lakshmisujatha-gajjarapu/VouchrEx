@@ -254,7 +254,7 @@ export class OrdersService {
 
       return {
         order,
-        checkout
+        checkout: { provider: 'RAZORPAY' as const, ...checkout }
       };
     } catch (error) {
       await this.prisma.$transaction(async (tx) => {
@@ -303,7 +303,7 @@ export class OrdersService {
 
     return {
       order,
-      checkout
+      checkout: { provider: 'RAZORPAY' as const, ...checkout }
     };
   }
 
@@ -1069,6 +1069,48 @@ export class OrdersService {
   }
 
   /**
+   * Called by the webhook handler when RazorpayX fires payout.processed,
+   * payout.failed, or payout.reversed.
+   */
+  async handlePayoutWebhook(
+    razorpayPayoutId: string,
+    event: 'payout.processed' | 'payout.failed' | 'payout.reversed'
+  ): Promise<void> {
+    const payment = await this.prisma.payment.findFirst({
+      where: { razorpayPayoutId }
+    });
+
+    if (!payment) {
+      this.logger.warn(`handlePayoutWebhook: no payment found for razorpayPayoutId=${razorpayPayoutId}`);
+      return;
+    }
+
+    if (event === 'payout.processed') {
+      await this.prisma.payment.update({
+        where: { id: payment.id },
+        data: { payoutStatus: PayoutStatus.COMPLETED, payoutCompletedAt: new Date() }
+      });
+      this.logger.log(`Payout completed: ${razorpayPayoutId} orderId=${payment.orderId}`);
+    } else {
+      const reason = event === 'payout.reversed' ? 'reversed by bank' : 'payout failed';
+      await this.prisma.payment.update({
+        where: { id: payment.id },
+        data: { payoutStatus: PayoutStatus.FAILED, payoutFailureReason: reason }
+      });
+      await this.prisma.auditLog.create({
+        data: {
+          entityType: 'payment',
+          entityId: payment.id,
+          action: 'payment.payout_failed',
+          actorId: null,
+          metadata: { orderId: payment.orderId, razorpayPayoutId, event, reason }
+        }
+      });
+      this.logger.error(`Payout ${event}: ${razorpayPayoutId} orderId=${payment.orderId}`);
+    }
+  }
+
+  /**
    * HLD Scenario 4 — voucher expiry during escrow.
    * Finds ESCROW_ACTIVE / CODE_REVEALED orders where the underlying voucher
    * has expired. Cancels the order and marks payment as REFUNDED (pending
@@ -1325,12 +1367,15 @@ export class OrdersService {
     });
 
     // Attempt automatic payout via Razorpay after the transaction commits
-    const fundAccountId = order.seller.payoutAccount?.razorpayFundAccountId;
-    if (order.payment && fundAccountId) {
+    const payoutAccount = order.seller.payoutAccount;
+    const fundAccountId = payoutAccount?.razorpayFundAccountId;
+    if (order.payment && payoutAccount && fundAccountId) {
       try {
         const razorpayPayoutId = await this.paymentsService.executePayout(
           fundAccountId,
-          order.sellerPayout
+          order.sellerPayout,
+          id,
+          payoutAccount.type
         );
         await this.prisma.payment.update({
           where: { orderId: id },
@@ -1361,7 +1406,6 @@ export class OrdersService {
       }
     }
 
-    const payoutAccount = order.seller.payoutAccount;
     const sellerPayoutMsg = payoutAccount?.upiId
       ? `₹${String(order.sellerPayout)} is being transferred to ${payoutAccount.upiId}`
       : `₹${String(order.sellerPayout)} will be settled once you add a payout account`;

@@ -62,9 +62,9 @@ export function getRelativeTime(date: Date | string): string {
   const diffDays = Math.floor(diffMs / 86400000);
 
   if (diffMins < 1) return 'just now';
-  if (diffMins < 60) return `${diffMins} min${diffMins > 1 ? 's' : ''} ago`;
-  if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
-  if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+  if (diffMins < 60) return `${String(diffMins)} min${diffMins > 1 ? 's' : ''} ago`;
+  if (diffHours < 24) return `${String(diffHours)} hour${diffHours > 1 ? 's' : ''} ago`;
+  if (diffDays < 7) return `${String(diffDays)} day${diffDays > 1 ? 's' : ''} ago`;
 
   return formatDate(d);
 }

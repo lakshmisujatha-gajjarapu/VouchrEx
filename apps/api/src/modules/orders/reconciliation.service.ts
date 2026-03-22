@@ -6,7 +6,8 @@ import { PaymentsService } from '../payments/payments.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { OrdersService } from './orders.service';
 
-const stalePaymentSyncMinutes = Number(process.env.STALE_PAYMENT_SYNC_MINUTES ?? 5);
+// Minimum age before reconciliation picks up a payment (avoids hammering Razorpay on brand-new orders).
+const stalePaymentSyncMinutes = Number(process.env.STALE_PAYMENT_SYNC_MINUTES ?? 1);
 const stalePaymentSyncMs = stalePaymentSyncMinutes * 60 * 1000;
 
 @Injectable()
@@ -20,7 +21,7 @@ export class ReconciliationService {
     private readonly ordersService: OrdersService,
   ) {}
 
-  @Cron('*/15 * * * *')
+  @Cron('*/1 * * * *')
   async reconcileStalePayments() {
     if (this.isRunning) {
       this.logger.warn('reconcileStalePayments still running — skipping tick.');

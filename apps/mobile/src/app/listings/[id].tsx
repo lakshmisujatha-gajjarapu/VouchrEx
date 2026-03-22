@@ -1,5 +1,4 @@
 import { BlurView } from 'expo-blur';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useMemo, useState } from 'react';
@@ -13,7 +12,6 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColorScheme } from 'nativewind';
 
-import { StatusPill } from '@/components/status-pill';
 import { useAuth } from '@/hooks/use-auth';
 import { useAsyncResource } from '@/hooks/use-async-resource';
 import { api } from '@/lib/api';
@@ -49,17 +47,8 @@ export default function ListingDetailScreen() {
         pathname: '/orders/[id]',
         params: {
           id: result.order.id,
-          checkoutProvider: result.checkout.provider,
-          ...(result.checkout.provider === 'MOCK'
-            ? {
-                checkoutOrderId: result.checkout.orderId ?? '',
-                checkoutAmount: String(result.checkout.amount ?? 0),
-                checkoutCurrency: result.checkout.currency ?? '',
-                checkoutReceipt: result.checkout.receipt ?? '',
-              }
-            : {}),
-          ...(result.checkout.paymentLinkUrl ? { checkoutPaymentLinkUrl: result.checkout.paymentLinkUrl } : {}),
-          ...(result.checkout.paymentLinkId ? { checkoutPaymentLinkId: result.checkout.paymentLinkId } : {}),
+          checkoutPaymentLinkUrl: result.checkout.paymentLinkUrl,
+          checkoutPaymentLinkId: result.checkout.paymentLinkId,
         },
       });
     } catch (error_) {
@@ -198,7 +187,7 @@ export default function ListingDetailScreen() {
             }}>
               {/* Accent stripe */}
               <View style={{ flexDirection: 'row' }}>
-                <View style={{ width: 8, backgroundColor: theme.colors.actionFixed }} />
+                <View style={{ width: 8, backgroundColor: theme.colors.brand }} />
                 <View style={{ flex: 1, padding: 24 }}>
 
                   {/* Status badges */}
@@ -216,10 +205,10 @@ export default function ListingDetailScreen() {
                     <View style={{
                       flexDirection: 'row', alignItems: 'center', gap: 6,
                       paddingHorizontal: 12, paddingVertical: 6, borderRadius: 9999,
-                      backgroundColor: theme.colors.actionFixed,
+                      backgroundColor: theme.colors.brandSoft,
                     }}>
-                      <Ionicons name="checkmark-circle" size={13} color="#002114" />
-                      <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 10, fontWeight: '700', color: '#002114', textTransform: 'uppercase', letterSpacing: 0.8 }}>
+                      <Ionicons name="checkmark-circle" size={13} color={theme.colors.brand} />
+                      <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 10, fontWeight: '700', color: theme.colors.brand, textTransform: 'uppercase', letterSpacing: 0.8 }}>
                         VERIFIED VOUCHER
                       </Text>
                     </View>
@@ -345,43 +334,40 @@ export default function ListingDetailScreen() {
               style={({ pressed }) => ({
                 flex: 1,
                 opacity: isOwnListing ? 0.5 : pressed ? 0.88 : 1,
-                transform: [{ scale: pressed && !isOwnListing && !submitting ? 0.985 : 1 }],
+                transform: [{ scale: pressed && !isOwnListing && !submitting ? 0.982 : 1 }],
                 borderRadius: 16,
                 overflow: 'hidden',
                 shadowColor: theme.colors.brand,
-                shadowOffset: { width: 0, height: 12 },
-                shadowOpacity: isOwnListing ? 0 : 0.3,
-                shadowRadius: 30,
-                elevation: isOwnListing ? 0 : 5,
+                shadowOffset: { width: 0, height: 6 },
+                shadowOpacity: isOwnListing ? 0 : 0.22,
+                shadowRadius: 14,
+                elevation: isOwnListing ? 0 : 4,
               })}>
-              <LinearGradient
-                colors={isOwnListing ? [theme.colors.surfaceHigh, theme.colors.surfaceHigh] : [theme.colors.brandBright, theme.colors.brand]}
-                end={{ x: 1, y: 1 }}
-                start={{ x: 0, y: 0 }}
-                style={{
-                  height: 56,
-                  borderRadius: 16,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8,
-                }}>
+              <View style={{
+                height: 56,
+                borderRadius: 16,
+                backgroundColor: isOwnListing ? theme.colors.surfaceHigh : theme.colors.brand,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+              }}>
                 {submitting
-                  ? <ActivityIndicator color="#FFFFFF" />
+                  ? <ActivityIndicator color={theme.colors.surface} />
                   : (
                       <>
                         <Text style={{
-                          color: isOwnListing ? theme.colors.inkMuted : '#FFFFFF',
+                          color: isOwnListing ? theme.colors.inkMuted : theme.colors.surface,
                           fontSize: 16,
                           fontWeight: '700',
                           fontFamily: theme.fontFamily.labelSemi,
                         }}>
                           {isOwnListing ? 'Your listing' : `Buy for ${formatCurrency(listing.sellingPrice)}`}
                         </Text>
-                        {!isOwnListing ? <Ionicons name="arrow-forward" size={18} color="#FFFFFF" /> : null}
+                        {!isOwnListing ? <Ionicons name="arrow-forward" size={18} color={theme.colors.surface} /> : null}
                       </>
                     )}
-              </LinearGradient>
+              </View>
             </Pressable>
           </View>
         </View>

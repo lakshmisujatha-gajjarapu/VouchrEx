@@ -26,7 +26,7 @@ declare module 'react-native-razorpay' {
     readonly razorpay_signature: string;
   };
 
-  type RazorpayError = {
+  export type RazorpayError = {
     readonly code: number;
     readonly description: string;
   };

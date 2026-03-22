@@ -1,10 +1,39 @@
 import { Ionicons } from '@expo/vector-icons';
+import { type BottomTabBarButtonProps } from '@react-navigation/bottom-tabs';
 import { Redirect, Tabs } from 'expo-router';
 import React from 'react';
+import { Pressable, View } from 'react-native';
 
 import { LoadingScreen } from '@/components/loading-screen';
 import { useAuth } from '@/hooks/use-auth';
 import { useTheme } from '@/theme/ThemeContext';
+
+function TabBarButton({ children, onPress, onLongPress, accessibilityState }: BottomTabBarButtonProps) {
+  const theme = useTheme();
+  const focused = accessibilityState?.selected ?? false;
+  return (
+    <Pressable
+      onLongPress={onLongPress}
+      onPress={onPress}
+      style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+      <View style={focused ? {
+        backgroundColor: `${theme.colors.brand}28`,
+        borderRadius: 14,
+        paddingHorizontal: 14,
+        paddingVertical: 5,
+        shadowColor: theme.colors.brand,
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.55,
+        shadowRadius: 12,
+      } : {
+        paddingHorizontal: 14,
+        paddingVertical: 5,
+      }}>
+        {children}
+      </View>
+    </Pressable>
+  );
+}
 
 export default function TabsLayout() {
   const { status } = useAuth();
@@ -15,12 +44,12 @@ export default function TabsLayout() {
     right: 14,
     bottom: 14,
     height: 62,
-    paddingTop: 6,
-    paddingBottom: 6,
+    paddingTop: 4,
+    paddingBottom: 4,
     borderTopWidth: 0,
     borderRadius: 20,
     backgroundColor: theme.colors.surface,
-    shadowColor: theme.colors.shadow,
+    shadowColor: theme.colors.shadowStrong,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 1,
     shadowRadius: 24,
@@ -28,11 +57,10 @@ export default function TabsLayout() {
   };
   const tabBarLabelStyle = {
     fontWeight: '700' as const,
-    fontSize: 11,
-    letterSpacing: 0.1,
-    fontFamily: theme.fontFamily.ui,
+    fontSize: 10,
+    letterSpacing: 0.4,
+    fontFamily: theme.fontFamily.labelSemi,
   };
-  const tabBarItemStyle = { paddingVertical: 4 };
 
   if (status === 'loading') {
     return <LoadingScreen label="Loading your market..." />;
@@ -53,7 +81,7 @@ export default function TabsLayout() {
         sceneStyle: { backgroundColor: 'transparent' },
         tabBarStyle,
         tabBarLabelStyle,
-        tabBarItemStyle,
+        tabBarButton: TabBarButton,
       }}>
       <Tabs.Screen
         name="bazaar"

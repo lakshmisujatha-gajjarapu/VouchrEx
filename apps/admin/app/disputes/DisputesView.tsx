@@ -94,13 +94,13 @@ export default function DisputesView({ disputes }: DisputesViewProps) {
                       {formatShortId(d.id)}
                     </td>
                     <td className="px-5 py-3.5 font-medium" style={{ fontFamily: 'var(--font-body)', color: 'var(--color-foreground)' }}>
-                      {d.order?.listing?.brand?.name ?? '—'}
+                      {d.order.listing.brand.name}
                     </td>
                     <td className="px-5 py-3.5" style={{ fontFamily: 'var(--font-body)', color: 'var(--color-foreground)' }}>
-                      {formatPhone(d.order?.buyer?.phone ?? '')}
+                      {formatPhone(d.order.buyer.phone)}
                     </td>
                     <td className="px-5 py-3.5" style={{ fontFamily: 'var(--font-body)', color: 'var(--color-foreground)' }}>
-                      {formatPhone(d.order?.seller?.phone ?? '')}
+                      {formatPhone(d.order.seller.phone)}
                     </td>
                     <td className="px-5 py-3.5 max-w-[180px] truncate" title={d.reason}
                       style={{ fontFamily: 'var(--font-body)', color: 'var(--color-foreground)' }}>
@@ -123,7 +123,7 @@ export default function DisputesView({ disputes }: DisputesViewProps) {
                     </td>
                     <td className="px-5 py-3.5">
                       <button
-                        onClick={() => setSelected(d)}
+                        onClick={() => { setSelected(d); }}
                         className="rounded-xl px-3 py-1.5 text-xs font-semibold transition-colors"
                         style={{ backgroundColor: 'var(--color-primary-soft)', color: 'var(--color-primary)', fontFamily: 'var(--font-body)' }}
                       >
@@ -139,7 +139,7 @@ export default function DisputesView({ disputes }: DisputesViewProps) {
       </div>
 
       {selected && (
-        <Dialog open onOpenChange={() => setSelected(null)}>
+        <Dialog open onOpenChange={() => { setSelected(null); }}>
           <DialogContent className="sm:max-w-lg">
             <DialogHeader>
               <DialogTitle style={{ fontFamily: 'var(--font-headline)', fontWeight: 800 }}>
@@ -154,17 +154,17 @@ export default function DisputesView({ disputes }: DisputesViewProps) {
               <div className="grid grid-cols-2 gap-2">
                 <div className="rounded-xl p-3" style={{ backgroundColor: 'var(--color-surface-raised)' }}>
                   <p className="text-xs font-semibold uppercase tracking-widest mb-0.5" style={{ color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}>Buyer</p>
-                  <p className="font-medium" style={{ fontFamily: 'var(--font-body)', color: 'var(--color-foreground)' }}>{formatPhone(selected.order?.buyer?.phone ?? '')}</p>
+                  <p className="font-medium" style={{ fontFamily: 'var(--font-body)', color: 'var(--color-foreground)' }}>{formatPhone(selected.order.buyer.phone)}</p>
                 </div>
                 <div className="rounded-xl p-3" style={{ backgroundColor: 'var(--color-surface-raised)' }}>
                   <p className="text-xs font-semibold uppercase tracking-widest mb-0.5" style={{ color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}>Seller</p>
-                  <p className="font-medium" style={{ fontFamily: 'var(--font-body)', color: 'var(--color-foreground)' }}>{formatPhone(selected.order?.seller?.phone ?? '')}</p>
+                  <p className="font-medium" style={{ fontFamily: 'var(--font-body)', color: 'var(--color-foreground)' }}>{formatPhone(selected.order.seller.phone)}</p>
                 </div>
               </div>
 
               <div className="rounded-xl p-3" style={{ backgroundColor: 'var(--color-surface-raised)' }}>
                 <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}>Brand &amp; Order</p>
-                <p className="font-medium" style={{ fontFamily: 'var(--font-body)', color: 'var(--color-foreground)' }}>{selected.order?.listing?.brand?.name}</p>
+                <p className="font-medium" style={{ fontFamily: 'var(--font-body)', color: 'var(--color-foreground)' }}>{selected.order.listing.brand.name}</p>
                 <p className="text-xs mt-0.5" style={{ color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}>Order {formatShortId(selected.orderId)}</p>
               </div>
 
@@ -199,19 +199,19 @@ export default function DisputesView({ disputes }: DisputesViewProps) {
             </div>
 
             <DialogFooter className="gap-2">
-              <Button variant="outline" onClick={() => setSelected(null)} disabled={isPending}>
+              <Button variant="outline" onClick={() => { setSelected(null); }} disabled={isPending}>
                 Cancel
               </Button>
               <Button
                 variant="destructive"
-                onClick={() => resolve('REFUND_BUYER')}
+                onClick={() => { resolve('REFUND_BUYER'); }}
                 disabled={isPending}
               >
                 Refund Buyer
               </Button>
               <Button
                 variant="success"
-                onClick={() => resolve('RELEASE_TO_SELLER')}
+                onClick={() => { resolve('RELEASE_TO_SELLER'); }}
                 disabled={isPending}
               >
                 Release to Seller

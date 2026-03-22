@@ -214,23 +214,32 @@ export class PaymentsService {
   /**
    * Trigger a RazorpayX Payout to a seller's registered fund account.
    * Returns the Razorpay payout ID (pout_xxxx).
+   *
+   * @param orderId  Used as idempotency key — safe to retry on network failure.
+   * @param accountType  UPI → mode 'UPI', BANK_ACCOUNT → mode 'IMPS'.
    */
-  async executePayout(fundAccountId: string, amountInr: number): Promise<string> {
+  async executePayout(
+    fundAccountId: string,
+    amountInr: number,
+    orderId: string,
+    accountType: 'UPI' | 'BANK_ACCOUNT'
+  ): Promise<string> {
     const accountNumber = this.requireRazorpayXAccountNumber();
+    const mode = accountType === 'UPI' ? 'UPI' : 'IMPS';
 
     const response = await fetch(razorpayBaseUrl + '/payouts', {
       method: 'POST',
       headers: {
         Authorization: this.razorpayXAuthHeader(),
         'Content-Type': 'application/json',
-        'X-Payout-Idempotency': `payout_${fundAccountId}_${String(amountInr)}_${Date.now()}`
+        'X-Payout-Idempotency': `payout_order_${orderId}`
       },
       body: JSON.stringify({
         account_number: accountNumber,
         fund_account_id: fundAccountId,
         amount: amountInr * inrMinorUnitFactor,
         currency: defaultCurrency,
-        mode: 'UPI',
+        mode,
         purpose: 'payout',
         queue_if_low_balance: true
       })
@@ -267,9 +276,12 @@ export class PaymentsService {
     const body = payload as Record<string, unknown>;
     const paid = body.status === 'paid';
     const payments = body.payments as readonly Record<string, unknown>[] | undefined;
+    const firstPayment = Array.isArray(payments) && payments.length > 0
+      ? (payments[0] as Record<string, unknown>)
+      : undefined;
     const razorpayPaymentId =
-      Array.isArray(payments) && payments.length > 0 && typeof payments[0]?.razorpay_payment_id === 'string'
-        ? (payments[0].razorpay_payment_id as string)
+      typeof firstPayment?.razorpay_payment_id === 'string'
+        ? firstPayment.razorpay_payment_id
         : undefined;
 
     return razorpayPaymentId !== undefined ? { paid, razorpayPaymentId } : { paid };

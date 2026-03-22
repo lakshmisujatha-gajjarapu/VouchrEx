@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react';
 import {
@@ -153,8 +152,8 @@ export default function SellScreen() {
     if (!sessionToken) return;
     api.getPayoutAccount(sessionToken)
       .then(setPayoutAccount)
-      .catch(() => setPayoutAccount({ registered: false }))
-      .finally(() => setPayoutLoading(false));
+      .catch(() => { setPayoutAccount({ registered: false }); })
+      .finally(() => { setPayoutLoading(false); });
   }, [sessionToken]);
 
   async function handleRegisterUpi() {
@@ -351,28 +350,26 @@ export default function SellScreen() {
                     shadowOpacity: upiInput.trim() ? 0.25 : 0,
                     shadowRadius: 16,
                   })}>
-                  <LinearGradient
-                    colors={[theme.colors.brandBright, theme.colors.brand]}
-                    end={{ x: 1, y: 1 }} start={{ x: 0, y: 0 }}
-                    style={{
-                      height: 56, borderRadius: 16,
-                      flexDirection: 'row', alignItems: 'center',
-                      justifyContent: 'center', gap: 8,
-                    }}>
+                  <View style={{
+                    height: 56, borderRadius: 16,
+                    backgroundColor: theme.colors.brand,
+                    flexDirection: 'row', alignItems: 'center',
+                    justifyContent: 'center', gap: 8,
+                  }}>
                     {upiSubmitting
-                      ? <ActivityIndicator color="#FFFFFF" />
+                      ? <ActivityIndicator color={theme.colors.surface} />
                       : (
                           <>
                             <Text style={{
-                              color: '#FFFFFF', fontSize: 16, fontWeight: '700',
+                              color: theme.colors.surface, fontSize: 16, fontWeight: '700',
                               fontFamily: theme.fontFamily.labelSemi,
                             }}>
                               Save UPI & Continue
                             </Text>
-                            <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
+                            <Ionicons name="arrow-forward" size={18} color={theme.colors.surface} />
                           </>
                         )}
-                  </LinearGradient>
+                  </View>
                 </Pressable>
               </View>
 
@@ -556,44 +553,41 @@ export default function SellScreen() {
                 onPress={() => { void handleCreateListing(); }}
                 style={({ pressed }) => ({
                   opacity: (!canSubmit || submitting) ? 0.5 : pressed ? 0.88 : 1,
-                  transform: [{ scale: pressed && canSubmit && !submitting ? 0.985 : 1 }],
+                  transform: [{ scale: pressed && canSubmit && !submitting ? 0.982 : 1 }],
                   shadowColor: theme.colors.brand,
-                  shadowOffset: { width: 0, height: 10 },
-                  shadowOpacity: canSubmit ? 0.28 : 0,
-                  shadowRadius: 20,
-                  elevation: canSubmit ? 5 : 0,
+                  shadowOffset: { width: 0, height: 6 },
+                  shadowOpacity: canSubmit ? 0.22 : 0,
+                  shadowRadius: 14,
+                  elevation: canSubmit ? 4 : 0,
                   borderRadius: 16,
                   overflow: 'hidden',
                 })}>
-                <LinearGradient
-                  colors={[theme.colors.brandBright, theme.colors.brand]}
-                  end={{ x: 1, y: 1 }}
-                  start={{ x: 0, y: 0 }}
-                  style={{
-                    height: 56,
-                    borderRadius: 16,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 8,
-                  }}>
+                <View style={{
+                  height: 56,
+                  borderRadius: 16,
+                  backgroundColor: theme.colors.brand,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                }}>
                   {submitting
-                    ? <ActivityIndicator color="#FFFFFF" />
+                    ? <ActivityIndicator color={theme.colors.surface} />
                     : (
                         <>
                           <Text style={{
-                            color: '#FFFFFF',
+                            color: theme.colors.surface,
                             fontSize: 16,
                             fontWeight: '700',
                             fontFamily: theme.fontFamily.labelSemi,
-                            letterSpacing: 0.1,
+                            letterSpacing: 0.2,
                           }}>
                             List Voucher
                           </Text>
-                          <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
+                          <Ionicons name="arrow-forward" size={18} color={theme.colors.surface} />
                         </>
                       )}
-                </LinearGradient>
+                </View>
               </Pressable>
 
             </View>

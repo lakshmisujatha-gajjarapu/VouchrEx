@@ -1,5 +1,4 @@
 import { Image } from 'expo-image';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { openBrowserAsync } from 'expo-web-browser';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,6 +7,7 @@ import {
   ActivityIndicator,
   AppState,
   Linking,
+  Modal,
   Pressable,
   ScrollView,
   Text,
@@ -16,27 +16,19 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PrimaryButton } from '@/components/primary-button';
+import { RevealCodeButton } from '@/components/reveal-code-button';
 import { StatusPill } from '@/components/status-pill';
 import { TextField } from '@/components/text-field';
 import { useAuth } from '@/hooks/use-auth';
 import { useAsyncResource } from '@/hooks/use-async-resource';
 import { api, type Checkout, type RevealResult } from '@/lib/api';
-import { formatCountdown, formatCurrency, formatDate, formatDateTime, formatStatus } from '@/lib/format';
+import { formatCountdown, formatCurrency, formatDate, formatStatus } from '@/lib/format';
 import { useTheme } from '@/theme/ThemeContext';
 
 function cardToneForStatus(status: string): 'neutral' | 'brand' | 'success' | 'danger' {
   if (status === 'DISPUTED' || status === 'CANCELLED' || status === 'PAYMENT_FAILED') return 'danger';
   if (status === 'CONFIRMED' || status === 'AUTO_CONFIRMED') return 'success';
   if (status === 'ESCROW_ACTIVE' || status === 'CODE_REVEALED') return 'brand';
-  return 'neutral';
-}
-
-function pillToneForStatus(status?: string | null): 'neutral' | 'brand' | 'success' | 'danger' | 'warning' {
-  if (!status) return 'neutral';
-  if (status === 'PAYMENT_PENDING') return 'warning';
-  if (status === 'ESCROW_ACTIVE') return 'brand';
-  if (status === 'CODE_REVEALED' || status === 'CONFIRMED' || status === 'AUTO_CONFIRMED' || status === 'RELEASED') return 'success';
-  if (status === 'DISPUTED' || status === 'PAYMENT_FAILED' || status === 'CANCELLED') return 'danger';
   return 'neutral';
 }
 
@@ -64,15 +56,6 @@ function escrowBadgeColors(status: string, theme: ReturnType<typeof useTheme>): 
   return { bg: theme.colors.warningSoft, border: theme.colors.pillWarnBorder, text: theme.colors.warning };
 }
 
-function nextActionLabel(status: string, isBuyer: boolean) {
-  if (status === 'PAYMENT_PENDING') return isBuyer ? 'Pay to secure your order' : 'Waiting for buyer payment';
-  if (status === 'ESCROW_ACTIVE') return isBuyer ? 'Reveal and verify' : 'Payment secured';
-  if (status === 'CODE_REVEALED') return isBuyer ? 'Confirm or dispute' : 'Waiting for buyer confirmation';
-  if (status === 'DISPUTED') return 'Dispute in review';
-  if (status === 'CONFIRMED' || status === 'AUTO_CONFIRMED') return isBuyer ? 'Order settled' : 'Payout released';
-  return 'No action needed';
-}
-
 function buildFlowSteps(status: string): readonly { label: string; tone: 'neutral' | 'brand' | 'success' | 'danger' | 'warning' }[] {
   if (status === 'PAYMENT_PENDING') return [{ label: 'Payment', tone: 'warning' }, { label: 'Secured', tone: 'neutral' }, { label: 'Reveal', tone: 'neutral' }, { label: 'Confirm', tone: 'neutral' }];
   if (status === 'ESCROW_ACTIVE') return [{ label: 'Payment', tone: 'success' }, { label: 'Secured', tone: 'brand' }, { label: 'Reveal', tone: 'neutral' }, { label: 'Confirm', tone: 'neutral' }];
@@ -86,58 +69,19 @@ function firstRouteParam(value?: string | string[]) {
   return Array.isArray(value) ? value[0] : value;
 }
 
-function parseCheckoutAmount(value?: string | string[]) {
-  const rawValue = firstRouteParam(value);
-  if (!rawValue) return null;
-  const parsed = Number(rawValue);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
 function buildCheckoutFromRoute(params: {
-  readonly checkoutProvider?: string | string[];
-  readonly checkoutOrderId?: string | string[];
-  readonly checkoutAmount?: string | string[];
-  readonly checkoutCurrency?: string | string[];
-  readonly checkoutReceipt?: string | string[];
   readonly checkoutPaymentLinkUrl?: string | string[];
   readonly checkoutPaymentLinkId?: string | string[];
 }): Checkout | null {
-  const provider = firstRouteParam(params.checkoutProvider);
-  if (!provider || (provider !== 'MOCK' && provider !== 'RAZORPAY')) return null;
-  if (provider === 'RAZORPAY') {
-    const paymentLinkUrl = firstRouteParam(params.checkoutPaymentLinkUrl);
-    const paymentLinkId = firstRouteParam(params.checkoutPaymentLinkId);
-    if (!paymentLinkUrl || !paymentLinkId) return null;
-    return { provider, paymentLinkUrl, paymentLinkId };
-  }
-  const orderId = firstRouteParam(params.checkoutOrderId);
-  const amount = parseCheckoutAmount(params.checkoutAmount);
-  const currency = firstRouteParam(params.checkoutCurrency);
-  const receipt = firstRouteParam(params.checkoutReceipt);
-  if (!orderId || amount === null || !currency || !receipt) return null;
-  return { provider, orderId, amount, currency, receipt };
-}
-
-function buildCheckoutFromOrder(order: {
-  readonly id: string;
-  readonly amount: number;
-  readonly platformFee: number;
-  readonly status: string;
-  readonly payment?: { readonly provider: 'MOCK' | 'RAZORPAY'; readonly currency: string; } | null;
-}): Checkout | null {
-  if (order.status !== 'PAYMENT_PENDING' || !order.payment) return null;
-  if (order.payment.provider === 'RAZORPAY') return null;
-  return { provider: 'MOCK', orderId: `mock_${order.id}`, amount: (order.amount + order.platformFee) * 100, currency: order.payment.currency, receipt: order.id };
+  const paymentLinkUrl = firstRouteParam(params.checkoutPaymentLinkUrl);
+  const paymentLinkId = firstRouteParam(params.checkoutPaymentLinkId);
+  if (!paymentLinkUrl || !paymentLinkId) return null;
+  return { provider: 'RAZORPAY', paymentLinkUrl, paymentLinkId };
 }
 
 export default function OrderDetailScreen() {
   const params = useLocalSearchParams<{
     readonly id?: string | string[];
-    readonly checkoutProvider?: string | string[];
-    readonly checkoutOrderId?: string | string[];
-    readonly checkoutAmount?: string | string[];
-    readonly checkoutCurrency?: string | string[];
-    readonly checkoutReceipt?: string | string[];
     readonly checkoutPaymentLinkUrl?: string | string[];
     readonly checkoutPaymentLinkId?: string | string[];
   }>();
@@ -147,9 +91,9 @@ export default function OrderDetailScreen() {
   const router = useRouter();
   const [checkout, setCheckout] = useState<Checkout | null>(() => buildCheckoutFromRoute(params));
   const [reveal, setReveal] = useState<RevealResult | null>(null);
+  const [disputeOpen, setDisputeOpen] = useState(false);
   const [reason, setReason] = useState('voucher-invalid');
   const [description, setDescription] = useState('');
-  const [evidence, setEvidence] = useState('');
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
 
@@ -164,28 +108,36 @@ export default function OrderDetailScreen() {
 
   async function reloadOrder() { return orderResource.reload(); }
 
-  async function handlePrepareCheckout() {
-    if (!sessionToken || !orderId) return;
-    setBusyAction('checkout'); setFeedback(null);
-    try {
-      const result = await api.prepareCheckout(sessionToken, orderId);
-      setCheckout(result.checkout);
-      setFeedback(result.checkout.provider === 'MOCK' ? 'Mock checkout prepared.' : 'Razorpay order ready.');
-    } catch (error_) {
-      setFeedback(error_ instanceof Error ? error_.message : 'Could not prepare checkout.');
-    } finally { setBusyAction(null); }
-  }
+  // Auto-sync once when screen loads with a PAYMENT_PENDING order.
+  // Handles the case where the user paid in a previous session and comes back.
+  useEffect(() => {
+    const order = orderResource.data;
+    if (!order || order.status !== 'PAYMENT_PENDING' || !sessionToken || !orderId) return;
+    const isBuyer = order.buyerId === user?.id;
+    if (!isBuyer) return;
+    void api.syncPayment(sessionToken, orderId)
+      .then((result) => { if (result.synced) void reloadOrder(); })
+      .catch(() => { /* silent — reconciliation will catch it */ });
+  // Run once when order data first loads.
+  }, [orderResource.data?.id, orderResource.data?.status]);
 
-  async function handleCaptureMockPayment() {
+  async function handlePrepareCheckout() {
     if (!sessionToken || !orderId) return;
     setBusyAction('payment'); setFeedback(null);
     try {
-      await api.verifyPayment(sessionToken, orderId, { method: 'mock' });
-      await reloadOrder();
-      setFeedback('Payment secured. You can now reveal the voucher.');
+      let co = checkout;
+      if (!co) {
+        const result = await api.prepareCheckout(sessionToken, orderId);
+        co = result.checkout;
+        setCheckout(co);
+      }
+      await openBrowserAsync(co.paymentLinkUrl);
+      // Browser dismissed — start polling immediately to detect payment completion.
+      void pollUntilEscrowActive();
     } catch (error_) {
-      setFeedback(error_ instanceof Error ? error_.message : 'Could not capture payment.');
-    } finally { setBusyAction(null); }
+      setFeedback(error_ instanceof Error ? error_.message : 'Could not prepare checkout.');
+      setBusyAction(null);
+    }
   }
 
   // Polls DB + proactively pulls Razorpay status so we don't wait for a slow webhook.
@@ -245,16 +197,8 @@ export default function OrderDetailScreen() {
       appStateSub.remove();
       linkSub.remove();
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionToken, orderId, busyAction]);
 
-  async function handleRazorpayLinkPayment(co: Checkout) {
-    if (!co.paymentLinkUrl) { setFeedback('Payment link URL is missing.'); return; }
-    setBusyAction('payment'); setFeedback(null);
-    // openBrowserAsync resolves when the in-app browser is dismissed.
-    // AppState 'active' event fires at the same time, which kicks off polling.
-    await openBrowserAsync(co.paymentLinkUrl);
-  }
 
   async function handleReveal() {
     if (!sessionToken || !orderId) return;
@@ -283,17 +227,14 @@ export default function OrderDetailScreen() {
 
   async function handleDispute() {
     if (!sessionToken || !orderId) return;
-    setBusyAction('dispute'); setFeedback(null);
+    setBusyAction('dispute');
     try {
-      await api.createDispute(sessionToken, orderId, {
-        reason,
-        description,
-        evidenceUrls: evidence.split('\n').map((item) => item.trim()).filter(Boolean),
-      });
+      await api.createDispute(sessionToken, orderId, { reason, description, evidenceUrls: [] });
+      setDisputeOpen(false);
       await reloadOrder();
       setFeedback('Dispute raised. Your payment is held until this is resolved.');
     } catch (error_) {
-      setFeedback(error_ instanceof Error ? error_.message : 'Could not create dispute.');
+      setFeedback(error_ instanceof Error ? error_.message : 'Could not raise dispute.');
     } finally { setBusyAction(null); }
   }
 
@@ -327,13 +268,12 @@ export default function OrderDetailScreen() {
 
   const order = orderResource.data;
   const isBuyer = order.buyerId === user?.id;
-  const resolvedCheckout = checkout ?? buildCheckoutFromOrder(order);
   const badgeColors = escrowBadgeColors(order.status, theme);
   const accentColor = cardToneForStatus(order.status) === 'danger'
     ? theme.colors.danger
     : cardToneForStatus(order.status) === 'success'
       ? theme.colors.success
-      : theme.colors.actionFixed;
+      : theme.colors.brand;
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
@@ -446,15 +386,15 @@ export default function OrderDetailScreen() {
                     alignItems: 'center', justifyContent: 'center',
                   }}>
                     <Text style={{ fontFamily: theme.fontFamily.headlineExtra, fontSize: 22, color: theme.colors.brand }}>
-                      {(order.listing.brand?.name ?? 'V').charAt(0).toUpperCase()}
+                      {order.listing.brand.name.charAt(0).toUpperCase()}
                     </Text>
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontFamily: theme.fontFamily.headline, fontSize: 18, fontWeight: '700', color: theme.colors.ink }}>
-                      {order.listing.brand?.name ?? 'Voucher'}
+                      {order.listing.brand.name}
                     </Text>
                     <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 13, color: theme.colors.inkMuted, marginTop: 2 }}>
-                      Sold by @{order.listing.seller?.name ?? order.seller?.name ?? 'Seller'}
+                      Sold by @{order.listing.seller.name}
                     </Text>
                   </View>
                 </View>
@@ -464,12 +404,12 @@ export default function OrderDetailScreen() {
                   </Text>
                   <View style={{
                     marginTop: 6,
-                    backgroundColor: `${theme.colors.actionFixed}40`,
+                    backgroundColor: theme.colors.brandSoft,
                     paddingHorizontal: 8,
                     paddingVertical: 2,
                     borderRadius: 6,
                   }}>
-                    <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 9, fontWeight: '700', color: theme.colors.action, textTransform: 'uppercase', letterSpacing: 1 }}>
+                    <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 9, fontWeight: '700', color: theme.colors.brand, textTransform: 'uppercase', letterSpacing: 1 }}>
                       VERIFIED
                     </Text>
                   </View>
@@ -517,39 +457,13 @@ export default function OrderDetailScreen() {
                     </View>
                     {isBuyer ? (
                       <>
-                        <Pressable
-                          disabled={busyAction === 'reveal'}
-                          onPress={() => { void handleReveal(); }}
-                          style={({ pressed }) => ({
-                            width: '100%',
-                            opacity: pressed ? 0.88 : 1,
-                            transform: [{ scale: pressed ? 0.985 : 1 }],
-                            borderRadius: 14,
-                            overflow: 'hidden',
-                          })}>
-                          <LinearGradient
-                            colors={[theme.colors.brandBright, theme.colors.brand]}
-                            end={{ x: 1, y: 1 }}
-                            start={{ x: 0, y: 0 }}
-                            style={{
-                              height: 52,
-                              flexDirection: 'row',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: 8,
-                            }}>
-                            {busyAction === 'reveal'
-                              ? <ActivityIndicator color="#FFFFFF" />
-                              : (
-                                  <>
-                                    <Ionicons name="key-outline" size={18} color="#FFFFFF" />
-                                    <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '700', fontFamily: theme.fontFamily.labelSemi }}>
-                                      Reveal Code
-                                    </Text>
-                                  </>
-                                )}
-                          </LinearGradient>
-                        </Pressable>
+                        <View style={{ alignSelf: 'stretch' }}>
+                          <RevealCodeButton
+                            disabled={busyAction === 'reveal'}
+                            loading={busyAction === 'reveal'}
+                            onPress={() => { void handleReveal(); }}
+                          />
+                        </View>
                         <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 11, color: theme.colors.inkMuted, textAlign: 'center', lineHeight: 16 }}>
                           By revealing the code, you acknowledge that the voucher is now your responsibility.
                         </Text>
@@ -589,85 +503,7 @@ export default function OrderDetailScreen() {
               {order.dispute ? <StatusPill label="Dispute open" tone="danger" /> : null}
             </View>
 
-            {/* ── Dispute / secondary action ── */}
-            {isBuyer && (order.status === 'CODE_REVEALED') ? (
-              <View style={{ alignItems: 'center', marginBottom: 24 }}>
-                <Pressable
-                  onPress={() => { void handleDispute(); }}
-                  style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1, flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 16, borderRadius: 12 })}>
-                  <Ionicons name="flag-outline" size={16} color={theme.colors.danger} />
-                  <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 13, fontWeight: '700', color: theme.colors.danger }}>
-                    Raise Dispute
-                  </Text>
-                </Pressable>
-              </View>
-            ) : null}
 
-            {/* ── Dispute form ── */}
-            {isBuyer && order.status === 'CODE_REVEALED' ? (
-              <View style={{
-                backgroundColor: theme.colors.surfaceRaised,
-                borderRadius: 16,
-                padding: 20,
-                gap: 16,
-                marginBottom: 24,
-              }}>
-                <Text style={{ fontFamily: theme.fontFamily.headline, fontSize: 16, fontWeight: '700', color: theme.colors.ink }}>
-                  Raise Dispute
-                </Text>
-                <TextField
-                  autoCapitalize="none"
-                  helperText="Use a short machine-friendly reason, e.g. voucher-invalid."
-                  label="Reason"
-                  onChangeText={setReason}
-                  value={reason}
-                />
-                <TextField
-                  helperText="Describe what failed during verification."
-                  label="What happened"
-                  multiline
-                  onChangeText={setDescription}
-                  value={description}
-                />
-                <TextField
-                  autoCapitalize="none"
-                  helperText="Add one evidence URL per line."
-                  label="Evidence URLs"
-                  multiline
-                  onChangeText={setEvidence}
-                  placeholder="One URL per line"
-                  value={evidence}
-                />
-                <PrimaryButton
-                  disabled={description.trim().length < 10}
-                  label="Submit dispute"
-                  loading={busyAction === 'dispute'}
-                  onPress={() => { void handleDispute(); }}
-                  tone="danger"
-                />
-              </View>
-            ) : null}
-
-            {/* ── Mock/Razorpay checkout (DEV) ── */}
-            {order.status === 'PAYMENT_PENDING' && resolvedCheckout?.provider === 'MOCK' ? (
-              <View style={{
-                backgroundColor: theme.colors.surfaceRaised,
-                borderRadius: 16,
-                padding: 20,
-                gap: 12,
-                marginBottom: 24,
-              }}>
-                <Text style={{ fontFamily: theme.fontFamily.label, fontSize: 10, textTransform: 'uppercase', letterSpacing: 1, color: theme.colors.inkMuted }}>
-                  DEV MODE
-                </Text>
-                <Text style={{ fontFamily: theme.fontFamily.headline, fontSize: 15, fontWeight: '700', color: theme.colors.ink }}>
-                  Mock Checkout
-                </Text>
-                <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 13, color: theme.colors.inkMuted }}>
-                  Receipt: {resolvedCheckout.receipt}
-                </Text>
-              </View>
-            ) : null}
 
             {/* ── Seller panel ── */}
             {!isBuyer ? (
@@ -775,43 +611,132 @@ export default function OrderDetailScreen() {
         }}>
           {/* Buyer payment flow */}
           {isBuyer && order.status === 'PAYMENT_PENDING' ? (
-            <>
-              {!resolvedCheckout ? (
-                <PrimaryButton
-                  label="Prepare checkout"
-                  loading={busyAction === 'checkout'}
-                  onPress={() => { void handlePrepareCheckout(); }}
-                />
-              ) : null}
-              {resolvedCheckout?.provider === 'MOCK' ? (
-                <PrimaryButton
-                  label="Capture mock payment"
-                  loading={busyAction === 'payment'}
-                  onPress={() => { void handleCaptureMockPayment(); }}
-                  tone="secondary"
-                />
-              ) : null}
-              {resolvedCheckout?.provider === 'RAZORPAY' ? (
-                <PrimaryButton
-                  label="Pay now"
-                  loading={busyAction === 'payment'}
-                  onPress={() => { void handleRazorpayLinkPayment(resolvedCheckout); }}
-                  tone="action"
-                />
-              ) : null}
-            </>
+            <PrimaryButton
+              label="Pay now"
+              loading={busyAction === 'payment'}
+              onPress={() => { void handlePrepareCheckout(); }}
+              tone="action"
+            />
           ) : null}
 
           {/* Confirm Receipt — only shown after code is revealed */}
           {isBuyer && order.status === 'CODE_REVEALED' ? (
-            <PrimaryButton
-              label="Voucher Works — Confirm"
-              loading={busyAction === 'confirm'}
-              onPress={() => { void handleConfirm(); }}
-              tone="action"
-            />
+            <>
+              <PrimaryButton
+                label="Voucher Works — Confirm"
+                loading={busyAction === 'confirm'}
+                onPress={() => { void handleConfirm(); }}
+                tone="brand"
+              />
+              <Pressable
+                onPress={() => { setDisputeOpen(true); }}
+                style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1, alignItems: 'center', paddingVertical: 8 })}>
+                <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 13, color: theme.colors.inkMuted }}>
+                  Something wrong?{' '}
+                  <Text style={{ color: theme.colors.danger, fontFamily: theme.fontFamily.labelSemi, fontWeight: '600' }}>
+                    Raise a dispute
+                  </Text>
+                </Text>
+              </Pressable>
+            </>
           ) : null}
         </View>
+
+        {/* ── Dispute bottom sheet ── */}
+        <Modal
+          animationType="slide"
+          onRequestClose={() => { setDisputeOpen(false); }}
+          transparent
+          visible={disputeOpen}>
+          <Pressable
+            onPress={() => { setDisputeOpen(false); }}
+            style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }}
+          />
+          <View style={{
+            backgroundColor: theme.colors.surface,
+            borderTopLeftRadius: 28,
+            borderTopRightRadius: 28,
+            paddingHorizontal: 24,
+            paddingTop: 12,
+            paddingBottom: 40,
+            gap: 20,
+          }}>
+            {/* Handle */}
+            <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: theme.colors.surfaceHighest, alignSelf: 'center' }} />
+
+            {/* Header */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <View style={{ gap: 2 }}>
+                <Text style={{ fontFamily: theme.fontFamily.headline, fontSize: 20, fontWeight: '700', color: theme.colors.ink }}>
+                  Raise a dispute
+                </Text>
+                <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 13, color: theme.colors.inkMuted }}>
+                  Your payment stays held until resolved.
+                </Text>
+              </View>
+              <Pressable
+                onPress={() => { setDisputeOpen(false); }}
+                style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1, padding: 4 })}>
+                <Ionicons name="close" size={22} color={theme.colors.inkMuted} />
+              </Pressable>
+            </View>
+
+            {/* Reason chips */}
+            <View style={{ gap: 8 }}>
+              <Text style={{ fontFamily: theme.fontFamily.label, fontSize: 12, color: theme.colors.inkMuted, textTransform: 'uppercase', letterSpacing: 0.8 }}>
+                What went wrong?
+              </Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                {([
+                  { label: 'Code doesn\'t work', value: 'voucher-invalid' },
+                  { label: 'Already used', value: 'voucher-already-used' },
+                  { label: 'Wrong voucher', value: 'wrong-voucher' },
+                  { label: 'Expired', value: 'voucher-expired' },
+                  { label: 'Other', value: 'other' },
+                ] as const).map((opt) => {
+                  const active = reason === opt.value;
+                  return (
+                    <Pressable
+                      key={opt.value}
+                      onPress={() => { setReason(opt.value); }}
+                      style={{
+                        paddingHorizontal: 14, paddingVertical: 8,
+                        borderRadius: 9999,
+                        backgroundColor: active ? `${theme.colors.danger}18` : theme.colors.surfaceHigh,
+                        borderWidth: active ? 1.5 : 1,
+                        borderColor: active ? theme.colors.danger : theme.colors.border,
+                      }}>
+                      <Text style={{
+                        fontFamily: theme.fontFamily.labelSemi,
+                        fontSize: 13, fontWeight: '600',
+                        color: active ? theme.colors.danger : theme.colors.inkSecondary,
+                      }}>
+                        {opt.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* Description */}
+            <TextField
+              helperText="Be specific — this helps resolve it faster."
+              label="Describe what happened"
+              multiline
+              onChangeText={setDescription}
+              value={description}
+            />
+
+            <PrimaryButton
+              disabled={description.trim().length < 10}
+              label="Submit dispute"
+              loading={busyAction === 'dispute'}
+              onPress={() => { void handleDispute(); }}
+              tone="danger"
+            />
+          </View>
+        </Modal>
 
       </SafeAreaView>
     </View>

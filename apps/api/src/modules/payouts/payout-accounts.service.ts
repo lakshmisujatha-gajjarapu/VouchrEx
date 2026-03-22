@@ -35,7 +35,8 @@ export class PayoutAccountsService {
     let fundAccountId: string;
 
     if (dto.type === 'UPI') {
-      const upiId = dto.upiId!;
+      if (!dto.upiId) throw new Error('upiId is required for UPI accounts');
+      const upiId = dto.upiId;
       fundAccountId = await this.paymentsService.createRazorpayFundAccountUpi(
         contactId,
         upiId
@@ -69,9 +70,12 @@ export class PayoutAccountsService {
     }
 
     // BANK_ACCOUNT
-    const accountNumber = dto.accountNumber!;
-    const ifsc = dto.ifsc!;
-    const accountHolderName = dto.accountHolderName!;
+    if (!dto.accountNumber || !dto.ifsc || !dto.accountHolderName) {
+      throw new Error('accountNumber, ifsc, and accountHolderName are required for bank accounts');
+    }
+    const accountNumber = dto.accountNumber;
+    const ifsc = dto.ifsc;
+    const accountHolderName = dto.accountHolderName;
     const encrypted = this.encryptBankDetails(accountNumber, ifsc);
     fundAccountId = await this.paymentsService.createRazorpayFundAccountBank(
       contactId,
@@ -129,10 +133,13 @@ export class PayoutAccountsService {
   decryptBankDetails(encrypted: string): { accountNumber: string; ifsc: string } {
     const key = this.requireEncryptionKey();
     const [ivHex, tagHex, dataHex] = encrypted.split(':');
-    const decipher = createDecipheriv(encAlgorithm, key, Buffer.from(ivHex!, 'hex'));
-    decipher.setAuthTag(Buffer.from(tagHex!, 'hex'));
+    if (!ivHex || !tagHex || !dataHex) {
+      throw new Error('Invalid encrypted bank details format.');
+    }
+    const decipher = createDecipheriv(encAlgorithm, key, Buffer.from(ivHex, 'hex'));
+    decipher.setAuthTag(Buffer.from(tagHex, 'hex'));
     const decrypted = Buffer.concat([
-      decipher.update(Buffer.from(dataHex!, 'hex')),
+      decipher.update(Buffer.from(dataHex, 'hex')),
       decipher.final()
     ]);
     return JSON.parse(decrypted.toString('utf8')) as { accountNumber: string; ifsc: string };

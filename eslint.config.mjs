@@ -7,6 +7,7 @@ export default tseslint.config(
     ignores: [
       '**/dist/**',
       '**/node_modules/**',
+      '**/.next/**',
       '.yarn/**',
       'eslint.config.mjs',
       'apps/api/test/**/*.cjs'
