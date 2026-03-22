@@ -64,9 +64,9 @@ export default function BazaarScreen() {
     <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <SafeAreaView style={{ flex: 1 }} edges={['top', 'left', 'right']}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
-          <View style={{ paddingHorizontal: 20, paddingTop: 8, gap: 20 }}>
 
-            {/* ── Editorial hero headline ── */}
+          {/* ── Hero + search — padded section ── */}
+          <View style={{ paddingHorizontal: 20, paddingTop: 8, gap: 20 }}>
             <View style={{ gap: 4, marginTop: 8 }}>
               <Text style={{
                 fontFamily: theme.fontFamily.headlineExtra,
@@ -88,7 +88,6 @@ export default function BazaarScreen() {
               </Text>
             </View>
 
-            {/* ── Pill search bar ── */}
             <View style={{
               flexDirection: 'row',
               alignItems: 'center',
@@ -118,72 +117,76 @@ export default function BazaarScreen() {
                 style={{
                   flex: 1, height: '100%', paddingHorizontal: 12,
                   fontSize: 15, fontFamily: theme.fontFamily.body,
-                  color: theme.colors.ink,
+                  color: theme.colors.ink, letterSpacing: 0,
                 }}
                 value={query}
               />
             </View>
+          </View>
 
-            {/* ── Sort chips ── */}
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -20 }} contentContainerStyle={{ paddingHorizontal: 20, gap: 8, flexDirection: 'row' }}>
-              {SORT_OPTIONS.map((option) => {
-                const active = sort === option;
+          {/* ── Sort chips — full width, outside padded container ── */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 20 }} contentContainerStyle={{ paddingHorizontal: 20, gap: 8, flexDirection: 'row' }}>
+            {SORT_OPTIONS.map((option) => {
+              const active = sort === option;
+              return (
+                <Pressable
+                  key={option}
+                  onPress={() => { setSort(option); }}
+                  style={{
+                    paddingHorizontal: 20,
+                    paddingVertical: 10,
+                    borderRadius: 9999,
+                    backgroundColor: active ? theme.colors.brand : theme.colors.surfaceHigh,
+                  }}>
+                  <Text style={{
+                    fontFamily: theme.fontFamily.labelSemi,
+                    fontSize: 13,
+                    fontWeight: '600',
+                    color: active ? '#FFFFFF' : theme.colors.inkMuted,
+                  }}>
+                    {sortLabel(option)}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+
+          {/* ── Category chips — full width, outside padded container ── */}
+          {categories.length > 1 ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 12 }} contentContainerStyle={{ paddingHorizontal: 20, gap: 8, flexDirection: 'row' }}>
+              {categories.map((cat) => {
+                const active = cat === 'All' ? !category : category === cat;
                 return (
                   <Pressable
-                    key={option}
-                    onPress={() => { setSort(option); }}
+                    key={cat}
+                    onPress={() => { setCategory(cat === 'All' ? undefined : cat); }}
                     style={{
                       paddingHorizontal: 20,
                       paddingVertical: 10,
                       borderRadius: 9999,
-                      backgroundColor: active ? theme.colors.brand : theme.colors.surfaceHigh,
+                      backgroundColor: active ? theme.colors.surfaceHighest : theme.colors.surfaceHigh,
+                      borderWidth: active ? 1 : 0,
+                      borderColor: active ? theme.colors.border : 'transparent',
                     }}>
                     <Text style={{
-                      fontFamily: theme.fontFamily.labelSemi,
+                      fontFamily: theme.fontFamily.label,
                       fontSize: 13,
-                      fontWeight: '600',
-                      color: active ? '#FFFFFF' : theme.colors.inkMuted,
+                      color: active ? theme.colors.ink : theme.colors.inkMuted,
                     }}>
-                      {sortLabel(option)}
+                      {cat}
                     </Text>
                   </Pressable>
                 );
               })}
             </ScrollView>
+          ) : null}
 
-            {/* ── Category chips ── */}
-            {categories.length > 1 ? (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -20 }} contentContainerStyle={{ paddingHorizontal: 20, gap: 8, flexDirection: 'row' }}>
-                {categories.map((cat) => {
-                  const active = cat === 'All' ? !category : category === cat;
-                  return (
-                    <Pressable
-                      key={cat}
-                      onPress={() => { setCategory(cat === 'All' ? undefined : cat); }}
-                      style={{
-                        paddingHorizontal: 20,
-                        paddingVertical: 10,
-                        borderRadius: 9999,
-                        backgroundColor: active ? theme.colors.surfaceHighest : theme.colors.surfaceHigh,
-                        borderWidth: active ? 1 : 0,
-                        borderColor: active ? theme.colors.border : 'transparent',
-                      }}>
-                      <Text style={{
-                        fontFamily: theme.fontFamily.label,
-                        fontSize: 13,
-                        color: active ? theme.colors.ink : theme.colors.inkMuted,
-                      }}>
-                        {cat}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
-            ) : null}
+          {/* ── Listings — padded section ── */}
+          <View style={{ paddingHorizontal: 20, gap: 20, marginTop: 20 }}>
 
             {/* ── Loading ── */}
             {listingsResource.loading && !listingsResource.data ? (
-              <ActivityIndicator color={theme.colors.brand} style={{ marginTop: 20 }} />
+              <ActivityIndicator color={theme.colors.brand} />
             ) : null}
 
             {listingsResource.error ? (

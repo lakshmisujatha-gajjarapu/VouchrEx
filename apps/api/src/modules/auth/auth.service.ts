@@ -223,7 +223,8 @@ export class AuthService {
     await this.prisma.userSession.update({
       where: { id: session.id },
       data: {
-        lastUsedAt: new Date()
+        lastUsedAt: new Date(),
+        expiresAt: new Date(Date.now() + this.sessionTtlHours * 60 * 60 * 1000)
       }
     });
 

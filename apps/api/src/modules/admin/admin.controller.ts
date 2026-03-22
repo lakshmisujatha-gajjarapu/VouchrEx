@@ -2,11 +2,14 @@ import { Controller, Get, Headers, Param, Post, Query } from '@nestjs/common';
 import { ApiHeader, ApiTags } from '@nestjs/swagger';
 import {
   DisputeStatus,
+  EscrowStatus,
   OrderStatus,
   PaymentStatus,
+  PayoutStatus,
   UserStatus
 } from '@prisma/client';
 
+import { PaymentsService } from '../payments/payments.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AdminAccessService } from './admin-access.service';
 import { adminHeaderName } from './admin.constants';
@@ -16,7 +19,8 @@ import { adminHeaderName } from './admin.constants';
 export class AdminController {
   constructor(
     private readonly adminAccessService: AdminAccessService,
-    private readonly prisma: PrismaService
+    private readonly prisma: PrismaService,
+    private readonly paymentsService: PaymentsService
   ) {}
 
   /** Platform-wide operational metrics. */
@@ -202,7 +206,10 @@ export class AdminController {
     return user;
   }
 
-  /** Orders where escrow is released but payout has not been completed. */
+  /**
+   * Orders where payout is PENDING (no payout account) or FAILED (Razorpay error).
+   * These need admin attention.
+   */
   @ApiHeader({ name: adminHeaderName, required: true })
   @Get('payouts/pending')
   async getPendingPayouts(@Headers(adminHeaderName) adminToken?: string) {
@@ -211,14 +218,21 @@ export class AdminController {
     return this.prisma.order.findMany({
       where: {
         payment: {
-          escrowStatus: 'RELEASED',
-          payoutCompletedAt: null
+          escrowStatus: EscrowStatus.RELEASED,
+          payoutStatus: { in: [PayoutStatus.PENDING, PayoutStatus.FAILED] }
         }
       },
       include: {
         payment: true,
         buyer: { select: { id: true, name: true, phone: true } },
-        seller: { select: { id: true, name: true, phone: true } },
+        seller: {
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+            payoutAccount: true
+          }
+        },
         listing: { include: { brand: true } }
       },
       orderBy: { createdAt: 'asc' }
@@ -226,8 +240,72 @@ export class AdminController {
   }
 
   /**
-   * Mark a payout as manually completed by the admin.
-   * Used after admin manually transfers funds to seller outside the platform (Phase 1).
+   * Retry a failed auto-payout. Calls Razorpay Payouts API again using the
+   * seller's registered fund account.
+   */
+  @ApiHeader({ name: adminHeaderName, required: true })
+  @Post('orders/:orderId/retry-payout')
+  async retryPayout(
+    @Param('orderId') orderId: string,
+    @Headers(adminHeaderName) adminToken?: string
+  ) {
+    this.adminAccessService.requireAdminAccess(adminToken);
+
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        payment: true,
+        seller: { select: { id: true, payoutAccount: true } }
+      }
+    });
+
+    if (!order?.payment) {
+      return { success: false, message: 'Order or payment not found.' };
+    }
+    if (order.payment.payoutStatus === PayoutStatus.COMPLETED) {
+      return { success: false, message: 'Payout already completed.' };
+    }
+    if (order.payment.payoutStatus === PayoutStatus.PROCESSING) {
+      return { success: false, message: 'Payout already processing — check Razorpay dashboard.' };
+    }
+
+    const fundAccountId = order.seller.payoutAccount?.razorpayFundAccountId;
+    if (!fundAccountId) {
+      return { success: false, message: 'Seller has no registered payout account.' };
+    }
+
+    try {
+      const razorpayPayoutId = await this.paymentsService.executePayout(
+        fundAccountId,
+        order.sellerPayout
+      );
+      const updated = await this.prisma.payment.update({
+        where: { orderId },
+        data: {
+          payoutStatus: PayoutStatus.PROCESSING,
+          razorpayPayoutId,
+          payoutInitiatedAt: new Date(),
+          payoutFailureReason: null
+        }
+      });
+      await this.prisma.auditLog.create({
+        data: {
+          entityType: 'payment',
+          entityId: order.payment.id,
+          action: 'payment.payout_retried',
+          actorId: null,
+          metadata: { orderId, razorpayPayoutId }
+        }
+      });
+      return { success: true, payment: updated };
+    } catch (err) {
+      return { success: false, message: String(err) };
+    }
+  }
+
+  /**
+   * Manually mark a payout as completed — fallback for edge cases where
+   * funds were transferred outside Razorpay (e.g., IMPS from bank directly).
    */
   @ApiHeader({ name: adminHeaderName, required: true })
   @Post('orders/:orderId/complete-payout')
@@ -241,13 +319,16 @@ export class AdminController {
     if (!payment) {
       return { success: false, message: 'No payment found for this order.' };
     }
-    if (payment.payoutCompletedAt) {
-      return { success: false, message: 'Payout already marked as completed.' };
+    if (payment.payoutStatus === PayoutStatus.COMPLETED) {
+      return { success: false, message: 'Payout already completed.' };
     }
 
     const updated = await this.prisma.payment.update({
       where: { orderId },
-      data: { payoutCompletedAt: new Date() }
+      data: {
+        payoutStatus: PayoutStatus.COMPLETED,
+        payoutCompletedAt: new Date()
+      }
     });
 
     await this.prisma.auditLog.create({

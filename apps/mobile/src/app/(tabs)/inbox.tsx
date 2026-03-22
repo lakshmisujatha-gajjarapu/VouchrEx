@@ -9,6 +9,7 @@ import { StatusPill } from '@/components/status-pill';
 import { TicketCard } from '@/components/ticket-card';
 import { useAuth } from '@/hooks/use-auth';
 import { useAsyncResource } from '@/hooks/use-async-resource';
+import { useRefetchOnFocus } from '@/hooks/use-refetch-on-focus';
 import { api } from '@/lib/api';
 import { formatDateTime, formatStatus } from '@/lib/format';
 import { useTheme } from '@/theme/ThemeContext';
@@ -41,6 +42,8 @@ export default function InboxScreen() {
     }, [sessionToken]),
     { enabled: Boolean(sessionToken) },
   );
+
+  useRefetchOnFocus(useCallback(() => { void notificationsResource.reload(); }, [notificationsResource.reload]));
 
   async function handleMarkRead(id: string) {
     if (!sessionToken) {

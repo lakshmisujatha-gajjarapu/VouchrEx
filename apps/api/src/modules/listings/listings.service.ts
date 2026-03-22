@@ -12,6 +12,7 @@ import {
 } from '@prisma/client';
 
 import { NotificationsService } from '../notifications/notifications.service';
+import { PayoutAccountsService } from '../payouts/payout-accounts.service';
 import { BrandsService } from '../brands/brands.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateListingDto } from './dto/create-listing.dto';
@@ -31,7 +32,8 @@ export class ListingsService {
     private readonly prisma: PrismaService,
     private readonly codeVaultService: CodeVaultService,
     private readonly notificationsService: NotificationsService,
-    private readonly brandsService: BrandsService
+    private readonly brandsService: BrandsService,
+    private readonly payoutAccountsService: PayoutAccountsService
   ) {}
 
   findActive(query: QueryListingsDto) {
@@ -150,22 +152,32 @@ export class ListingsService {
       readonly name: string;
     }
   ) {
+    const minExpiryHours = Number(process.env.LISTING_MIN_EXPIRY_HOURS ?? 48);
     const expiryDate = new Date(createListingDto.expiryDate);
-    const minExpiryDate = new Date(Date.now() + 48 * 60 * 60 * 1000);
+    const minExpiryDate = new Date(Date.now() + minExpiryHours * 60 * 60 * 1000);
     if (expiryDate <= minExpiryDate) {
-      throw new BadRequestException('Voucher must expire at least 48 hours from now to allow time for buyer verification.');
+      throw new BadRequestException(`Voucher must expire at least ${String(minExpiryHours)} hours from now to allow time for buyer verification.`);
     }
 
     if (createListingDto.sellingPrice >= createListingDto.faceValue) {
       throw new BadRequestException('Selling price must be below face value for resale.');
     }
 
-    // Seller velocity: max 5 listings per hour (HLD fraud rule S1)
+    // Seller must have a registered payout account to receive payments
+    const payoutAccount = await this.payoutAccountsService.findByUserId(seller.id);
+    if (!payoutAccount) {
+      throw new BadRequestException(
+        'You must register a payout account (UPI or bank) before listing a voucher. Go to Settings → Payout Account.'
+      );
+    }
+
+    // Seller velocity: max N listings per hour (HLD fraud rule S1)
+    const sellerMaxListingsPerHour = Number(process.env.SELLER_MAX_LISTINGS_PER_HOUR ?? 5);
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
     const recentListings = await this.prisma.voucherListing.count({
       where: { sellerId: seller.id, createdAt: { gte: oneHourAgo } }
     });
-    if (recentListings >= 5) {
+    if (recentListings >= sellerMaxListingsPerHour) {
       throw new BadRequestException('Too many listings in a short period. Please try again later.');
     }
 

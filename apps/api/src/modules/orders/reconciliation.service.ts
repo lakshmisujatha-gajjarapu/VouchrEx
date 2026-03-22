@@ -6,7 +6,8 @@ import { PaymentsService } from '../payments/payments.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { OrdersService } from './orders.service';
 
-const fiveMinutesMs = 5 * 60 * 1000;
+const stalePaymentSyncMinutes = Number(process.env.STALE_PAYMENT_SYNC_MINUTES ?? 5);
+const stalePaymentSyncMs = stalePaymentSyncMinutes * 60 * 1000;
 
 @Injectable()
 export class ReconciliationService {
@@ -34,14 +35,14 @@ export class ReconciliationService {
   }
 
   private async runReconciliation() {
-    const fiveMinutesAgo = new Date(Date.now() - fiveMinutesMs);
+    const stalePaymentCutoff = new Date(Date.now() - stalePaymentSyncMs);
 
     const stalePendingPayments = await this.prisma.payment.findMany({
       where: {
         razorpayPaymentLinkId: { not: null },
         status: PaymentStatus.PENDING,
         order: { status: OrderStatus.PAYMENT_PENDING },
-        createdAt: { lte: fiveMinutesAgo }
+        createdAt: { lte: stalePaymentCutoff }
       },
       include: { order: true }
     });

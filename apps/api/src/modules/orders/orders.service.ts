@@ -13,7 +13,8 @@ import {
   NotificationChannel,
   OrderStatus,
   PaymentProvider,
-  PaymentStatus
+  PaymentStatus,
+  PayoutStatus
 } from '@prisma/client';
 
 import { CodeVaultService } from '../listings/services/code-vault.service';
@@ -23,10 +24,10 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateDisputeDto } from './dto/create-dispute.dto';
 import { CreateOrderDto } from './dto/create-order.dto';
 import {
-  phase1CommissionRate,
-  phase1HighValueThresholdInr,
-  phase1HighValueWindowHours,
-  phase1PlatformFeeInr
+  commissionRate,
+  highValueThresholdInr,
+  highValueWindowHours,
+  platformFeeInr
 } from './orders.constants';
 import { VerifyPaymentDto } from './dto/verify-payment.dto';
 
@@ -146,23 +147,32 @@ export class OrdersService {
         status: { not: OrderStatus.CANCELLED }
       }
     });
-    if (recentBuyerOrders >= 3) {
+    const buyerMaxOrdersPerHour = Number(process.env.BUYER_MAX_ORDERS_PER_HOUR ?? 3);
+    if (recentBuyerOrders >= buyerMaxOrdersPerHour) {
       throw new BadRequestException('Too many purchases in a short period. Please try again later.');
     }
 
     // Bronze users cannot purchase high-value vouchers (HLD fraud rule B5 / trust tier gating)
-    const highValueThreshold = 2000;
-    if (buyer.tier === 'BRONZE' && listing.sellingPrice > highValueThreshold) {
+    if (buyer.tier === 'BRONZE' && listing.sellingPrice > highValueThresholdInr) {
       throw new BadRequestException(
         'New accounts cannot purchase high-value vouchers. Complete more transactions to raise your trust tier.'
       );
     }
 
-    const platformFee = phase1PlatformFeeInr;
-    const commission = Math.round(listing.sellingPrice * phase1CommissionRate);
+    const platformFee = platformFeeInr;
+    const commission = Math.round(listing.sellingPrice * commissionRate);
     const sellerPayout = listing.sellingPrice - commission;
 
     const order = await this.prisma.$transaction(async (tx) => {
+      // Remove stale terminal orders so the unique constraint on listingId
+      // doesn't block a fresh purchase attempt after a cancelled payment.
+      await tx.order.deleteMany({
+        where: {
+          listingId: listing.id,
+          status: { in: [OrderStatus.CANCELLED, OrderStatus.PAYMENT_FAILED] }
+        }
+      });
+
       const createdOrder = await tx.order.create({
         data: {
           listingId: listing.id,
@@ -225,8 +235,7 @@ export class OrdersService {
           title: 'Complete payment',
           message: `Escrow checkout is ready for ${listing.brand.name}.`,
           metadata: {
-            checkoutProvider: checkout.provider,
-            checkoutOrderId: checkout.orderId
+            checkoutPaymentLinkId: checkout.paymentLinkId
           }
         },
         {
@@ -316,38 +325,34 @@ export class OrdersService {
       throw new BadRequestException('Payment can only be captured for pending orders.');
     }
 
-    const paymentProvider = order.payment?.provider ?? this.paymentsService.getConfiguredProvider();
+    if (!order.payment?.razorpayOrderId) {
+      throw new BadRequestException(
+        'Prepare Razorpay checkout before verifying payment.'
+      );
+    }
 
-    if (paymentProvider === PaymentProvider.RAZORPAY) {
-      if (!order.payment?.razorpayOrderId) {
-        throw new BadRequestException(
-          'Prepare Razorpay checkout before verifying payment.'
-        );
-      }
+    if (
+      !dto.razorpayOrderId ||
+      !dto.razorpayPaymentId ||
+      !dto.razorpaySignature
+    ) {
+      throw new BadRequestException(
+        'Razorpay payment verification requires order, payment, and signature IDs.'
+      );
+    }
 
-      if (
-        !dto.razorpayOrderId ||
-        !dto.razorpayPaymentId ||
-        !dto.razorpaySignature
-      ) {
-        throw new BadRequestException(
-          'Razorpay payment verification requires order, payment, and signature IDs.'
-        );
-      }
+    if (order.payment.razorpayOrderId !== dto.razorpayOrderId) {
+      throw new BadRequestException('Razorpay order ID does not match the prepared checkout.');
+    }
 
-      if (order.payment.razorpayOrderId !== dto.razorpayOrderId) {
-        throw new BadRequestException('Razorpay order ID does not match the prepared checkout.');
-      }
+    const isValidSignature = this.paymentsService.verifySignature({
+      orderId: dto.razorpayOrderId,
+      paymentId: dto.razorpayPaymentId,
+      signature: dto.razorpaySignature
+    });
 
-      const isValidSignature = this.paymentsService.verifySignature({
-        orderId: dto.razorpayOrderId,
-        paymentId: dto.razorpayPaymentId,
-        signature: dto.razorpaySignature
-      });
-
-      if (!isValidSignature) {
-        throw new BadRequestException('Razorpay payment signature is invalid.');
-      }
+    if (!isValidSignature) {
+      throw new BadRequestException('Razorpay payment signature is invalid.');
     }
 
     return this.activateEscrow(id, {
@@ -384,7 +389,6 @@ export class OrdersService {
 
     const linkId = order.payment?.razorpayPaymentLinkId;
     if (!linkId) {
-      // MOCK provider or no link yet — nothing to pull from Razorpay.
       return { synced: false, status: order.status };
     }
 
@@ -470,8 +474,8 @@ export class OrdersService {
     const codeVault = order.listing.codeVault;
     const now = new Date();
     const verificationWindowHours =
-      order.listing.faceValue > phase1HighValueThresholdInr
-        ? Math.max(order.listing.brand.verificationWindowHours, phase1HighValueWindowHours)
+      order.listing.faceValue > highValueThresholdInr
+        ? Math.max(order.listing.brand.verificationWindowHours, highValueWindowHours)
         : order.listing.brand.verificationWindowHours;
     const verificationDeadline =
       order.verificationDeadline ??
@@ -1168,7 +1172,7 @@ export class OrdersService {
       throw new NotFoundException(`Order ${orderId} was not found.`);
     }
 
-    const provider = order.payment?.provider ?? this.paymentsService.getConfiguredProvider();
+    const provider = order.payment?.provider ?? PaymentProvider.RAZORPAY;
 
     const updatedOrder = await this.prisma.$transaction(async (tx) => {
       const paymentData = {
@@ -1261,7 +1265,8 @@ export class OrdersService {
         seller: {
           select: {
             id: true,
-            name: true
+            name: true,
+            payoutAccount: true
           }
         }
       }
@@ -1292,9 +1297,8 @@ export class OrdersService {
         await tx.payment.update({
           where: { orderId: id },
           data: {
-            escrowStatus: EscrowStatus.RELEASED
-            // payoutCompletedAt is set by admin via POST /admin/orders/:id/complete-payout
-            // after manual bank transfer in Phase 1
+            escrowStatus: EscrowStatus.RELEASED,
+            payoutStatus: PayoutStatus.PENDING
           }
         });
       }
@@ -1311,20 +1315,6 @@ export class OrdersService {
         }
       });
 
-      // Record that payout is owed so admin can track and execute it
-      await tx.auditLog.create({
-        data: {
-          entityType: 'payment',
-          entityId: order.payment?.id ?? id,
-          action: 'payment.payout_pending',
-          actorId: null,
-          metadata: {
-            orderId: id,
-            sellerPayoutInr: order.sellerPayout
-          }
-        }
-      });
-
       return tx.order.findUnique({
         where: { id },
         include: {
@@ -1333,6 +1323,48 @@ export class OrdersService {
         }
       });
     });
+
+    // Attempt automatic payout via Razorpay after the transaction commits
+    const fundAccountId = order.seller.payoutAccount?.razorpayFundAccountId;
+    if (order.payment && fundAccountId) {
+      try {
+        const razorpayPayoutId = await this.paymentsService.executePayout(
+          fundAccountId,
+          order.sellerPayout
+        );
+        await this.prisma.payment.update({
+          where: { orderId: id },
+          data: {
+            payoutStatus: PayoutStatus.PROCESSING,
+            razorpayPayoutId,
+            payoutInitiatedAt: new Date()
+          }
+        });
+      } catch (err) {
+        this.logger.error(`Auto-payout failed for order ${id}: ${String(err)}`);
+        await this.prisma.payment.update({
+          where: { orderId: id },
+          data: {
+            payoutStatus: PayoutStatus.FAILED,
+            payoutFailureReason: String(err)
+          }
+        });
+        await this.prisma.auditLog.create({
+          data: {
+            entityType: 'payment',
+            entityId: order.payment.id,
+            action: 'payment.payout_failed',
+            actorId: null,
+            metadata: { orderId: id, sellerPayoutInr: order.sellerPayout, error: String(err) }
+          }
+        });
+      }
+    }
+
+    const payoutAccount = order.seller.payoutAccount;
+    const sellerPayoutMsg = payoutAccount?.upiId
+      ? `₹${String(order.sellerPayout)} is being transferred to ${payoutAccount.upiId}`
+      : `₹${String(order.sellerPayout)} will be settled once you add a payout account`;
 
     await this.notificationsService.createMany([
       {
@@ -1343,7 +1375,7 @@ export class OrdersService {
         eventType:
           status === OrderStatus.AUTO_CONFIRMED ? 'order.auto_confirmed' : 'order.confirmed',
         title: status === OrderStatus.AUTO_CONFIRMED ? 'Order auto-confirmed' : 'Order confirmed',
-        message: `Escrow closed for ${order.listing.brand.name}.`,
+        message: `Payment released for ${order.listing.brand.name}.`,
         metadata: {
           confirmedAt: confirmedAt.toISOString()
         }
@@ -1355,10 +1387,11 @@ export class OrdersService {
         channel: NotificationChannel.PUSH,
         eventType:
           status === OrderStatus.AUTO_CONFIRMED ? 'order.auto_confirmed' : 'order.confirmed',
-        title: 'Seller payout released',
-        message: `Escrow released for ${order.listing.brand.name}.`,
+        title: 'Payout initiated',
+        message: sellerPayoutMsg,
         metadata: {
-          confirmedAt: confirmedAt.toISOString()
+          confirmedAt: confirmedAt.toISOString(),
+          sellerPayoutInr: order.sellerPayout
         }
       }
     ]);

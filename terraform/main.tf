@@ -16,24 +16,26 @@ module "postgres_instance" {
 }
 
 # ─── Redis on Lightsail ────────────────────────────────────────────────────────
+# Phase 2: uncomment when Redis (queues/sessions) is needed.
 
-module "redis_instance" {
-  source = "./modules/redis_instance"
-
-  name           = "${local.name_prefix}-redis"
-  aws_region     = var.aws_region
-  bundle_id      = var.redis_bundle_id
-  redis_password = var.redis_password
-}
+# module "redis_instance" {
+#   source = "./modules/redis_instance"
+#
+#   name           = "${local.name_prefix}-redis"
+#   aws_region     = var.aws_region
+#   bundle_id      = var.redis_bundle_id
+#   redis_password = var.redis_password
+# }
 
 # ─── Lightsail Object Storage ──────────────────────────────────────────────────
+# Phase 2: uncomment when file uploads are needed.
 
-module "storage" {
-  source = "./modules/storage"
-
-  bucket_name = "${local.name_prefix}-store"
-  aws_region  = var.aws_region
-}
+# module "storage" {
+#   source = "./modules/storage"
+#
+#   bucket_name = "${local.name_prefix}-store"
+#   aws_region  = var.aws_region
+# }
 
 # ─── NestJS API Container Service ─────────────────────────────────────────────
 
@@ -53,14 +55,15 @@ module "container_service" {
     # Database — pooler URL for Prisma + PgBouncer (transaction mode)
     DATABASE_URL = module.postgres_instance.db_pooler_url
 
-    # Redis
-    REDIS_URL = "redis://:${var.redis_password}@${module.redis_instance.private_ip}:6379"
+    # Phase 2: uncomment when Redis module is enabled
+    # REDIS_URL = "redis://:${var.redis_password}@${module.redis_instance.private_ip}:6379"
 
     # Object storage (S3-compatible Lightsail bucket)
-    MINIO_ENDPOINT   = module.storage.bucket_url
-    MINIO_ACCESS_KEY = module.storage.access_key_id
-    MINIO_SECRET_KEY = module.storage.secret_access_key
-    MINIO_BUCKET     = module.storage.bucket_name
+    # Phase 2: uncomment when storage module is enabled
+    # MINIO_ENDPOINT   = module.storage.bucket_url
+    # MINIO_ACCESS_KEY = module.storage.access_key_id
+    # MINIO_SECRET_KEY = module.storage.secret_access_key
+    # MINIO_BUCKET     = module.storage.bucket_name
 
     # App secrets
     CODE_ENCRYPTION_KEY = var.code_encryption_key

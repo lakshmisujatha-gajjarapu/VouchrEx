@@ -24,22 +24,24 @@ output "db_connection" {
   sensitive   = true
 }
 
-output "bucket_name" {
-  description = "Lightsail bucket name"
-  value       = module.storage.bucket_name
-}
+# Phase 2: uncomment when storage module is enabled
+# output "bucket_name" {
+#   description = "Lightsail bucket name"
+#   value       = module.storage.bucket_name
+# }
 
 output "postgres_private_ip" {
   description = "Private IP of the PostgreSQL Lightsail instance"
   value       = module.postgres_instance.private_ip
 }
 
-output "redis_private_ip" {
-  description = "Private IP of the Redis Lightsail instance"
-  value       = module.redis_instance.private_ip
-}
-
-output "redis_public_ip" {
-  description = "Public (static) IP of the Redis Lightsail instance"
-  value       = module.redis_instance.public_ip
-}
+# Phase 2: uncomment when Redis module is enabled
+# output "redis_private_ip" {
+#   description = "Private IP of the Redis Lightsail instance"
+#   value       = module.redis_instance.private_ip
+# }
+#
+# output "redis_public_ip" {
+#   description = "Public (static) IP of the Redis Lightsail instance"
+#   value       = module.redis_instance.public_ip
+# }

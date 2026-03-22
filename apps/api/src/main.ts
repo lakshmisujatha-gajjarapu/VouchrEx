@@ -3,28 +3,62 @@ import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ZodValidationPipe, patchNestJsSwagger } from 'nestjs-zod';
 import helmet from 'helmet';
+import { z } from 'zod';
 
 import { AppModule } from './modules/app.module';
 
-function validateEnv() {
-  const always = ['CODE_ENCRYPTION_KEY', 'DATABASE_URL', 'ADMIN_API_TOKEN'];
-  const missing = always.filter((k) => !process.env[k]?.trim());
+const envSchema = z.object({
+  // ── Required ─────────────────────────────────────────────────────────────
+  CODE_ENCRYPTION_KEY:      z.string().min(1),
+  DATABASE_URL:             z.string().min(1),
+  ADMIN_API_TOKEN:          z.string().min(1),
+  // Razorpay — payment collection
+  RAZORPAY_KEY_ID:          z.string().min(1),
+  RAZORPAY_KEY_SECRET:      z.string().min(1),
+  RAZORPAY_WEBHOOK_SECRET:  z.string().min(1),
+  // RazorpayX — payouts to sellers
+  RAZORPAY_X_KEY_ID:        z.string().min(1),
+  RAZORPAY_X_KEY_SECRET:    z.string().min(1),
+  RAZORPAY_X_ACCOUNT_NUMBER: z.string().min(1),
 
-  if (missing.length > 0) {
+  // ── Optional with defaults ────────────────────────────────────────────────
+  PORT:                         z.coerce.number().default(3010),
+  RAZORPAY_PAYMENT_CALLBACK_URL: z.string().default('couponbazaar://payment-callback'),
+  // Marketplace economics
+  PLATFORM_FEE_INR:             z.coerce.number().default(10),
+  COMMISSION_RATE:              z.coerce.number().default(0.12),
+  HIGH_VALUE_THRESHOLD_INR:     z.coerce.number().default(2000),
+  HIGH_VALUE_WINDOW_HOURS:      z.coerce.number().default(4),
+  // Fraud / velocity limits
+  BUYER_MAX_ORDERS_PER_HOUR:    z.coerce.number().default(3),
+  SELLER_MAX_LISTINGS_PER_HOUR: z.coerce.number().default(5),
+  LISTING_MIN_EXPIRY_HOURS:     z.coerce.number().default(48),
+  // Payments & reconciliation
+  PAYMENT_TIMEOUT_MINUTES:      z.coerce.number().default(30),
+  STALE_PAYMENT_SYNC_MINUTES:   z.coerce.number().default(5),
+  // Auth / sessions
+  OTP_TTL_MINUTES:              z.coerce.number().default(5),
+  OTP_MAX_ATTEMPTS:             z.coerce.number().default(5),
+  SESSION_TTL_HOURS:            z.coerce.number().default(2160),
+  AUDIT_RETENTION_DAYS:         z.coerce.number().default(7),
+  OTP_CHALLENGE_GRACE_HOURS:    z.coerce.number().default(24),
+  // Throttler
+  THROTTLE_SHORT_TTL_MS:        z.coerce.number().default(1000),
+  THROTTLE_SHORT_LIMIT:         z.coerce.number().default(10),
+  THROTTLE_MEDIUM_TTL_MS:       z.coerce.number().default(60000),
+  THROTTLE_MEDIUM_LIMIT:        z.coerce.number().default(100),
+  THROTTLE_LONG_TTL_MS:         z.coerce.number().default(900000),
+  THROTTLE_LONG_LIMIT:          z.coerce.number().default(500),
+});
+
+function validateEnv() {
+  const result = envSchema.safeParse(process.env);
+  if (!result.success) {
+    const missing = result.error.issues.map((i) => i.path.join('.'));
     throw new Error(
-      `Missing required environment variables: ${missing.join(', ')}. ` +
+      `Missing or empty required environment variables: ${missing.join(', ')}. ` +
         'Copy .env.example to .env and fill in all values.'
     );
-  }
-
-  if (process.env.NODE_ENV === 'production') {
-    const prodOnly = ['RAZORPAY_KEY_ID', 'RAZORPAY_KEY_SECRET', 'RAZORPAY_WEBHOOK_SECRET'];
-    const prodMissing = prodOnly.filter((k) => !process.env[k]?.trim());
-    if (prodMissing.length > 0) {
-      throw new Error(
-        `Production requires these variables to be set: ${prodMissing.join(', ')}`
-      );
-    }
   }
 }
 

@@ -4,7 +4,7 @@ import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
 
 /** Retain revoked/expired records for this many days before hard-deleting. */
-const auditRetentionDays = 7;
+const auditRetentionDays = Number(process.env.AUDIT_RETENTION_DAYS ?? 7);
 
 @Injectable()
 export class AuthScheduler {
@@ -40,7 +40,8 @@ export class AuthScheduler {
   private async pruneOtpChallenges() {
     // Delete challenges that are either consumed or expired (past OTP TTL).
     // Keep a 24-hour grace window so ops can inspect recent auth failures.
-    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const otpChallengeGraceHours = Number(process.env.OTP_CHALLENGE_GRACE_HOURS ?? 24);
+    const cutoff = new Date(Date.now() - otpChallengeGraceHours * 60 * 60 * 1000);
 
     const { count } = await this.prisma.otpChallenge.deleteMany({
       where: {

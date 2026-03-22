@@ -25,6 +25,14 @@ export type OtpVerifyResult = {
   readonly user: SessionUser;
 };
 
+export type PayoutAccount = {
+  readonly registered: boolean;
+  readonly type?: 'UPI' | 'BANK_ACCOUNT';
+  readonly upiId?: string;
+  readonly accountHolderName?: string;
+  readonly verifiedAt?: string;
+};
+
 export type Brand = {
   readonly id: string;
   readonly name: string;
@@ -395,6 +403,16 @@ export const api = {
     }
   ) {
     return apiRequest<Dispute>(`/orders/${orderId}/disputes`, {
+      method: 'POST',
+      sessionToken,
+      body: input
+    });
+  },
+  getPayoutAccount(sessionToken: string) {
+    return apiRequest<PayoutAccount>('/payout-accounts/me', { sessionToken });
+  },
+  registerPayoutAccount(sessionToken: string, input: { readonly type: 'UPI'; readonly upiId: string }) {
+    return apiRequest<PayoutAccount>('/payout-accounts', {
       method: 'POST',
       sessionToken,
       body: input

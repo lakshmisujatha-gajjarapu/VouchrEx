@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useDeferredValue, useMemo, useState } from 'react';
+import React, { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -18,7 +18,7 @@ import { DateField } from '@/components/date-field';
 import { FilterChip } from '@/components/filter-chip';
 import { useAuth } from '@/hooks/use-auth';
 import { useAsyncResource } from '@/hooks/use-async-resource';
-import { api } from '@/lib/api';
+import { api, type PayoutAccount } from '@/lib/api';
 import { searchBrandfetchBrands } from '@/lib/brandfetch';
 import { useTheme } from '@/theme/ThemeContext';
 
@@ -141,6 +141,39 @@ export default function SellScreen() {
   const { sessionToken } = useAuth();
   const theme = useTheme();
   const router = useRouter();
+
+  // ── Payout account gate ──────────────────────────────────────────
+  const [payoutAccount, setPayoutAccount]   = useState<PayoutAccount | null>(null);
+  const [payoutLoading, setPayoutLoading]   = useState(true);
+  const [upiInput, setUpiInput]             = useState('');
+  const [upiSubmitting, setUpiSubmitting]   = useState(false);
+  const [upiError, setUpiError]             = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!sessionToken) return;
+    api.getPayoutAccount(sessionToken)
+      .then(setPayoutAccount)
+      .catch(() => setPayoutAccount({ registered: false }))
+      .finally(() => setPayoutLoading(false));
+  }, [sessionToken]);
+
+  async function handleRegisterUpi() {
+    if (!sessionToken || !upiInput.trim()) return;
+    setUpiSubmitting(true); setUpiError(null);
+    try {
+      const account = await api.registerPayoutAccount(sessionToken, {
+        type: 'UPI',
+        upiId: upiInput.trim()
+      });
+      setPayoutAccount(account);
+    } catch (e) {
+      setUpiError(e instanceof Error ? e.message : 'Could not register UPI. Try again.');
+    } finally {
+      setUpiSubmitting(false);
+    }
+  }
+  // ─────────────────────────────────────────────────────────────────
+
   const [brandName, setBrandName]       = useState('');
   const [voucherType, setVoucherType]   = useState<VoucherType>('gift-card');
   const [faceValue, setFaceValue]       = useState('');
@@ -148,7 +181,7 @@ export default function SellScreen() {
   const [expiryDate, setExpiryDate]     = useState(todayString);
   const [code, setCode]                 = useState('');
   const [submitting, setSubmitting]     = useState(false);
-  const [feedback, setFeedback]         = useState<{ ok: boolean; text: string } | null>(null);
+  const [feedback, setFeedback]         = useState<string | null>(null);
   const deferredBrandName               = useDeferredValue(brandName.trim());
 
   const suggestionsResource = useAsyncResource(
@@ -198,10 +231,9 @@ export default function SellScreen() {
         expiryDate: new Date(`${expiryDate}T23:59:59.000Z`).toISOString(),
         code,
       });
-      setBrandName(''); setCode(''); setFaceValue(''); setSellingPrice(''); setExpiryDate(todayString());
-      setFeedback({ ok: true, text: 'Live in the bazaar. This brand is now searchable for the next seller.' });
+      router.replace('/(tabs)/listings');
     } catch (e) {
-      setFeedback({ ok: false, text: e instanceof Error ? e.message : 'Could not create listing.' });
+      setFeedback(e instanceof Error ? e.message : 'Could not create listing.');
     } finally {
       setSubmitting(false);
     }
@@ -245,6 +277,122 @@ export default function SellScreen() {
             </View>
           </View>
 
+          {/* ── Payout gate: loading ── */}
+          {payoutLoading ? (
+            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+              <ActivityIndicator color={theme.colors.brand} size="large" />
+            </View>
+          ) : !payoutAccount?.registered ? (
+            /* ── Payout gate: UPI registration ── */
+            <ScrollView
+              contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20, paddingBottom: 60, justifyContent: 'center' }}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}>
+              <View style={{ alignItems: 'center', marginBottom: 32 }}>
+                <View style={{
+                  width: 72, height: 72, borderRadius: 36,
+                  backgroundColor: theme.colors.brandSoft,
+                  alignItems: 'center', justifyContent: 'center',
+                  marginBottom: 20,
+                }}>
+                  <Ionicons name="wallet-outline" size={34} color={theme.colors.brand} />
+                </View>
+                <Text style={{
+                  fontFamily: theme.fontFamily.headlineExtra,
+                  fontSize: 26, fontWeight: '800', letterSpacing: -0.5,
+                  color: theme.colors.ink, textAlign: 'center', marginBottom: 10,
+                }}>
+                  Where should we send your money?
+                </Text>
+                <Text style={{
+                  fontFamily: theme.fontFamily.body, fontSize: 15,
+                  color: theme.colors.inkSecondary, textAlign: 'center',
+                  lineHeight: 22, maxWidth: 300,
+                }}>
+                  Add your UPI ID once. Every sale credits your account automatically — no waiting, no hassle.
+                </Text>
+              </View>
+
+              <View style={{ gap: 12 }}>
+                <FieldLabel>Your UPI ID</FieldLabel>
+                <SubmergedInput
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  keyboardType="email-address"
+                  onChangeText={setUpiInput}
+                  placeholder="9876543210@ybl or name@okaxis"
+                  rightIcon={<Ionicons name="at-outline" size={20} color={theme.colors.inkMuted} />}
+                  value={upiInput}
+                />
+                <Text style={{
+                  fontSize: 12, fontFamily: theme.fontFamily.label,
+                  color: theme.colors.inkMuted, fontStyle: 'italic',
+                }}>
+                  Find your UPI ID in PhonePe, GPay, or Paytm under Profile → UPI ID.
+                </Text>
+
+                {upiError ? (
+                  <Text style={{
+                    fontSize: 13, fontFamily: theme.fontFamily.labelSemi,
+                    color: theme.colors.danger, textAlign: 'center',
+                  }}>
+                    {upiError}
+                  </Text>
+                ) : null}
+
+                <Pressable
+                  disabled={!upiInput.trim() || upiSubmitting}
+                  onPress={() => { void handleRegisterUpi(); }}
+                  style={({ pressed }) => ({
+                    opacity: (!upiInput.trim() || upiSubmitting) ? 0.5 : pressed ? 0.88 : 1,
+                    borderRadius: 16, overflow: 'hidden', marginTop: 8,
+                    shadowColor: theme.colors.brand,
+                    shadowOffset: { width: 0, height: 8 },
+                    shadowOpacity: upiInput.trim() ? 0.25 : 0,
+                    shadowRadius: 16,
+                  })}>
+                  <LinearGradient
+                    colors={[theme.colors.brandBright, theme.colors.brand]}
+                    end={{ x: 1, y: 1 }} start={{ x: 0, y: 0 }}
+                    style={{
+                      height: 56, borderRadius: 16,
+                      flexDirection: 'row', alignItems: 'center',
+                      justifyContent: 'center', gap: 8,
+                    }}>
+                    {upiSubmitting
+                      ? <ActivityIndicator color="#FFFFFF" />
+                      : (
+                          <>
+                            <Text style={{
+                              color: '#FFFFFF', fontSize: 16, fontWeight: '700',
+                              fontFamily: theme.fontFamily.labelSemi,
+                            }}>
+                              Save UPI & Continue
+                            </Text>
+                            <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
+                          </>
+                        )}
+                  </LinearGradient>
+                </Pressable>
+              </View>
+
+              {/* Trust note */}
+              <View style={{
+                marginTop: 28, flexDirection: 'row', gap: 10,
+                backgroundColor: theme.colors.surfaceRaised,
+                borderRadius: 12, padding: 14, alignItems: 'flex-start',
+              }}>
+                <Ionicons name="shield-checkmark-outline" size={16} color={theme.colors.brand} style={{ marginTop: 1 }} />
+                <Text style={{
+                  flex: 1, fontSize: 13, fontFamily: theme.fontFamily.body,
+                  color: theme.colors.inkSecondary, lineHeight: 19,
+                }}>
+                  Your UPI ID is stored securely and only used to credit your earnings. We never debit your account.
+                </Text>
+              </View>
+            </ScrollView>
+          ) : (
+          /* ── Main listing form (payout account exists) ── */
           <ScrollView
             contentContainerStyle={{ paddingBottom: 120 }}
             keyboardShouldPersistTaps="handled"
@@ -396,9 +544,9 @@ export default function SellScreen() {
                   fontSize: 14,
                   fontFamily: theme.fontFamily.labelSemi,
                   fontWeight: '600',
-                  color: feedback.ok ? theme.colors.success : theme.colors.danger,
+                  color: theme.colors.danger,
                 }}>
-                  {feedback.text}
+                  {feedback}
                 </Text>
               ) : null}
 
@@ -450,6 +598,7 @@ export default function SellScreen() {
 
             </View>
           </ScrollView>
+          )}
         </KeyboardAvoidingView>
       </SafeAreaView>
     </View>

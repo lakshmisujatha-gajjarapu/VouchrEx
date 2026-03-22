@@ -11,6 +11,7 @@ import { ListingsModule } from './listings/listings.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { OrdersModule } from './orders/orders.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { PayoutsModule } from './payouts/payouts.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
 
 @Module({
@@ -19,12 +20,14 @@ import { WebhooksModule } from './webhooks/webhooks.module';
       isGlobal: true,
       envFilePath: ['.env', '../../.env']
     }),
-    ThrottlerModule.forRoot({
-      throttlers: [
-        { name: 'short',  ttl: 1000,   limit: 10  }, // 10 req/sec burst
-        { name: 'medium', ttl: 60000,  limit: 100 }, // 100 req/min
-        { name: 'long',   ttl: 900000, limit: 500 }, // 500 req/15min sustained
-      ],
+    ThrottlerModule.forRootAsync({
+      useFactory: () => ({
+        throttlers: [
+          { name: 'short',  ttl: Number(process.env.THROTTLE_SHORT_TTL_MS  ?? 1000),   limit: Number(process.env.THROTTLE_SHORT_LIMIT  ?? 10)  },
+          { name: 'medium', ttl: Number(process.env.THROTTLE_MEDIUM_TTL_MS ?? 60000),  limit: Number(process.env.THROTTLE_MEDIUM_LIMIT ?? 100) },
+          { name: 'long',   ttl: Number(process.env.THROTTLE_LONG_TTL_MS   ?? 900000), limit: Number(process.env.THROTTLE_LONG_LIMIT   ?? 500) },
+        ],
+      }),
     }),
     ScheduleModule.forRoot(),
     PrismaModule,
@@ -34,6 +37,7 @@ import { WebhooksModule } from './webhooks/webhooks.module';
     ListingsModule,
     OrdersModule,
     NotificationsModule,
+    PayoutsModule,
     WebhooksModule
   ],
   providers: [

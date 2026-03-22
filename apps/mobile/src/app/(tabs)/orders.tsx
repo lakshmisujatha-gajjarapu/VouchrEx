@@ -8,6 +8,7 @@ import { StatusPill } from '@/components/status-pill';
 import { TicketCard } from '@/components/ticket-card';
 import { useAuth } from '@/hooks/use-auth';
 import { useAsyncResource } from '@/hooks/use-async-resource';
+import { useRefetchOnFocus } from '@/hooks/use-refetch-on-focus';
 import { api } from '@/lib/api';
 import { formatCountdown, formatCurrency, formatStatus } from '@/lib/format';
 import { useTheme } from '@/theme/ThemeContext';
@@ -66,6 +67,8 @@ export default function OrdersScreen() {
     }, [sessionToken]),
     { enabled: Boolean(sessionToken) }
   );
+
+  useRefetchOnFocus(useCallback(() => { void ordersResource.reload(); }, [ordersResource.reload]));
 
   const visibleOrders = useMemo(
     () => ordersResource.data?.filter((o) =>

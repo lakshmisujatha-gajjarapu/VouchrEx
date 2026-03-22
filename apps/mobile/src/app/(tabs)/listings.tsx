@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import React, { useCallback, useDeferredValue, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -20,6 +20,7 @@ import { StatusPill } from '@/components/status-pill';
 import { TicketCard } from '@/components/ticket-card';
 import { useAuth } from '@/hooks/use-auth';
 import { useAsyncResource } from '@/hooks/use-async-resource';
+import { useRefetchOnFocus } from '@/hooks/use-refetch-on-focus';
 import { api, type Listing } from '@/lib/api';
 import { formatCurrency, formatDate, formatStatus } from '@/lib/format';
 import { useTheme } from '@/theme/ThemeContext';
@@ -271,13 +272,7 @@ export default function ListingsScreen() {
     { enabled: Boolean(sessionToken) },
   );
 
-  useFocusEffect(
-    useCallback(() => {
-      if (!sessionToken) return undefined;
-      void listingsResource.reload();
-      return undefined;
-    }, [listingsResource.reload, sessionToken]),
-  );
+  useRefetchOnFocus(useCallback(() => { void listingsResource.reload(); }, [listingsResource.reload]));
 
   const visibleListings = useMemo(
     () =>
