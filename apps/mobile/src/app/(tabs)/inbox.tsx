@@ -9,6 +9,7 @@ import { StatusPill } from '@/components/status-pill';
 import { TicketCard } from '@/components/ticket-card';
 import { useAuth } from '@/hooks/use-auth';
 import { useAsyncResource } from '@/hooks/use-async-resource';
+import { useNotificationsSocket } from '@/hooks/use-notifications-socket';
 import { useRefetchOnFocus } from '@/hooks/use-refetch-on-focus';
 import { api } from '@/lib/api';
 import { formatDateTime, formatStatus } from '@/lib/format';
@@ -44,6 +45,9 @@ export default function InboxScreen() {
   );
 
   useRefetchOnFocus(useCallback(() => { void notificationsResource.reload(); }, [notificationsResource.reload]));
+
+  // Real-time: instantly reload inbox when a new notification arrives.
+  useNotificationsSocket(useCallback(() => { void notificationsResource.reload(); }, [notificationsResource.reload]));
 
   async function handleMarkRead(id: string) {
     if (!sessionToken) return;

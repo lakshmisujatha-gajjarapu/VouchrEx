@@ -5,6 +5,7 @@ import {
   NotFoundException,
   ServiceUnavailableException
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
   DisputeResolution,
   DisputeStatus,
@@ -39,7 +40,8 @@ export class OrdersService {
     private readonly prisma: PrismaService,
     private readonly codeVaultService: CodeVaultService,
     private readonly notificationsService: NotificationsService,
-    private readonly paymentsService: PaymentsService
+    private readonly paymentsService: PaymentsService,
+    private readonly eventEmitter: EventEmitter2
   ) {}
 
   findAllForUser(userId: string) {
@@ -550,6 +552,13 @@ export class OrdersService {
       }
     ]);
 
+    this.eventEmitter.emit('order.updated', {
+      orderId: order.id,
+      buyerId: order.buyerId,
+      sellerId: order.sellerId,
+      status: OrderStatus.CODE_REVEALED
+    });
+
     return {
       watermarkedCodeImageUrl,
       verificationDeadline,
@@ -670,6 +679,13 @@ export class OrdersService {
         }
       }
     ]);
+
+    this.eventEmitter.emit('order.updated', {
+      orderId: order.id,
+      buyerId: order.buyerId,
+      sellerId: order.sellerId,
+      status: OrderStatus.DISPUTED
+    });
 
     return dispute;
   }
@@ -1280,6 +1296,13 @@ export class OrdersService {
       }
     ]);
 
+    this.eventEmitter.emit('order.updated', {
+      orderId: order.id,
+      buyerId: order.buyerId,
+      sellerId: order.sellerId,
+      status: OrderStatus.ESCROW_ACTIVE
+    });
+
     return updatedOrder;
   }
 
@@ -1439,6 +1462,13 @@ export class OrdersService {
         }
       }
     ]);
+
+    this.eventEmitter.emit('order.updated', {
+      orderId: order.id,
+      buyerId: order.buyerId,
+      sellerId: order.sellerId,
+      status
+    });
 
     return updatedOrder;
   }

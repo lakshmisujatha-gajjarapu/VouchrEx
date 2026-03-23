@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
   NotificationChannel,
   NotificationStatus,
@@ -20,7 +21,10 @@ type CreateNotificationInput = {
 
 @Injectable()
 export class NotificationsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2
+  ) {}
 
   async createNotification(input: CreateNotificationInput) {
     const channel = input.channel ?? NotificationChannel.PUSH;
@@ -29,7 +33,7 @@ export class NotificationsService {
         ? NotificationStatus.SENT
         : NotificationStatus.PENDING;
 
-    return this.prisma.notification.create({
+    const notification = await this.prisma.notification.create({
       data: {
         eventType: input.eventType,
         title: input.title,
@@ -43,6 +47,15 @@ export class NotificationsService {
         ...(status === NotificationStatus.SENT ? { sentAt: new Date() } : {})
       }
     });
+
+    if (input.userId) {
+      this.eventEmitter.emit('notification.created', {
+        userId: input.userId,
+        notification
+      });
+    }
+
+    return notification;
   }
 
   async createMany(inputs: readonly CreateNotificationInput[]) {

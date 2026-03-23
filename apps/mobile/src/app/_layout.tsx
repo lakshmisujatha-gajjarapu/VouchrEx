@@ -23,6 +23,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { LoadingScreen } from '@/components/loading-screen';
 import { AuthProvider, useAuth } from '@/hooks/use-auth';
+import { SocketProvider } from '@/hooks/use-socket';
 import { ThemeProvider, useTheme } from '@/theme/ThemeContext';
 import { ThemePreferenceProvider, useThemePreference } from '@/theme/theme-preference';
 import { darkTheme } from '@/theme/tokens';
@@ -51,7 +52,9 @@ function InnerApp() {
   return (
     <ThemeProvider preference={preference}>
       <AuthProvider>
-        <AppStack />
+        <SocketProvider>
+          <AppStack />
+        </SocketProvider>
       </AuthProvider>
     </ThemeProvider>
   );

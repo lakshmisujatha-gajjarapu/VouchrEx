@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 
 import { AdminModule } from '../admin/admin.module';
 import { AuthModule } from '../auth/auth.module';
@@ -11,7 +12,7 @@ import { OrdersScheduler } from './orders.scheduler';
 import { ReconciliationService } from './reconciliation.service';
 
 @Module({
-  imports: [AdminModule, ListingsModule, AuthModule, NotificationsModule, PaymentsModule],
+  imports: [AdminModule, ListingsModule, AuthModule, NotificationsModule, PaymentsModule, EventEmitterModule],
   controllers: [OrdersController],
   providers: [OrdersService, OrdersScheduler, ReconciliationService],
   exports: [OrdersService]

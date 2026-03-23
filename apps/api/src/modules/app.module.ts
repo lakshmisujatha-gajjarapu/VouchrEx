@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 
@@ -12,6 +13,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { OrdersModule } from './orders/orders.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { PayoutsModule } from './payouts/payouts.module';
+import { RealtimeModule } from './realtime/realtime.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
 
 @Module({
@@ -20,6 +22,7 @@ import { WebhooksModule } from './webhooks/webhooks.module';
       isGlobal: true,
       envFilePath: ['.env', '../../.env']
     }),
+    EventEmitterModule.forRoot(),
     ThrottlerModule.forRootAsync({
       useFactory: () => ({
         throttlers: [
@@ -38,6 +41,7 @@ import { WebhooksModule } from './webhooks/webhooks.module';
     OrdersModule,
     NotificationsModule,
     PayoutsModule,
+    RealtimeModule,
     WebhooksModule
   ],
   providers: [

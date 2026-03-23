@@ -21,6 +21,7 @@ import { StatusPill } from '@/components/status-pill';
 import { TextField } from '@/components/text-field';
 import { useAuth } from '@/hooks/use-auth';
 import { useAsyncResource } from '@/hooks/use-async-resource';
+import { useOrderSocket } from '@/hooks/use-order-socket';
 import { api, type Checkout, type RevealResult } from '@/lib/api';
 import { formatCountdown, formatCurrency, formatDate, formatStatus } from '@/lib/format';
 import { useTheme } from '@/theme/ThemeContext';
@@ -106,7 +107,10 @@ export default function OrderDetailScreen() {
     { enabled: Boolean(orderId && sessionToken) },
   );
 
-  async function reloadOrder() { return orderResource.reload(); }
+  const reloadOrder = useCallback(() => orderResource.reload(), [orderResource]);
+
+  // Real-time: reload order whenever the server pushes a status change.
+  useOrderSocket(orderId, useCallback(() => { void orderResource.reload(); }, [orderResource]));
 
   // Auto-sync once when screen loads with a PAYMENT_PENDING order.
   // Handles the case where the user paid in a previous session and comes back.
@@ -132,7 +136,8 @@ export default function OrderDetailScreen() {
         setCheckout(co);
       }
       await openBrowserAsync(co.paymentLinkUrl);
-      // Browser dismissed — start polling immediately to detect payment completion.
+      // Browser dismissed — start fallback polling.
+      // Socket will resolve this faster if connected; polling is the safety net.
       void pollUntilEscrowActive();
     } catch (error_) {
       setFeedback(error_ instanceof Error ? error_.message : 'Could not prepare checkout.');
