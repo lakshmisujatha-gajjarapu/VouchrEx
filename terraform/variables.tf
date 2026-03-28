@@ -6,6 +6,41 @@ variable "aws_region" {
   default     = "ap-south-1"
 }
 
+# ─── Environment ──────────────────────────────────────────────────────────────
+
+variable "environment" {
+  description = "Deployment environment name (staging | production)"
+  type        = string
+
+  validation {
+    condition     = contains(["staging", "production"], var.environment)
+    error_message = "environment must be 'staging' or 'production'."
+  }
+}
+
+# ─── API VPS ──────────────────────────────────────────────────────────────────
+
+variable "api_bundle_id" {
+  description = "Lightsail bundle for the API VPS. small_2_0 = 2 vCPU, 2 GB, 60 GB SSD (~$12/mo)"
+  type        = string
+  default     = "small_2_0"
+}
+
+variable "dockerhub_username" {
+  description = "Docker Hub username — images are pulled as username/couponbazaar-api:env-latest"
+  type        = string
+}
+
+variable "api_ssh_public_key" {
+  description = <<-EOT
+    SSH public key for the deploy user on the API VPS.
+    Generate once: ssh-keygen -t ed25519 -f ~/.ssh/couponbazaar_deploy -C deploy
+    Store the private key as the SSH_PRIVATE_KEY GitHub secret.
+    Store the public key here (contents of ~/.ssh/couponbazaar_deploy.pub).
+  EOT
+  type        = string
+}
+
 # ─── PostgreSQL ───────────────────────────────────────────────────────────────
 
 variable "db_name" {
@@ -32,18 +67,6 @@ variable "postgres_bundle_id" {
   default     = "micro_2_0"
 }
 
-# ─── Environment ──────────────────────────────────────────────────────────────
-
-variable "environment" {
-  description = "Deployment environment name (staging | production)"
-  type        = string
-
-  validation {
-    condition     = contains(["staging", "production"], var.environment)
-    error_message = "environment must be 'staging' or 'production'."
-  }
-}
-
 # ─── App secrets ──────────────────────────────────────────────────────────────
 
 variable "code_encryption_key" {
@@ -59,23 +82,25 @@ variable "admin_api_token" {
 }
 
 variable "redis_password" {
-  description = "AUTH password for the Redis instance"
+  description = "AUTH password for the Redis instance (Phase 2)"
   type        = string
   sensitive   = true
+  default     = ""
 }
 
 # ─── Payment / OTP providers ──────────────────────────────────────────────────
-
-variable "payment_provider" {
-  description = "Payment backend: MOCK | RAZORPAY"
-  type        = string
-  default     = "MOCK"
-}
 
 variable "otp_provider" {
   description = "OTP backend: DEV | EXOTEL"
   type        = string
   default     = "DEV"
+}
+
+variable "auth_challenge_secret" {
+  description = "Signing secret for OTP request challenges"
+  type        = string
+  sensitive   = true
+  default     = ""
 }
 
 variable "razorpay_key_id" {
@@ -128,6 +153,18 @@ variable "otp_fixed_code" {
   default     = "123456"
 }
 
+variable "auth_challenge_ttl_seconds" {
+  description = "Lifetime of a signed OTP request challenge"
+  type        = number
+  default     = 180
+}
+
+variable "auth_pow_difficulty" {
+  description = "Leading-zero hex difficulty for the OTP proof-of-work challenge"
+  type        = number
+  default     = 5
+}
+
 variable "otp_ttl_minutes" {
   description = "OTP expiry in minutes"
   type        = number
@@ -138,6 +175,42 @@ variable "otp_max_attempts" {
   description = "Maximum OTP verification attempts before lockout"
   type        = number
   default     = 5
+}
+
+variable "otp_resend_cooldown_seconds" {
+  description = "Minimum delay before another OTP can be sent to the same phone"
+  type        = number
+  default     = 60
+}
+
+variable "otp_max_per_phone_hour" {
+  description = "Maximum OTP sends to a single phone number per hour"
+  type        = number
+  default     = 3
+}
+
+variable "otp_max_per_device_hour" {
+  description = "Maximum OTP sends from one device per hour"
+  type        = number
+  default     = 4
+}
+
+variable "otp_max_per_ip_hour" {
+  description = "Maximum OTP sends from one IP per hour"
+  type        = number
+  default     = 8
+}
+
+variable "otp_max_distinct_phones_per_device_day" {
+  description = "Maximum distinct phone numbers one device can request in a day"
+  type        = number
+  default     = 3
+}
+
+variable "otp_max_distinct_phones_per_ip_day" {
+  description = "Maximum distinct phone numbers one IP can request in a day"
+  type        = number
+  default     = 6
 }
 
 variable "session_ttl_hours" {
@@ -152,32 +225,10 @@ variable "payment_timeout_minutes" {
   default     = 30
 }
 
-# ─── Container service sizing ─────────────────────────────────────────────────
-
-variable "container_power" {
-  description = "Lightsail container power (nano | micro | small | medium | large | xlarge)"
-  type        = string
-  default     = "nano"
-}
-
-variable "container_scale" {
-  description = "Number of container nodes"
-  type        = number
-  default     = 1
-}
-
-# ─── Image versioning ─────────────────────────────────────────────────────────
-
-variable "api_image_version" {
-  description = "Version number of the pushed container image (increment per deploy)"
-  type        = number
-  default     = 0
-}
-
 # ─── Redis instance sizing ────────────────────────────────────────────────────
 
 variable "redis_bundle_id" {
-  description = "Lightsail instance bundle for the Redis VPS"
+  description = "Lightsail instance bundle for the Redis VPS (Phase 2)"
   type        = string
   default     = "nano_2_0"
 }

@@ -16,7 +16,7 @@ module "postgres_instance" {
 }
 
 # ─── Redis on Lightsail ────────────────────────────────────────────────────────
-# Phase 2: uncomment when Redis (queues/sessions) is needed.
+# Phase 2: uncomment when BullMQ queues are needed.
 
 # module "redis_instance" {
 #   source = "./modules/redis_instance"
@@ -37,16 +37,20 @@ module "postgres_instance" {
 #   aws_region  = var.aws_region
 # }
 
-# ─── NestJS API Container Service ─────────────────────────────────────────────
+# ─── NestJS API — Lightsail VPS (Docker Compose + nginx) ──────────────────────
+# $12/mo: 2 vCPU, 2 GB RAM, 60 GB SSD, 1.5 TB transfer (Mumbai halves allowance).
+# nginx proxies :80 → 127.0.0.1:3010. Cloudflare terminates TLS.
+# Deploy: CI pushes image to Docker Hub, then SSH pulls + restarts compose.
 
-module "container_service" {
-  source = "./modules/container_service"
+module "api_instance" {
+  source = "./modules/api_instance"
 
-  service_name  = "${local.name_prefix}-api"
-  aws_region    = var.aws_region
-  power         = var.container_power
-  scale         = var.container_scale
-  image_version = var.api_image_version
+  name               = "${local.name_prefix}-api"
+  aws_region         = var.aws_region
+  bundle_id          = var.api_bundle_id
+  environment        = var.environment
+  dockerhub_username = var.dockerhub_username
+  ssh_public_key     = var.api_ssh_public_key
 
   environment_vars = {
     PORT     = "3010"
@@ -58,7 +62,6 @@ module "container_service" {
     # Phase 2: uncomment when Redis module is enabled
     # REDIS_URL = "redis://:${var.redis_password}@${module.redis_instance.private_ip}:6379"
 
-    # Object storage (S3-compatible Lightsail bucket)
     # Phase 2: uncomment when storage module is enabled
     # MINIO_ENDPOINT   = module.storage.bucket_url
     # MINIO_ACCESS_KEY = module.storage.access_key_id
@@ -70,33 +73,40 @@ module "container_service" {
     ADMIN_API_TOKEN     = var.admin_api_token
 
     # Payment / OTP
-    PAYMENT_PROVIDER        = var.payment_provider
     RAZORPAY_KEY_ID         = var.razorpay_key_id
     RAZORPAY_KEY_SECRET     = var.razorpay_key_secret
     RAZORPAY_WEBHOOK_SECRET = var.razorpay_webhook_secret
     OTP_PROVIDER            = var.otp_provider
     OTP_FIXED_CODE          = var.otp_fixed_code
+    AUTH_CHALLENGE_SECRET   = var.auth_challenge_secret
     EXOTEL_ACCOUNT_SID      = var.exotel_account_sid
     EXOTEL_APP_ID           = var.exotel_app_id
     EXOTEL_APP_SECRET       = var.exotel_app_secret
 
     # Tunables
+    AUTH_CHALLENGE_TTL_SECONDS = tostring(var.auth_challenge_ttl_seconds)
+    AUTH_POW_DIFFICULTY        = tostring(var.auth_pow_difficulty)
     OTP_TTL_MINUTES         = tostring(var.otp_ttl_minutes)
     OTP_MAX_ATTEMPTS        = tostring(var.otp_max_attempts)
+    OTP_RESEND_COOLDOWN_SECONDS          = tostring(var.otp_resend_cooldown_seconds)
+    OTP_MAX_PER_PHONE_HOUR               = tostring(var.otp_max_per_phone_hour)
+    OTP_MAX_PER_DEVICE_HOUR              = tostring(var.otp_max_per_device_hour)
+    OTP_MAX_PER_IP_HOUR                  = tostring(var.otp_max_per_ip_hour)
+    OTP_MAX_DISTINCT_PHONES_PER_DEVICE_DAY = tostring(var.otp_max_distinct_phones_per_device_day)
+    OTP_MAX_DISTINCT_PHONES_PER_IP_DAY     = tostring(var.otp_max_distinct_phones_per_ip_day)
     SESSION_TTL_HOURS       = tostring(var.session_ttl_hours)
     PAYMENT_TIMEOUT_MINUTES = tostring(var.payment_timeout_minutes)
   }
 }
 
 # ─── Database Migrations ───────────────────────────────────────────────────────
-# Runs `prisma migrate deploy` after infra is up.
+# Runs `prisma migrate deploy` from the machine running terraform apply.
 # Uses the DIRECT DB URL (not pooler) — required by Prisma migrate.
-# Trigger: db_url changes or api_image_version bumps.
+# Trigger: db_url changes or a new deploy is kicked off.
 
 resource "null_resource" "run_migrations" {
   triggers = {
-    db_url            = module.postgres_instance.db_url
-    api_image_version = var.api_image_version
+    db_url = module.postgres_instance.db_url
   }
 
   provisioner "local-exec" {
@@ -107,5 +117,5 @@ resource "null_resource" "run_migrations" {
     EOT
   }
 
-  depends_on = [module.postgres_instance, module.container_service]
+  depends_on = [module.postgres_instance, module.api_instance]
 }
