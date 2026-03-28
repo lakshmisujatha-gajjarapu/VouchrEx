@@ -96,13 +96,6 @@ variable "otp_provider" {
   default     = "DEV"
 }
 
-variable "auth_challenge_secret" {
-  description = "Signing secret for OTP request challenges"
-  type        = string
-  sensitive   = true
-  default     = ""
-}
-
 variable "razorpay_key_id" {
   description = "Razorpay key ID (leave empty for staging)"
   type        = string
@@ -153,18 +146,6 @@ variable "otp_fixed_code" {
   default     = "123456"
 }
 
-variable "auth_challenge_ttl_seconds" {
-  description = "Lifetime of a signed OTP request challenge"
-  type        = number
-  default     = 180
-}
-
-variable "auth_pow_difficulty" {
-  description = "Leading-zero hex difficulty for the OTP proof-of-work challenge"
-  type        = number
-  default     = 5
-}
-
 variable "otp_ttl_minutes" {
   description = "OTP expiry in minutes"
   type        = number
@@ -175,42 +156,6 @@ variable "otp_max_attempts" {
   description = "Maximum OTP verification attempts before lockout"
   type        = number
   default     = 5
-}
-
-variable "otp_resend_cooldown_seconds" {
-  description = "Minimum delay before another OTP can be sent to the same phone"
-  type        = number
-  default     = 60
-}
-
-variable "otp_max_per_phone_hour" {
-  description = "Maximum OTP sends to a single phone number per hour"
-  type        = number
-  default     = 3
-}
-
-variable "otp_max_per_device_hour" {
-  description = "Maximum OTP sends from one device per hour"
-  type        = number
-  default     = 4
-}
-
-variable "otp_max_per_ip_hour" {
-  description = "Maximum OTP sends from one IP per hour"
-  type        = number
-  default     = 8
-}
-
-variable "otp_max_distinct_phones_per_device_day" {
-  description = "Maximum distinct phone numbers one device can request in a day"
-  type        = number
-  default     = 3
-}
-
-variable "otp_max_distinct_phones_per_ip_day" {
-  description = "Maximum distinct phone numbers one IP can request in a day"
-  type        = number
-  default     = 6
 }
 
 variable "session_ttl_hours" {

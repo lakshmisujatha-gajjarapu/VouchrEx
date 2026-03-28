@@ -78,22 +78,13 @@ module "api_instance" {
     RAZORPAY_WEBHOOK_SECRET = var.razorpay_webhook_secret
     OTP_PROVIDER            = var.otp_provider
     OTP_FIXED_CODE          = var.otp_fixed_code
-    AUTH_CHALLENGE_SECRET   = var.auth_challenge_secret
     EXOTEL_ACCOUNT_SID      = var.exotel_account_sid
     EXOTEL_APP_ID           = var.exotel_app_id
     EXOTEL_APP_SECRET       = var.exotel_app_secret
 
     # Tunables
-    AUTH_CHALLENGE_TTL_SECONDS = tostring(var.auth_challenge_ttl_seconds)
-    AUTH_POW_DIFFICULTY        = tostring(var.auth_pow_difficulty)
     OTP_TTL_MINUTES         = tostring(var.otp_ttl_minutes)
     OTP_MAX_ATTEMPTS        = tostring(var.otp_max_attempts)
-    OTP_RESEND_COOLDOWN_SECONDS          = tostring(var.otp_resend_cooldown_seconds)
-    OTP_MAX_PER_PHONE_HOUR               = tostring(var.otp_max_per_phone_hour)
-    OTP_MAX_PER_DEVICE_HOUR              = tostring(var.otp_max_per_device_hour)
-    OTP_MAX_PER_IP_HOUR                  = tostring(var.otp_max_per_ip_hour)
-    OTP_MAX_DISTINCT_PHONES_PER_DEVICE_DAY = tostring(var.otp_max_distinct_phones_per_device_day)
-    OTP_MAX_DISTINCT_PHONES_PER_IP_DAY     = tostring(var.otp_max_distinct_phones_per_ip_day)
     SESSION_TTL_HOURS       = tostring(var.session_ttl_hours)
     PAYMENT_TIMEOUT_MINUTES = tostring(var.payment_timeout_minutes)
   }
