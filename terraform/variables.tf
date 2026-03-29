@@ -27,16 +27,16 @@ variable "api_bundle_id" {
 }
 
 variable "dockerhub_username" {
-  description = "Docker Hub username — images are pulled as username/couponbazaar-api:env-latest"
+  description = "Docker Hub username — images are pulled as username/vouchrex-api:env-latest"
   type        = string
 }
 
 variable "api_ssh_public_key" {
   description = <<-EOT
     SSH public key for the deploy user on the API VPS.
-    Generate once: ssh-keygen -t ed25519 -f ~/.ssh/couponbazaar_deploy -C deploy
+    Generate once: ssh-keygen -t ed25519 -f ~/.ssh/vouchrex_deploy -C deploy
     Store the private key as the SSH_PRIVATE_KEY GitHub secret.
-    Store the public key here (contents of ~/.ssh/couponbazaar_deploy.pub).
+    Store the public key here (contents of ~/.ssh/vouchrex_deploy.pub).
   EOT
   type        = string
 }
@@ -46,7 +46,7 @@ variable "api_ssh_public_key" {
 variable "db_name" {
   description = "PostgreSQL database name"
   type        = string
-  default     = "couponbazaar"
+  default     = "vouchrex"
 }
 
 variable "db_user" {

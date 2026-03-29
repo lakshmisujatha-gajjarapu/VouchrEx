@@ -68,7 +68,7 @@ export function Navigation({ isSuperAdmin = false }: NavigationProps) {
             </div>
             <div>
               <p className="font-bold text-base leading-tight" style={{ fontFamily: 'var(--font-headline)', color: 'var(--color-primary)' }}>
-                CouponBazaar
+                Vouchrex
               </p>
               <p className="text-xs" style={{ color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}>
                 Admin Console

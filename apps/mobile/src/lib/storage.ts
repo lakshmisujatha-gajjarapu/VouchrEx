@@ -3,8 +3,8 @@ import { Platform } from 'react-native';
 
 import type { ThemePreference } from '@/theme/tokens';
 
-const sessionTokenKey = 'couponbazaar.session-token';
-const themePreferenceKey = 'couponbazaar.theme-preference';
+const sessionTokenKey = 'vouchrex.session-token';
+const themePreferenceKey = 'vouchrex.theme-preference';
 
 async function readPersistedValue(key: string) {
   if (Platform.OS === 'web') {

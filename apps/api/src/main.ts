@@ -23,7 +23,7 @@ const envSchema = z.object({
 
   // ── Optional with defaults ────────────────────────────────────────────────
   PORT:                         z.coerce.number().default(3010),
-  RAZORPAY_PAYMENT_CALLBACK_URL: z.string().default('couponbazaar://payment-callback'),
+  RAZORPAY_PAYMENT_CALLBACK_URL: z.string().default('vouchrex://payment-callback'),
   // Marketplace economics
   PLATFORM_FEE_INR:             z.coerce.number().default(10),
   COMMISSION_RATE:              z.coerce.number().default(0.12),
@@ -100,8 +100,8 @@ async function bootstrap() {
   app.useGlobalPipes(new ZodValidationPipe());
 
   const swaggerConfig = new DocumentBuilder()
-    .setTitle('CouponBazaar API')
-    .setDescription('Phase 1 API for the CouponBazaar voucher resale marketplace.')
+    .setTitle('Vouchrex API')
+    .setDescription('Phase 1 API for the Vouchrex voucher resale marketplace.')
     .setVersion('0.1.0')
     .addTag('health')
     .addTag('auth')
@@ -119,14 +119,14 @@ async function bootstrap() {
 
   SwaggerModule.setup('docs', app, documentFactory, {
     jsonDocumentUrl: 'docs/json',
-    customSiteTitle: 'CouponBazaar API Docs'
+    customSiteTitle: 'Vouchrex API Docs'
   });
 
   const port = Number(process.env.PORT ?? 3010);
   await app.listen(port);
 
   const logger = new Logger('bootstrap');
-  logger.log(`CouponBazaar API listening on http://localhost:${String(port)}`);
+  logger.log(`Vouchrex API listening on http://localhost:${String(port)}`);
   logger.log(`Swagger docs available at http://localhost:${String(port)}/docs`);
 }
 

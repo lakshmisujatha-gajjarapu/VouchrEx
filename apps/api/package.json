@@ -1,8 +1,8 @@
 {
-  "name": "couponbazaar-api",
+  "name": "vouchrex-api",
   "version": "0.1.0",
   "private": true,
-  "description": "Phase 1 API for the CouponBazaar modular monolith",
+  "description": "Phase 1 API for the Vouchrex modular monolith",
   "scripts": {
     "build": "prisma generate && tsc -p tsconfig.build.json",
     "clean": "rm -rf dist",

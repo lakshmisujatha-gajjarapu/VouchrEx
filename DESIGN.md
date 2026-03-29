@@ -1,4 +1,4 @@
-# DESIGN.md — CouponBazaar
+# DESIGN.md — Vouchrex
 
 > Agent-friendly design system file for use with Google Stitch, Claude Code, Gemini CLI, Cursor, and other AI coding assistants.
 > Import this file into Stitch to restore the full design system instantly.
@@ -7,7 +7,7 @@
 
 ## Product
 
-**CouponBazaar** is a P2P voucher and coupon resale marketplace for India. The mobile app is built with Expo React Native (Expo Router). The aesthetic is modern, trustworthy, and slightly premium — using deep violet/indigo as the brand identity with emerald green as the action/CTA colour.
+**Vouchrex** is a P2P voucher and coupon resale marketplace for India. The mobile app is built with Expo React Native (Expo Router). The aesthetic is modern, trustworthy, and slightly premium — using deep violet/indigo as the brand identity with emerald green as the action/CTA colour.
 
 ---
 

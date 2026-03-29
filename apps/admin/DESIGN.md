@@ -1,4 +1,4 @@
-# DESIGN.md — CouponBazaar Admin Console
+# DESIGN.md — Vouchrex Admin Console
 
 > Authoritative design system reference for the Next.js admin app (`apps/admin`).
 > All token values are sourced from `app/globals.css` `@theme` block — that file is the single source of truth.
@@ -409,7 +409,7 @@ Two-panel split:
 **Left panel (desktop only, `lg:w-1/2`)**
 - Background: `linear-gradient(135deg, #2E1F6B 0%, #0D0B1E 100%)`
 - Decorative orbs: `#A78BFA` (top-right, 288×288, 20% opacity) + `#85F8C4` (bottom-left, 224×224, 10% opacity)
-- Logo mark + "CouponBazaar" headline + subtitle
+- Logo mark + "Vouchrex" headline + subtitle
 - Feature list: items in `rgba(255,255,255,0.08)` cards with emerald dot indicators
 
 **Right panel (`flex-1`)**

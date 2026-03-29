@@ -1,6 +1,6 @@
-# CouponBazaar
+# Vouchrex
 
-Phase 1 backend and mobile app foundation for the CouponBazaar voucher resale marketplace.
+Phase 1 backend and mobile app foundation for the Vouchrex voucher resale marketplace.
 
 ## Current scope
 

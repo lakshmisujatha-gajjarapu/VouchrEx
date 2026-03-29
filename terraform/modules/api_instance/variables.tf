@@ -20,7 +20,7 @@ variable "environment" {
 }
 
 variable "dockerhub_username" {
-  description = "Docker Hub username — image pulled as username/couponbazaar-api:env-latest"
+  description = "Docker Hub username — image pulled as username/vouchrex-api:env-latest"
   type        = string
 }
 
@@ -30,7 +30,7 @@ variable "ssh_public_key" {
 }
 
 variable "environment_vars" {
-  description = "Environment variables written to /opt/couponbazaar/.env on first boot"
+  description = "Environment variables written to /opt/vouchrex/.env on first boot"
   type        = map(string)
   sensitive   = true
 }

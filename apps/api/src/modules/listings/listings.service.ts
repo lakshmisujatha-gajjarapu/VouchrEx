@@ -190,7 +190,7 @@ export class ListingsService {
     const codeHash = this.codeVaultService.hash(createListingDto.code);
     const existingCode = await this.prisma.codeVault.findUnique({ where: { codeHash } });
     if (existingCode) {
-      throw new ConflictException('This voucher code is already listed on CouponBazaar.');
+      throw new ConflictException('This voucher code is already listed on Vouchrex.');
     }
 
     const encrypted = this.codeVaultService.encrypt(createListingDto.code);

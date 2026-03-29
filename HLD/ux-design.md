@@ -1,5 +1,5 @@
 
-# CouponBazaar — Complete Design System & Redesign Plan
+# Vouchrex — Complete Design System & Redesign Plan
 
 ## Context
 Starting fresh from HLD. The user wants a proper design-first approach with both dark and light themes from the start. Previous attempts used saffron (now feels overused) and suffered from glassmorphism applied everywhere without contrast hierarchy. This plan establishes the design philosophy first, then defines the full token system, then maps it to every screen.
@@ -8,7 +8,7 @@ Starting fresh from HLD. The user wants a proper design-first approach with both
 
 ## UX Design Philosophy
 
-**"Calm Confidence"** — CouponBazaar is a trust-first escrow marketplace. The design must communicate:
+**"Calm Confidence"** — Vouchrex is a trust-first escrow marketplace. The design must communicate:
 - **Safety without sterility** — Not a cold bank, but not a flashy startup either
 - **Clarity over cleverness** — Every screen answers: "What do I do next?"
 - **State transparency** — Escrow status, verification timers, trust tiers always visible

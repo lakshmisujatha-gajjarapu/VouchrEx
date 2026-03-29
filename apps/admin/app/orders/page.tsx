@@ -3,7 +3,7 @@ import { formatShortId, formatCurrency, formatDate, formatPhone } from '@/lib/ut
 import type { Metadata } from 'next';
 import type { Order } from '@/lib/types';
 
-export const metadata: Metadata = { title: 'Orders | CouponBazaar Admin' };
+export const metadata: Metadata = { title: 'Orders | Vouchrex Admin' };
 
 const TABS = [
   { label: 'All',           value: undefined },

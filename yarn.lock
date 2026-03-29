@@ -5932,140 +5932,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"couponbazaar-admin@workspace:apps/admin":
-  version: 0.0.0-use.local
-  resolution: "couponbazaar-admin@workspace:apps/admin"
-  dependencies:
-    "@radix-ui/react-dialog": "npm:^1.1.15"
-    "@radix-ui/react-label": "npm:^2.1.8"
-    "@radix-ui/react-slot": "npm:^1.2.4"
-    "@radix-ui/react-tabs": "npm:^1.1.2"
-    "@tailwindcss/postcss": "npm:^4"
-    "@types/node": "npm:^20"
-    "@types/react": "npm:^19"
-    "@types/react-dom": "npm:^19"
-    class-variance-authority: "npm:^0.7.1"
-    clsx: "npm:^2.1.1"
-    eslint: "npm:^9"
-    eslint-config-next: "npm:16.1.1"
-    lucide-react: "npm:^0.562.0"
-    next: "npm:16.1.1"
-    next-themes: "npm:^0.4.6"
-    postcss: "npm:^8"
-    react: "npm:19.2.3"
-    react-dom: "npm:19.2.3"
-    tailwind-merge: "npm:^3.4.0"
-    tailwindcss: "npm:^4"
-    tw-animate-css: "npm:^1.4.0"
-    typescript: "npm:^5"
-  languageName: unknown
-  linkType: soft
-
-"couponbazaar-api@workspace:apps/api":
-  version: 0.0.0-use.local
-  resolution: "couponbazaar-api@workspace:apps/api"
-  dependencies:
-    "@nestjs/common": "npm:^11.1.16"
-    "@nestjs/config": "npm:^4.0.3"
-    "@nestjs/core": "npm:^11.1.16"
-    "@nestjs/event-emitter": "npm:^3.0.1"
-    "@nestjs/platform-express": "npm:^11.1.16"
-    "@nestjs/platform-socket.io": "npm:^11.1.17"
-    "@nestjs/schedule": "npm:^6.1.1"
-    "@nestjs/swagger": "npm:^11.2.6"
-    "@nestjs/throttler": "npm:^6.5.0"
-    "@nestjs/websockets": "npm:^11.1.17"
-    "@prisma/adapter-pg": "npm:^7.5.0"
-    "@prisma/client": "npm:^7.5.0"
-    "@types/bcryptjs": "npm:^3.0.0"
-    "@types/express": "npm:^5"
-    "@types/node": "npm:^25.5.0"
-    "@types/pg": "npm:^8"
-    bcryptjs: "npm:^3.0.3"
-    express: "npm:^5.2.1"
-    helmet: "npm:^8.1.0"
-    nestjs-zod: "npm:^3.0.0"
-    pg: "npm:^8.20.0"
-    prisma: "npm:^7.5.0"
-    reflect-metadata: "npm:^0.2.2"
-    rxjs: "npm:^7.8.2"
-    socket.io: "npm:^4.8.3"
-    swagger-ui-express: "npm:^5.0.1"
-    ts-node: "npm:^10.9.2"
-    typescript: "npm:^5.9.3"
-    zod: "npm:^3.25.0"
-  languageName: unknown
-  linkType: soft
-
-"couponbazaar-mobile@workspace:apps/mobile":
-  version: 0.0.0-use.local
-  resolution: "couponbazaar-mobile@workspace:apps/mobile"
-  dependencies:
-    "@babel/core": "npm:^7.25.0"
-    "@expo-google-fonts/ibm-plex-sans": "npm:^0.4.1"
-    "@expo-google-fonts/jetbrains-mono": "npm:^0.4.1"
-    "@expo-google-fonts/manrope": "npm:^0.4.2"
-    "@expo-google-fonts/work-sans": "npm:^0.4.2"
-    "@react-native-community/datetimepicker": "npm:8.4.4"
-    "@react-navigation/bottom-tabs": "npm:^7.7.3"
-    "@react-navigation/elements": "npm:^2.8.1"
-    "@react-navigation/native": "npm:^7.1.28"
-    "@types/babel__core": "npm:^7"
-    "@types/react": "npm:~19.1.0"
-    "@types/react-refresh": "npm:^0"
-    babel-preset-expo: "npm:~54.0.10"
-    expo: "npm:~54.0.31"
-    expo-blur: "npm:~15.0.8"
-    expo-constants: "npm:~18.0.13"
-    expo-device: "npm:~8.0.10"
-    expo-font: "npm:~14.0.11"
-    expo-image: "npm:~3.0.11"
-    expo-linear-gradient: "npm:~15.0.8"
-    expo-linking: "npm:~8.0.11"
-    expo-router: "npm:~6.0.23"
-    expo-secure-store: "npm:~15.0.8"
-    expo-splash-screen: "npm:~31.0.13"
-    expo-status-bar: "npm:~3.0.9"
-    expo-symbols: "npm:~1.0.8"
-    expo-system-ui: "npm:~6.0.9"
-    expo-web-browser: "npm:~15.0.10"
-    nativewind: "npm:^4.2.3"
-    react: "npm:19.1.0"
-    react-dom: "npm:19.1.0"
-    react-native: "npm:0.81.5"
-    react-native-gesture-handler: "npm:~2.28.0"
-    react-native-reanimated: "npm:~4.1.1"
-    react-native-safe-area-context: "npm:~5.6.2"
-    react-native-screens: "npm:~4.16.0"
-    react-native-web: "npm:~0.21.0"
-    react-native-worklets: "npm:0.5.1"
-    react-refresh: "npm:^0.14.2"
-    socket.io-client: "npm:^4.8.3"
-    tailwindcss: "npm:^3"
-    typescript: "npm:~5.9.2"
-  languageName: unknown
-  linkType: soft
-
-"couponbazaar-worker@workspace:apps/worker":
-  version: 0.0.0-use.local
-  resolution: "couponbazaar-worker@workspace:apps/worker"
-  languageName: unknown
-  linkType: soft
-
-"couponbazaar@workspace:.":
-  version: 0.0.0-use.local
-  resolution: "couponbazaar@workspace:."
-  dependencies:
-    "@eslint/js": "npm:^10.0.1"
-    "@types/node": "npm:^25.5.0"
-    eslint: "npm:^10.0.3"
-    globals: "npm:^17.4.0"
-    ts-node: "npm:^10.9.2"
-    typescript: "npm:^5.9.3"
-    typescript-eslint: "npm:^8.57.0"
-  languageName: unknown
-  linkType: soft
-
 "create-require@npm:^1.1.0":
   version: 1.1.1
   resolution: "create-require@npm:1.1.1"
@@ -14116,6 +13982,140 @@ __metadata:
   checksum: 10c0/a8ec5c95d747c840198f20b4973327fa317b98397f341e7a2f352bfcf385aeb73c0eea01cc6d406c20169298375397e259efc317aec53c8ffc001ec998204aed
   languageName: node
   linkType: hard
+
+"vouchrex-admin@workspace:apps/admin":
+  version: 0.0.0-use.local
+  resolution: "vouchrex-admin@workspace:apps/admin"
+  dependencies:
+    "@radix-ui/react-dialog": "npm:^1.1.15"
+    "@radix-ui/react-label": "npm:^2.1.8"
+    "@radix-ui/react-slot": "npm:^1.2.4"
+    "@radix-ui/react-tabs": "npm:^1.1.2"
+    "@tailwindcss/postcss": "npm:^4"
+    "@types/node": "npm:^20"
+    "@types/react": "npm:^19"
+    "@types/react-dom": "npm:^19"
+    class-variance-authority: "npm:^0.7.1"
+    clsx: "npm:^2.1.1"
+    eslint: "npm:^9"
+    eslint-config-next: "npm:16.1.1"
+    lucide-react: "npm:^0.562.0"
+    next: "npm:16.1.1"
+    next-themes: "npm:^0.4.6"
+    postcss: "npm:^8"
+    react: "npm:19.2.3"
+    react-dom: "npm:19.2.3"
+    tailwind-merge: "npm:^3.4.0"
+    tailwindcss: "npm:^4"
+    tw-animate-css: "npm:^1.4.0"
+    typescript: "npm:^5"
+  languageName: unknown
+  linkType: soft
+
+"vouchrex-api@workspace:apps/api":
+  version: 0.0.0-use.local
+  resolution: "vouchrex-api@workspace:apps/api"
+  dependencies:
+    "@nestjs/common": "npm:^11.1.16"
+    "@nestjs/config": "npm:^4.0.3"
+    "@nestjs/core": "npm:^11.1.16"
+    "@nestjs/event-emitter": "npm:^3.0.1"
+    "@nestjs/platform-express": "npm:^11.1.16"
+    "@nestjs/platform-socket.io": "npm:^11.1.17"
+    "@nestjs/schedule": "npm:^6.1.1"
+    "@nestjs/swagger": "npm:^11.2.6"
+    "@nestjs/throttler": "npm:^6.5.0"
+    "@nestjs/websockets": "npm:^11.1.17"
+    "@prisma/adapter-pg": "npm:^7.5.0"
+    "@prisma/client": "npm:^7.5.0"
+    "@types/bcryptjs": "npm:^3.0.0"
+    "@types/express": "npm:^5"
+    "@types/node": "npm:^25.5.0"
+    "@types/pg": "npm:^8"
+    bcryptjs: "npm:^3.0.3"
+    express: "npm:^5.2.1"
+    helmet: "npm:^8.1.0"
+    nestjs-zod: "npm:^3.0.0"
+    pg: "npm:^8.20.0"
+    prisma: "npm:^7.5.0"
+    reflect-metadata: "npm:^0.2.2"
+    rxjs: "npm:^7.8.2"
+    socket.io: "npm:^4.8.3"
+    swagger-ui-express: "npm:^5.0.1"
+    ts-node: "npm:^10.9.2"
+    typescript: "npm:^5.9.3"
+    zod: "npm:^3.25.0"
+  languageName: unknown
+  linkType: soft
+
+"vouchrex-mobile@workspace:apps/mobile":
+  version: 0.0.0-use.local
+  resolution: "vouchrex-mobile@workspace:apps/mobile"
+  dependencies:
+    "@babel/core": "npm:^7.25.0"
+    "@expo-google-fonts/ibm-plex-sans": "npm:^0.4.1"
+    "@expo-google-fonts/jetbrains-mono": "npm:^0.4.1"
+    "@expo-google-fonts/manrope": "npm:^0.4.2"
+    "@expo-google-fonts/work-sans": "npm:^0.4.2"
+    "@react-native-community/datetimepicker": "npm:8.4.4"
+    "@react-navigation/bottom-tabs": "npm:^7.7.3"
+    "@react-navigation/elements": "npm:^2.8.1"
+    "@react-navigation/native": "npm:^7.1.28"
+    "@types/babel__core": "npm:^7"
+    "@types/react": "npm:~19.1.0"
+    "@types/react-refresh": "npm:^0"
+    babel-preset-expo: "npm:~54.0.10"
+    expo: "npm:~54.0.31"
+    expo-blur: "npm:~15.0.8"
+    expo-constants: "npm:~18.0.13"
+    expo-device: "npm:~8.0.10"
+    expo-font: "npm:~14.0.11"
+    expo-image: "npm:~3.0.11"
+    expo-linear-gradient: "npm:~15.0.8"
+    expo-linking: "npm:~8.0.11"
+    expo-router: "npm:~6.0.23"
+    expo-secure-store: "npm:~15.0.8"
+    expo-splash-screen: "npm:~31.0.13"
+    expo-status-bar: "npm:~3.0.9"
+    expo-symbols: "npm:~1.0.8"
+    expo-system-ui: "npm:~6.0.9"
+    expo-web-browser: "npm:~15.0.10"
+    nativewind: "npm:^4.2.3"
+    react: "npm:19.1.0"
+    react-dom: "npm:19.1.0"
+    react-native: "npm:0.81.5"
+    react-native-gesture-handler: "npm:~2.28.0"
+    react-native-reanimated: "npm:~4.1.1"
+    react-native-safe-area-context: "npm:~5.6.2"
+    react-native-screens: "npm:~4.16.0"
+    react-native-web: "npm:~0.21.0"
+    react-native-worklets: "npm:0.5.1"
+    react-refresh: "npm:^0.14.2"
+    socket.io-client: "npm:^4.8.3"
+    tailwindcss: "npm:^3"
+    typescript: "npm:~5.9.2"
+  languageName: unknown
+  linkType: soft
+
+"vouchrex-worker@workspace:apps/worker":
+  version: 0.0.0-use.local
+  resolution: "vouchrex-worker@workspace:apps/worker"
+  languageName: unknown
+  linkType: soft
+
+"vouchrex@workspace:.":
+  version: 0.0.0-use.local
+  resolution: "vouchrex@workspace:."
+  dependencies:
+    "@eslint/js": "npm:^10.0.1"
+    "@types/node": "npm:^25.5.0"
+    eslint: "npm:^10.0.3"
+    globals: "npm:^17.4.0"
+    ts-node: "npm:^10.9.2"
+    typescript: "npm:^5.9.3"
+    typescript-eslint: "npm:^8.57.0"
+  languageName: unknown
+  linkType: soft
 
 "walker@npm:^1.0.7, walker@npm:^1.0.8":
   version: 1.0.8

@@ -7,7 +7,7 @@ const { CodeVaultService } = require('../src/modules/listings/services/code-vaul
 
 test('CodeVaultService encrypts and decrypts voucher codes', () => {
   const originalKey = process.env.CODE_ENCRYPTION_KEY;
-  process.env.CODE_ENCRYPTION_KEY = 'test_couponbazaar_secret';
+  process.env.CODE_ENCRYPTION_KEY = 'test_vouchrex_secret';
 
   const service = new CodeVaultService();
   const encrypted = service.encrypt('AMZN-9X2M-47QP');
@@ -21,7 +21,7 @@ test('CodeVaultService encrypts and decrypts voucher codes', () => {
 
 test('CodeVaultService renders a watermarked SVG data URL', () => {
   const originalKey = process.env.CODE_ENCRYPTION_KEY;
-  process.env.CODE_ENCRYPTION_KEY = 'test_couponbazaar_secret';
+  process.env.CODE_ENCRYPTION_KEY = 'test_vouchrex_secret';
 
   const service = new CodeVaultService();
   const dataUrl = service.renderWatermarkedCodeCard({

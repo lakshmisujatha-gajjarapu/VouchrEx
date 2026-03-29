@@ -62,8 +62,8 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     environment:
-      POSTGRES_USER: couponbazaar_user
-      POSTGRES_DB: couponbazaar_db
+      POSTGRES_USER: vouchrex_user
+      POSTGRES_DB: vouchrex_db
       POSTGRES_PASSWORD: change_me_strong_password
     restart: always
     deploy:
@@ -71,7 +71,7 @@ services:
         limits:
           memory: 2g
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U couponbazaar_user -d couponbazaar_db"]
+      test: ["CMD-SHELL", "pg_isready -U vouchrex_user -d vouchrex_db"]
       interval: 10s
       timeout: 5s
       retries: 5

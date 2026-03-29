@@ -1,4 +1,4 @@
-# 🎟️ CouponBazaar — High-Level Design Document
+# 🎟️ Vouchrex — High-Level Design Document
 ## India's First P2P Voucher & Coupon Resale Marketplace
 
 | # | File | Description |

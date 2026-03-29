@@ -2,7 +2,7 @@ import { getDisputes } from '@/lib/api';
 import DisputesView from './DisputesView';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = { title: 'Disputes | CouponBazaar Admin' };
+export const metadata: Metadata = { title: 'Disputes | Vouchrex Admin' };
 
 const TABS = [
   { label: 'Open',         value: 'OPEN' },

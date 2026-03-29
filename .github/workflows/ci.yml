@@ -46,6 +46,6 @@ jobs:
           context: .
           file: apps/api/Dockerfile
           push: false
-          tags: couponbazaar-api:ci
+          tags: vouchrex-api:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max

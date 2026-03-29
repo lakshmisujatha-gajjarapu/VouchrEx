@@ -25,8 +25,8 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CouponBazaar Admin",
-  description: "Admin console for CouponBazaar operations",
+  title: "Vouchrex Admin",
+  description: "Admin console for Vouchrex operations",
   robots: { index: false, follow: false },
 };
 

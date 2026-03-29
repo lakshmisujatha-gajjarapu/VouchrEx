@@ -6,7 +6,7 @@ locals {
   env_file = join("\n", [for k, v in var.environment_vars : "${k}=${v}"])
 
   # Mutable image tag — CI pushes to this tag, deploy just pulls it.
-  docker_image = "${var.dockerhub_username}/couponbazaar-api:${var.environment}-latest"
+  docker_image = "${var.dockerhub_username}/vouchrex-api:${var.environment}-latest"
 
   # cloud-init: install Docker + nginx, write compose + env, start services.
   user_data = <<-EOT
@@ -39,7 +39,7 @@ locals {
     # Reverse proxy — listens on :80, forwards to NestJS on 127.0.0.1:3010.
     # Cloudflare terminates TLS; traffic from CF to here is HTTP (Flexible mode).
     # Pass real client IP from CF-Connecting-IP so NestJS throttler sees it.
-    cat > /etc/nginx/conf.d/couponbazaar.conf <<'NGINXEOF'
+    cat > /etc/nginx/conf.d/vouchrex.conf <<'NGINXEOF'
     server {
         listen 80 default_server;
         server_name _;
@@ -71,18 +71,18 @@ locals {
     nginx -t && systemctl start nginx
 
     # ── 4. App directory ────────────────────────────────────────────────────────
-    mkdir -p /opt/couponbazaar
-    chown ec2-user:ec2-user /opt/couponbazaar
+    mkdir -p /opt/vouchrex
+    chown ec2-user:ec2-user /opt/vouchrex
 
     # ── 5. docker-compose.yml ───────────────────────────────────────────────────
     # Image uses the mutable env-latest tag. CI pushes new images to this tag;
     # the deploy step does `docker compose pull && up -d`.
-    cat > /opt/couponbazaar/docker-compose.yml <<'COMPOSEEOF'
+    cat > /opt/vouchrex/docker-compose.yml <<'COMPOSEEOF'
     services:
       api:
         image: ${local.docker_image}
         restart: unless-stopped
-        env_file: /opt/couponbazaar/.env
+        env_file: /opt/vouchrex/.env
         ports:
           - "127.0.0.1:3010:3010"
         healthcheck:
@@ -97,33 +97,33 @@ locals {
           start_period: 40s
     COMPOSEEOF
 
-    chown ec2-user:ec2-user /opt/couponbazaar/docker-compose.yml
+    chown ec2-user:ec2-user /opt/vouchrex/docker-compose.yml
 
     # ── 6. .env file ────────────────────────────────────────────────────────────
     # Written at Terraform apply time — update secrets by re-running terraform apply.
     # Phase 2: migrate to AWS Secrets Manager / Parameter Store.
-    cat > /opt/couponbazaar/.env <<ENVEOF
+    cat > /opt/vouchrex/.env <<ENVEOF
     ${local.env_file}
     ENVEOF
 
-    chmod 600 /opt/couponbazaar/.env
-    chown ec2-user:ec2-user /opt/couponbazaar/.env
+    chmod 600 /opt/vouchrex/.env
+    chown ec2-user:ec2-user /opt/vouchrex/.env
 
     # ── 7. Pull image + start ───────────────────────────────────────────────────
     # Run as ec2-user so the deploy script (SSH) uses the same user.
-    sudo -u ec2-user docker compose -f /opt/couponbazaar/docker-compose.yml pull  || true
-    sudo -u ec2-user docker compose -f /opt/couponbazaar/docker-compose.yml up -d || true
+    sudo -u ec2-user docker compose -f /opt/vouchrex/docker-compose.yml pull  || true
+    sudo -u ec2-user docker compose -f /opt/vouchrex/docker-compose.yml up -d || true
 
     # ── 8. systemd unit — restart compose on reboot ─────────────────────────────
-    cat > /etc/systemd/system/couponbazaar.service <<'UNITEOF'
+    cat > /etc/systemd/system/vouchrex.service <<'UNITEOF'
     [Unit]
-    Description=CouponBazaar API (Docker Compose)
+    Description=Vouchrex API (Docker Compose)
     Requires=docker.service
     After=docker.service network-online.target
 
     [Service]
     User=ec2-user
-    WorkingDirectory=/opt/couponbazaar
+    WorkingDirectory=/opt/vouchrex
     ExecStart=/usr/bin/docker compose up
     ExecStop=/usr/bin/docker compose down
     Restart=on-failure
@@ -134,7 +134,7 @@ locals {
     UNITEOF
 
     systemctl daemon-reload
-    systemctl enable couponbazaar
+    systemctl enable vouchrex
   EOT
 }
 
@@ -154,7 +154,7 @@ resource "aws_lightsail_instance" "api" {
   user_data         = local.user_data
 
   tags = {
-    Project = "couponbazaar"
+    Project = "vouchrex"
     Role    = "api"
     Env     = var.environment
   }

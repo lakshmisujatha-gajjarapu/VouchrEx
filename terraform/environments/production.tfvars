@@ -17,7 +17,7 @@ aws_region  = "ap-south-1"
 
 # PostgreSQL: micro_2_0 (upgrade to small_2_0 if needed)
 postgres_bundle_id = "micro_2_0"
-db_name            = "couponbazaar"
+db_name            = "vouchrex"
 db_user            = "cbuser"
 
 # Redis: nano_2_0 — sufficient for Phase 1

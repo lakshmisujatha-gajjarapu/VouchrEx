@@ -20,7 +20,7 @@
                             └──────┬───────┘
                                    │ Verification APIs
 ┌──────────┐              ┌────────▼────────┐              ┌──────────┐
-│  SELLER  │──List/Sell──►│  COUPONBAZAAR   │◄──Browse/Buy─│  BUYER   │
+│  SELLER  │──List/Sell──►│  VOUCHREX   │◄──Browse/Buy─│  BUYER   │
 │          │◄──Payouts────│   PLATFORM      │──Code Reveal─►│          │
 └──────────┘              └──┬────┬────┬────┘              └──────────┘
                              │    │    │

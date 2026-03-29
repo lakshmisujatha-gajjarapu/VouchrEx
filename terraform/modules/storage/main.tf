@@ -3,7 +3,7 @@ resource "aws_lightsail_bucket" "store" {
   bundle_id = "small_1_0" # 100 GB storage, $1/mo
 
   tags = {
-    Project = "couponbazaar"
+    Project = "vouchrex"
   }
 }
 

@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 import { ROUTES } from '@/lib/routes';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = { title: 'Team | CouponBazaar Admin' };
+export const metadata: Metadata = { title: 'Team | Vouchrex Admin' };
 
 export default async function TeamPage() {
   const me = await getMe();

@@ -340,7 +340,7 @@ export class PaymentsService {
         amount: totalAmount * inrMinorUnitFactor,
         currency: defaultCurrency,
         reference_id: orderId,
-        callback_url: process.env.RAZORPAY_PAYMENT_CALLBACK_URL ?? 'couponbazaar://payment-callback',
+        callback_url: process.env.RAZORPAY_PAYMENT_CALLBACK_URL ?? 'vouchrex://payment-callback',
         callback_method: 'get',
         notes: {
           appOrderId: order.id,

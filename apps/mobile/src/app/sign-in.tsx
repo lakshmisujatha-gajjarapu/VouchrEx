@@ -124,7 +124,7 @@ export default function SignInScreen() {
                 />
               </View>
               <Text className="font-headline text-2xl font-extrabold tracking-[-0.3px] text-white">
-                CouponBazaar
+                Vouchrex
               </Text>
             </View>
 

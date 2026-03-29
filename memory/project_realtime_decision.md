@@ -1,6 +1,6 @@
 ---
 name: real-time updates decision
-description: Decision on real-time/live update strategy for CouponBazaar mobile app
+description: Decision on real-time/live update strategy for Vouchrex mobile app
 type: project
 ---
 

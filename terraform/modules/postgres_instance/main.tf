@@ -82,7 +82,7 @@ resource "aws_lightsail_instance" "postgres" {
   user_data         = local.user_data
 
   tags = {
-    Project = "couponbazaar"
+    Project = "vouchrex"
     Role    = "postgres"
   }
 }

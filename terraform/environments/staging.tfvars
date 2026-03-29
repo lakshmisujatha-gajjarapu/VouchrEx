@@ -9,7 +9,7 @@ aws_region  = "ap-south-1"
 
 # PostgreSQL: micro_2_0 (1 GB RAM, 40 GB SSD, ~$5/mo)
 postgres_bundle_id = "micro_2_0"
-db_name            = "couponbazaar"
+db_name            = "vouchrex"
 db_user            = "cbuser"
 
 # Redis: nano_2_0 (~$3.50/mo)

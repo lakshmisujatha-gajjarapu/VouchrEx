@@ -1,4 +1,4 @@
-# DESIGN.md — CouponBazaar Mobile App
+# DESIGN.md — Vouchrex Mobile App
 
 > Authoritative design system reference for the Expo React Native app.
 > All token values are sourced from `src/theme/tokens.ts` — that file is the single source of truth.
@@ -8,7 +8,7 @@
 
 ## 1. Creative North Star — "The Digital Vault"
 
-CouponBazaar is a P2P voucher resale marketplace for India. The mobile experience must feel **premium, secure, and trustworthy** — closer to a luxury-fintech product than a standard e-commerce app.
+Vouchrex is a P2P voucher resale marketplace for India. The mobile experience must feel **premium, secure, and trustworthy** — closer to a luxury-fintech product than a standard e-commerce app.
 
 **Concept: Secure Fluidity.** Deep violet establishes brand authority. Emerald green signals safe, prosperous action. The two never compete — violet owns navigation and identity, emerald owns money and CTAs.
 

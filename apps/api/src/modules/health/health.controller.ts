@@ -22,7 +22,7 @@ export class HealthController {
 
     const body = {
       status: dbOk ? 'ok' : 'degraded',
-      service: 'couponbazaar-api',
+      service: 'vouchrex-api',
       phase: 'phase-1-mvp',
       checks: {
         db: dbOk ? 'ok' : 'error'

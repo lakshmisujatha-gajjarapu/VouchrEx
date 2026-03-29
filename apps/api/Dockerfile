@@ -14,7 +14,7 @@ RUN yarn install --immutable
 
 # Copy source and build (prisma generate + tsc)
 COPY apps/api ./apps/api
-RUN yarn workspace couponbazaar-api build
+RUN yarn workspace vouchrex-api build
 
 # ── Stage 2: lean runtime image ───────────────────────────────────────────────
 FROM node:22-alpine AS runtime

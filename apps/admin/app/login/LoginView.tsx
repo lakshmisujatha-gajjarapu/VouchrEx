@@ -63,7 +63,7 @@ export default function LoginView() {
               <span className="text-white font-bold text-sm" style={{ fontFamily: 'var(--font-headline)' }}>CB</span>
             </div>
             <h1 className="text-white" style={{ fontFamily: 'var(--font-headline)', fontSize: '1.5rem', fontWeight: 800 }}>
-              CouponBazaar
+              Vouchrex
             </h1>
           </div>
 
@@ -71,7 +71,7 @@ export default function LoginView() {
             Admin Console
           </h2>
           <p style={{ color: 'rgba(255,255,255,0.65)', fontFamily: 'var(--font-body)', fontSize: '1rem', marginBottom: '2.5rem', maxWidth: '380px' }}>
-            Manage disputes, orders, users, and payouts for the CouponBazaar platform.
+            Manage disputes, orders, users, and payouts for the Vouchrex platform.
           </p>
 
           <div className="space-y-3">
@@ -104,7 +104,7 @@ export default function LoginView() {
               <span className="text-white font-bold text-sm" style={{ fontFamily: 'var(--font-headline)' }}>CB</span>
             </div>
             <span className="font-bold text-lg" style={{ fontFamily: 'var(--font-headline)', color: 'var(--color-primary)' }}>
-              CouponBazaar
+              Vouchrex
             </span>
           </div>
 

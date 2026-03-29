@@ -1,5 +1,5 @@
 locals {
-  name_prefix = "couponbazaar-${var.environment}"
+  name_prefix = "vouchrex-${var.environment}"
 }
 
 # ─── PostgreSQL 16 + PgBouncer on Lightsail ────────────────────────────────────

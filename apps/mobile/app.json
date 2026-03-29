@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "CouponBazaar",
-    "slug": "couponbazaar",
+    "name": "Vouchrex",
+    "slug": "vouchrex",
     "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "couponbazaar",
+    "scheme": "vouchrex",
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/expo.icon"

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**CouponBazaar** — a P2P voucher/coupon resale marketplace for India. Yarn monorepo with a NestJS API, Expo React Native mobile app, and a worker placeholder. Designed as a modular monolith (Phase 1) intended to evolve toward microservices.
+**Vouchrex** — a P2P voucher/coupon resale marketplace for India. Yarn monorepo with a NestJS API, Expo React Native mobile app, and a worker placeholder. Designed as a modular monolith (Phase 1) intended to evolve toward microservices.
 
 ## Common Commands
 

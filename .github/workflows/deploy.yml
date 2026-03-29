@@ -35,8 +35,8 @@ jobs:
 
       # ── Build + push to Docker Hub ────────────────────────────────────────────
       # Two tags:
-      #   username/couponbazaar-api:<git-sha>       — immutable, pinnable
-      #   username/couponbazaar-api:staging-latest  — mutable, what the VPS pulls
+      #   username/vouchrex-api:<git-sha>       — immutable, pinnable
+      #   username/vouchrex-api:staging-latest  — mutable, what the VPS pulls
       - uses: docker/setup-buildx-action@v3
 
       - uses: docker/build-push-action@v6
@@ -45,8 +45,8 @@ jobs:
           file: apps/api/Dockerfile
           push: true
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/couponbazaar-api:${{ env.IMAGE_TAG }}
-            ${{ secrets.DOCKERHUB_USERNAME }}/couponbazaar-api:${{ env.ENV_NAME }}-latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/vouchrex-api:${{ env.IMAGE_TAG }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/vouchrex-api:${{ env.ENV_NAME }}-latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -60,14 +60,25 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H "${{ secrets.API_HOST }}" >> ~/.ssh/known_hosts
 
+      # ── Run migrations ────────────────────────────────────────────────────────
+      # Pull the new image first so migrate runs against the latest schema,
+      # then restart the stack. Migrations run in a one-shot container that
+      # exits cleanly; the API container starts only after this succeeds.
+      - name: Run migrations via SSH
+        run: |
+          ssh -i ~/.ssh/deploy_key ec2-user@"${{ secrets.API_HOST }}" \
+            "cd /opt/vouchrex && \
+             docker compose pull && \
+             docker compose run --rm --no-deps api \
+               node node_modules/.bin/prisma migrate deploy"
+
       # ── Deploy ────────────────────────────────────────────────────────────────
-      # Pull the new env-latest image and restart the compose stack.
+      # Start the API after migrations have been applied.
       # docker system prune removes dangling images to keep disk usage low.
       - name: Deploy via SSH
         run: |
           ssh -i ~/.ssh/deploy_key ec2-user@"${{ secrets.API_HOST }}" \
-            "cd /opt/couponbazaar && \
-             docker compose pull && \
+            "cd /opt/vouchrex && \
              docker compose up -d --remove-orphans && \
              docker system prune -f"
 
