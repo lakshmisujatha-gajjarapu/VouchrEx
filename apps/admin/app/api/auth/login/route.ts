@@ -3,28 +3,35 @@ import type { NextRequest } from 'next/server';
 import { AUTH_CONFIG, API_CONFIG, ADMIN_HEADER } from '@/lib/constants';
 
 export async function POST(request: NextRequest) {
-  const { token } = (await request.json()) as { token: string };
+  const { email, password } = (await request.json()) as { email: string; password: string };
 
-  if (!token.trim()) {
-    return NextResponse.json({ error: 'Token is required' }, { status: 400 });
+  if (!email?.trim() || !password?.trim()) {
+    return NextResponse.json({ error: 'Email and password are required.' }, { status: 400 });
   }
 
-  // Validate the token against the API
+  let sessionToken: string;
   try {
-    const res = await fetch(`${API_CONFIG.BASE_URL}/admin/metrics`, {
-      headers: { [ADMIN_HEADER]: token },
+    const res = await fetch(`${API_CONFIG.BASE_URL}/admin/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email.trim(), password }),
       cache: 'no-store',
     });
 
     if (!res.ok) {
-      return NextResponse.json({ error: 'Invalid admin token' }, { status: 401 });
+      const body = (await res.json()) as { message?: string };
+      const msg = Array.isArray(body.message) ? body.message[0] : (body.message ?? 'Invalid credentials.');
+      return NextResponse.json({ error: msg }, { status: 401 });
     }
+
+    const data = (await res.json()) as { sessionToken: string };
+    sessionToken = data.sessionToken;
   } catch {
-    return NextResponse.json({ error: 'Could not reach API' }, { status: 502 });
+    return NextResponse.json({ error: 'Could not reach API.' }, { status: 502 });
   }
 
   const response = NextResponse.json({ success: true });
-  response.cookies.set(AUTH_CONFIG.COOKIE_NAME, token, {
+  response.cookies.set(AUTH_CONFIG.COOKIE_NAME, sessionToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
@@ -32,5 +39,33 @@ export async function POST(request: NextRequest) {
     path: '/',
   });
 
+  return response;
+}
+
+/** Bootstrap login: raw ADMIN_API_TOKEN still works for initial setup. */
+export async function PUT(request: NextRequest) {
+  const { token } = (await request.json()) as { token: string };
+  if (!token?.trim()) {
+    return NextResponse.json({ error: 'Token is required.' }, { status: 400 });
+  }
+
+  try {
+    const res = await fetch(`${API_CONFIG.BASE_URL}/admin/metrics`, {
+      headers: { [ADMIN_HEADER]: token },
+      cache: 'no-store',
+    });
+    if (!res.ok) return NextResponse.json({ error: 'Invalid admin token.' }, { status: 401 });
+  } catch {
+    return NextResponse.json({ error: 'Could not reach API.' }, { status: 502 });
+  }
+
+  const response = NextResponse.json({ success: true, bootstrap: true });
+  response.cookies.set(AUTH_CONFIG.COOKIE_NAME, token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: AUTH_CONFIG.COOKIE_MAX_AGE,
+    path: '/',
+  });
   return response;
 }

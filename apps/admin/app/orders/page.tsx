@@ -64,7 +64,7 @@ export default async function OrdersPage({ searchParams }: PageProps) {
           <table className="w-full text-sm">
             <thead>
               <tr style={{ backgroundColor: 'var(--color-surface-raised)' }}>
-                {['ID', 'Brand', 'Buyer', 'Amount', 'Status', 'Created'].map((h) => (
+                {['ID', 'Brand', 'Buyer', 'Seller', 'Amount', 'Status', 'Created'].map((h) => (
                   <th key={h} className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-widest whitespace-nowrap"
                     style={{ color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}>
                     {h}
@@ -75,7 +75,7 @@ export default async function OrdersPage({ searchParams }: PageProps) {
             <tbody>
               {orders.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="text-center py-12"
+                  <td colSpan={7} className="text-center py-12"
                     style={{ color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}>
                     No orders found.
                   </td>
@@ -95,13 +95,25 @@ export default async function OrdersPage({ searchParams }: PageProps) {
                     <td className="px-5 py-3.5" style={{ fontFamily: 'var(--font-body)', color: 'var(--color-foreground)' }}>
                       {formatPhone(o.buyer.phone)}
                     </td>
+                    <td className="px-5 py-3.5" style={{ fontFamily: 'var(--font-body)', color: 'var(--color-foreground)' }}>
+                      {formatPhone(o.seller.phone)}
+                    </td>
                     <td className="px-5 py-3.5 tabular-nums" style={{ fontFamily: 'var(--font-mono)', color: 'var(--color-foreground)' }}>
                       {o.payment ? formatCurrency(o.payment.amount) : '—'}
                     </td>
                     <td className="px-5 py-3.5">
-                      <span className="status-badge" style={{ backgroundColor: s.bg, color: s.color }}>
-                        {o.status.replace('_', ' ')}
-                      </span>
+                      <div className="flex flex-col gap-1">
+                        <span className="status-badge" style={{ backgroundColor: s.bg, color: s.color }}>
+                          {o.status.replace('_', ' ')}
+                        </span>
+                        {o.dispute && (
+                          <a href={`/disputes?status=${o.dispute.status}`}
+                            className="text-xs underline-offset-2 underline"
+                            style={{ color: 'var(--color-destructive)', fontFamily: 'var(--font-body)' }}>
+                            dispute {o.dispute.status.toLowerCase().replace('_', ' ')}
+                          </a>
+                        )}
+                      </div>
                     </td>
                     <td className="px-5 py-3.5 whitespace-nowrap" style={{ color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}>
                       {formatDate(o.createdAt)}

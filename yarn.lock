@@ -3889,6 +3889,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/bcryptjs@npm:^3.0.0":
+  version: 3.0.0
+  resolution: "@types/bcryptjs@npm:3.0.0"
+  dependencies:
+    bcryptjs: "npm:*"
+  checksum: 10c0/5d61ce381736f8252627cf32f2bbc17003c0361c6cf63ac23034a651b9c1edfdbf8f786730816e0b5257a927ffa369658562183a68495eb07ca2ddc77fbb171c
+  languageName: node
+  linkType: hard
+
 "@types/body-parser@npm:*":
   version: 1.19.6
   resolution: "@types/body-parser@npm:1.19.6"
@@ -5224,6 +5233,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"bcryptjs@npm:*, bcryptjs@npm:^3.0.3":
+  version: 3.0.3
+  resolution: "bcryptjs@npm:3.0.3"
+  bin:
+    bcrypt: bin/bcrypt
+  checksum: 10c0/127c94699f07eab5fbbb89d600c3f0e36ae6fd001e028139740b41fffb62a23a2743523fb88f442ae3308a27d4843b97ccb9e436d78f5c5899be187d0972c6d5
+  languageName: node
+  linkType: hard
+
 "better-opn@npm:~3.0.2":
   version: 3.0.2
   resolution: "better-opn@npm:3.0.2"
@@ -5959,9 +5977,11 @@ __metadata:
     "@nestjs/websockets": "npm:^11.1.17"
     "@prisma/adapter-pg": "npm:^7.5.0"
     "@prisma/client": "npm:^7.5.0"
+    "@types/bcryptjs": "npm:^3.0.0"
     "@types/express": "npm:^5"
     "@types/node": "npm:^25.5.0"
     "@types/pg": "npm:^8"
+    bcryptjs: "npm:^3.0.3"
     express: "npm:^5.2.1"
     helmet: "npm:^8.1.0"
     nestjs-zod: "npm:^3.0.0"

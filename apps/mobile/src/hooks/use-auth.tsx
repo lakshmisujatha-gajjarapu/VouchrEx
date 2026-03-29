@@ -1,7 +1,15 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import * as Device from 'expo-device';
 
 import { api, type OtpRequestResult, type SessionUser } from '@/lib/api';
 import { clearSessionToken, readSessionToken, writeSessionToken } from '@/lib/storage';
+
+function getDeviceFingerprint(): string {
+  return [Device.brand, Device.modelName, Device.osName, Device.osVersion]
+    .filter(Boolean)
+    .join(':')
+    .slice(0, 128);
+}
 
 type AuthStatus = 'loading' | 'signedOut' | 'signedIn';
 
@@ -61,7 +69,7 @@ export function AuthProvider({ children }: { readonly children: React.ReactNode 
       sessionToken,
       otpRequest,
       async requestOtp(input) {
-        const response = await api.requestOtp(input);
+        const response = await api.requestOtp({ ...input, deviceId: getDeviceFingerprint() });
         setOtpRequest(response);
         return response;
       },

@@ -15,7 +15,8 @@ import {
   OrderStatus,
   PaymentProvider,
   PaymentStatus,
-  PayoutStatus
+  PayoutStatus,
+  UserStatus
 } from '@prisma/client';
 
 import { CodeVaultService } from '../listings/services/code-vault.service';
@@ -686,6 +687,9 @@ export class OrdersService {
       sellerId: order.sellerId,
       status: OrderStatus.DISPUTED
     });
+
+    // Update seller dispute stats — may auto-suspend if dispute rate exceeds threshold
+    await this.updateSellerDisputeStats(order.sellerId);
 
     return dispute;
   }
@@ -1389,10 +1393,17 @@ export class OrdersService {
       });
     });
 
+    // Increment seller totalSales counter
+    await this.prisma.user.update({
+      where: { id: order.sellerId },
+      data: { totalSales: { increment: 1 } }
+    });
+
     // Attempt automatic payout via Razorpay after the transaction commits
     const payoutAccount = order.seller.payoutAccount;
     const fundAccountId = payoutAccount?.razorpayFundAccountId;
-    if (order.payment && payoutAccount && fundAccountId) {
+    const kycVerified = payoutAccount?.kycStatus === 'VERIFIED';
+    if (order.payment && payoutAccount && fundAccountId && kycVerified) {
       try {
         const razorpayPayoutId = await this.paymentsService.executePayout(
           fundAccountId,
@@ -1429,9 +1440,16 @@ export class OrdersService {
       }
     }
 
-    const sellerPayoutMsg = payoutAccount?.upiId
-      ? `₹${String(order.sellerPayout)} is being transferred to ${payoutAccount.upiId}`
-      : `₹${String(order.sellerPayout)} will be settled once you add a payout account`;
+    let sellerPayoutMsg: string;
+    if (!payoutAccount) {
+      sellerPayoutMsg = `₹${String(order.sellerPayout)} will be settled once you add a payout account`;
+    } else if (!kycVerified) {
+      sellerPayoutMsg = `₹${String(order.sellerPayout)} is held pending KYC verification. Complete KYC in Settings to receive your payout.`;
+    } else {
+      sellerPayoutMsg = payoutAccount.upiId
+        ? `₹${String(order.sellerPayout)} is being transferred to ${payoutAccount.upiId}`
+        : `₹${String(order.sellerPayout)} will be settled to your bank account`;
+    }
 
     await this.notificationsService.createMany([
       {
@@ -1484,5 +1502,44 @@ export class OrdersService {
     }
 
     return order;
+  }
+
+  private async updateSellerDisputeStats(sellerId: string) {
+    const disputeRateThreshold = Number(process.env.SELLER_DISPUTE_RATE_THRESHOLD ?? 0.3);
+    const minSalesForCheck = Number(process.env.SELLER_MIN_SALES_FOR_RATE_CHECK ?? 3);
+
+    const seller = await this.prisma.user.update({
+      where: { id: sellerId },
+      data: { disputeCount: { increment: 1 } },
+      select: { id: true, disputeCount: true, totalSales: true, status: true }
+    });
+
+    if (
+      seller.status === UserStatus.ACTIVE &&
+      seller.totalSales >= minSalesForCheck &&
+      seller.disputeCount / seller.totalSales > disputeRateThreshold
+    ) {
+      await this.prisma.user.update({
+        where: { id: sellerId },
+        data: { status: UserStatus.SUSPENDED }
+      });
+      await this.prisma.auditLog.create({
+        data: {
+          entityType: 'user',
+          entityId: sellerId,
+          action: 'user.auto_suspended',
+          actorId: null,
+          metadata: {
+            reason: 'dispute_rate_exceeded',
+            disputeCount: seller.disputeCount,
+            totalSales: seller.totalSales,
+            rate: seller.disputeCount / seller.totalSales
+          }
+        }
+      });
+      this.logger.warn(
+        `Seller ${sellerId} auto-suspended: ${String(seller.disputeCount)}/${String(seller.totalSales)} dispute rate`
+      );
+    }
   }
 }

@@ -38,6 +38,8 @@ export interface Payment {
   amount: number;
   status: string;
   escrowStatus: 'PENDING' | 'ACTIVE' | 'RELEASED' | 'REFUNDED' | 'CANCELLED';
+  payoutStatus: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+  payoutFailureReason: string | null;
   payoutCompletedAt: string | null;
   refundCompletedAt: string | null;
 }
@@ -81,10 +83,30 @@ export interface AdminUser {
   tier: string;
   trustScore: number;
   status: string;
+  disputeCount: number;
+  totalSales: number;
   createdAt: string;
+  payoutAccount: { kycStatus: string; upiId: string | null } | null;
 }
 
 // PendingPayout is an Order with a non-null payment (sellerPayout lives on Order)
 export interface PendingPayout extends Order {
   payment: Payment;
+}
+
+export interface AdminMe {
+  id: string | null;
+  name: string;
+  email: string | null;
+  role: 'ADMIN' | 'SUPER_ADMIN';
+  kind: 'session' | 'bootstrap';
+}
+
+export interface AdminTeamMember {
+  id: string;
+  email: string;
+  name: string;
+  role: 'ADMIN' | 'SUPER_ADMIN';
+  active: boolean;
+  createdAt: string;
 }

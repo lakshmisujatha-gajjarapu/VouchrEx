@@ -21,6 +21,7 @@ interface DisputesViewProps {
 function statusStyle(status: string): { bg: string; color: string } {
   if (status === 'OPEN')         return { bg: 'var(--color-destructive-soft)', color: 'var(--color-destructive)' };
   if (status === 'UNDER_REVIEW') return { bg: 'var(--color-warning-soft)',     color: 'var(--color-warning)' };
+  if (status === 'RESOLVED')     return { bg: 'var(--color-success-soft)',     color: 'var(--color-success)' };
   return                                { bg: 'var(--color-surface-high)',      color: 'var(--color-muted-foreground)' };
 }
 
@@ -170,13 +171,22 @@ export default function DisputesView({ disputes }: DisputesViewProps) {
 
               <div className="rounded-xl p-3" style={{ backgroundColor: 'var(--color-surface-raised)' }}>
                 <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}>Buyer&apos;s Reason</p>
-                <p style={{ fontFamily: 'var(--font-body)', color: 'var(--color-foreground)' }}>{selected.reason}</p>
+                <p className="font-medium" style={{ fontFamily: 'var(--font-body)', color: 'var(--color-foreground)' }}>{selected.reason}</p>
               </div>
 
               {selected.sellerResponse && (
                 <div className="rounded-xl p-3" style={{ backgroundColor: 'var(--color-surface-raised)' }}>
                   <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}>Seller&apos;s Response</p>
                   <p style={{ fontFamily: 'var(--font-body)', color: 'var(--color-foreground)' }}>{selected.sellerResponse}</p>
+                </div>
+              )}
+
+              {selected.resolution && (
+                <div className="rounded-xl p-3" style={{ backgroundColor: 'var(--color-success-soft)' }}>
+                  <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: 'var(--color-success)', fontFamily: 'var(--font-body)' }}>Resolution</p>
+                  <p className="font-semibold" style={{ fontFamily: 'var(--font-body)', color: 'var(--color-success)' }}>
+                    {selected.resolution === 'REFUND_BUYER' ? 'Buyer refunded' : 'Released to seller'}
+                  </p>
                 </div>
               )}
 
@@ -200,22 +210,26 @@ export default function DisputesView({ disputes }: DisputesViewProps) {
 
             <DialogFooter className="gap-2">
               <Button variant="outline" onClick={() => { setSelected(null); }} disabled={isPending}>
-                Cancel
+                {selected.status === 'RESOLVED' ? 'Close' : 'Cancel'}
               </Button>
-              <Button
-                variant="destructive"
-                onClick={() => { resolve('REFUND_BUYER'); }}
-                disabled={isPending}
-              >
-                Refund Buyer
-              </Button>
-              <Button
-                variant="success"
-                onClick={() => { resolve('RELEASE_TO_SELLER'); }}
-                disabled={isPending}
-              >
-                Release to Seller
-              </Button>
+              {selected.status !== 'RESOLVED' && (
+                <>
+                  <Button
+                    variant="destructive"
+                    onClick={() => { resolve('REFUND_BUYER'); }}
+                    disabled={isPending}
+                  >
+                    Refund Buyer
+                  </Button>
+                  <Button
+                    variant="success"
+                    onClick={() => { resolve('RELEASE_TO_SELLER'); }}
+                    disabled={isPending}
+                  >
+                    Release to Seller
+                  </Button>
+                </>
+              )}
             </DialogFooter>
           </DialogContent>
         </Dialog>

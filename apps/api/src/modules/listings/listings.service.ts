@@ -186,6 +186,13 @@ export class ListingsService {
       ...(createListingDto.brandName ? { brandName: createListingDto.brandName } : {})
     });
 
+    // Code uniqueness: reject duplicate voucher codes (DB also enforces codeHash @unique)
+    const codeHash = this.codeVaultService.hash(createListingDto.code);
+    const existingCode = await this.prisma.codeVault.findUnique({ where: { codeHash } });
+    if (existingCode) {
+      throw new ConflictException('This voucher code is already listed on CouponBazaar.');
+    }
+
     const encrypted = this.codeVaultService.encrypt(createListingDto.code);
     const discountPercent =
       ((createListingDto.faceValue - createListingDto.sellingPrice) / createListingDto.faceValue) *

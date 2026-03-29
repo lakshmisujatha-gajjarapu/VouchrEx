@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Headers, Post } from '@nestjs/common';
+import { Body, Controller, Get, Headers, Ip, Post } from '@nestjs/common';
 import { ApiHeader, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 
@@ -15,8 +15,8 @@ export class AuthController {
   // Tight limit: 1 OTP request per 10s, 5 per minute to deter brute force / SMS flooding
   @Throttle({ short: { limit: 1, ttl: 10000 }, medium: { limit: 5, ttl: 60000 } })
   @Post('otp/request')
-  requestOtp(@Body() requestOtpDto: RequestOtpDto) {
-    return this.authService.requestOtp(requestOtpDto);
+  requestOtp(@Body() requestOtpDto: RequestOtpDto, @Ip() clientIp: string) {
+    return this.authService.requestOtp(requestOtpDto, clientIp);
   }
 
   // 5 verify attempts per minute per IP (service-layer also limits per phone)

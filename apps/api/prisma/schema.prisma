@@ -103,16 +103,23 @@ enum NotificationStatus {
   READ
 }
 
+enum AdminRole {
+  ADMIN
+  SUPER_ADMIN
+}
+
 model User {
-  id          String           @id @default(cuid())
-  phone       String           @unique
-  name        String
-  email       String?          @unique
-  trustScore  Int              @default(30)
-  tier        String           @default("BRONZE")
-  status      UserStatus       @default(ACTIVE)
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  id             String           @id @default(cuid())
+  phone          String           @unique
+  name           String
+  email          String?          @unique
+  trustScore     Int              @default(30)
+  tier           String           @default("BRONZE")
+  status         UserStatus       @default(ACTIVE)
+  disputeCount   Int              @default(0)  // incremented on each dispute raised against this user as seller
+  totalSales     Int              @default(0)  // incremented on each confirmed/auto-confirmed sale
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
   listings      VoucherListing[]    @relation("SellerListings")
   purchases     Order[]             @relation("BuyerOrders")
   sales         Order[]             @relation("SellerOrders")
@@ -238,6 +245,7 @@ model SellerPayoutAccount {
   bankAccountEncrypted  String?
   razorpayContactId     String?
   razorpayFundAccountId String?
+  kycStatus             String            @default("PENDING") // PENDING | VERIFIED | REJECTED
   verifiedAt            DateTime?
   createdAt             DateTime          @default(now())
   updatedAt             DateTime          @updatedAt
@@ -262,18 +270,21 @@ model Dispute {
 }
 
 model OtpChallenge {
-  id         String     @id @default(cuid())
-  phone      String
-  purpose    OtpPurpose @default(LOGIN)
-  provider   String     @default("DEV")
+  id                String     @id @default(cuid())
+  phone             String
+  purpose           OtpPurpose @default(LOGIN)
+  provider          String     @default("DEV")
   providerRequestId String?
-  codeHash   String
-  expiresAt  DateTime
-  consumedAt DateTime?
-  attempts   Int        @default(0)
-  createdAt  DateTime   @default(now())
+  codeHash          String
+  expiresAt         DateTime
+  consumedAt        DateTime?
+  attempts          Int        @default(0)
+  deviceId          String?    // soft fingerprint from expo-device, for fraud detection
+  clientIp          String?    // real IP (CF-Connecting-IP / X-Real-IP)
+  createdAt         DateTime   @default(now())
 
   @@index([phone, createdAt])
+  @@index([deviceId, createdAt])
   @@index([expiresAt])
 }
 
@@ -312,6 +323,31 @@ model Notification {
   @@index([userId, createdAt])
   @@index([orderId, createdAt])
   @@index([listingId, createdAt])
+}
+
+model AdminUser {
+  id           String         @id @default(cuid())
+  email        String         @unique
+  name         String
+  passwordHash String
+  role         AdminRole      @default(ADMIN)
+  active       Boolean        @default(true)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  sessions     AdminSession[]
+}
+
+model AdminSession {
+  id        String    @id @default(cuid())
+  adminId   String
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+  admin     AdminUser @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
+  @@index([expiresAt])
 }
 
 model AuditLog {

@@ -30,6 +30,7 @@ export type PayoutAccount = {
   readonly type?: 'UPI' | 'BANK_ACCOUNT';
   readonly upiId?: string;
   readonly accountHolderName?: string;
+  readonly kycStatus?: 'PENDING' | 'VERIFIED' | 'REJECTED';
   readonly verifiedAt?: string;
 };
 
@@ -228,6 +229,7 @@ export const api = {
   requestOtp(input: {
     readonly phone: string;
     readonly name?: string;
+    readonly deviceId?: string;
   }) {
     return apiRequest<OtpRequestResult>('/auth/otp/request', {
       method: 'POST',

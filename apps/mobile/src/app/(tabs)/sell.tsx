@@ -396,6 +396,32 @@ export default function SellScreen() {
             showsVerticalScrollIndicator={false}>
             <View style={{ paddingHorizontal: 20, gap: 24 }}>
 
+              {/* ── KYC status banner ── */}
+              {payoutAccount?.kycStatus === 'PENDING' && (
+                <View style={{
+                  flexDirection: 'row', gap: 10, alignItems: 'flex-start',
+                  backgroundColor: '#fefce8',
+                  borderRadius: 12, padding: 14,
+                }}>
+                  <Ionicons name="time-outline" size={18} color="#b45309" style={{ marginTop: 1 }} />
+                  <Text style={{ flex: 1, fontSize: 13, fontFamily: theme.fontFamily.body, color: '#92400e', lineHeight: 19 }}>
+                    Your payout account is under review. You can list vouchers, but your first payout will be held until our team verifies your account (usually within 24h).
+                  </Text>
+                </View>
+              )}
+              {payoutAccount?.kycStatus === 'REJECTED' && (
+                <View style={{
+                  flexDirection: 'row', gap: 10, alignItems: 'flex-start',
+                  backgroundColor: '#fef2f2',
+                  borderRadius: 12, padding: 14,
+                }}>
+                  <Ionicons name="alert-circle-outline" size={18} color="#dc2626" style={{ marginTop: 1 }} />
+                  <Text style={{ flex: 1, fontSize: 13, fontFamily: theme.fontFamily.body, color: '#991b1b', lineHeight: 19 }}>
+                    Payout verification failed. Please contact support to resolve this before your earnings can be released.
+                  </Text>
+                </View>
+              )}
+
               {/* ── Hero ── */}
               <View style={{ gap: 6 }}>
                 <Text style={{

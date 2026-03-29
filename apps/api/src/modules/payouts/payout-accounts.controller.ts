@@ -35,6 +35,7 @@ export class PayoutAccountsController {
       type: account.type,
       upiId: account.upiId ?? undefined,
       accountHolderName: account.accountHolderName ?? undefined,
+      kycStatus: account.kycStatus,
       verifiedAt: account.verifiedAt
     };
   }
@@ -56,6 +57,7 @@ export class PayoutAccountsController {
       type: account.type,
       upiId: account.upiId ?? undefined,
       accountHolderName: account.accountHolderName ?? undefined,
+      kycStatus: account.kycStatus,
       verifiedAt: account.verifiedAt
     };
   }

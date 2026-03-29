@@ -1,15 +1,28 @@
 node_modules
 .git
+.github
+
+# Never let secrets near the build context
 .env
 .env.*
 !.env.example
+terraform/environments/secrets.*.tfvars
+
+# Workspaces not needed in the API image
+apps/mobile
+apps/worker
+
+# Build artefacts — builder stage starts fresh
+apps/api/dist
+apps/api/node_modules
+
+# Tooling
 .expo
 .yarn/install-state.gz
 package-lock.json
 pnpm-lock.yaml
-apps/api/dist
-apps/worker/dist
-apps/mobile/.expo
-apps/mobile/.git
-CouponBazaar
+
+# Docs and design assets
 HLD
+*.md
+CouponBazaar

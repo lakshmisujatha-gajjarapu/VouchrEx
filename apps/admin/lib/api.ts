@@ -1,7 +1,9 @@
 import { cookies } from 'next/headers';
 import { API_CONFIG, ADMIN_HEADER, AUTH_CONFIG } from './constants';
 import type {
+  AdminMe,
   AdminMetrics,
+  AdminTeamMember,
   AdminUser,
   Dispute,
   Order,
@@ -72,5 +74,13 @@ export async function completePayout(orderId: string): Promise<{ success: boolea
   return apiFetch<{ success: boolean }>(`/admin/orders/${orderId}/complete-payout`, {
     method: 'POST',
   });
+}
+
+export async function getMe(): Promise<AdminMe> {
+  return apiFetch<AdminMe>('/admin/me');
+}
+
+export async function getTeam(): Promise<AdminTeamMember[]> {
+  return apiFetch<AdminTeamMember[]>('/admin/team');
 }
 

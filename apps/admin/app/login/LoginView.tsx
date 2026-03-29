@@ -4,8 +4,13 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ROUTES } from '@/lib/routes';
 
+type Mode = 'password' | 'bootstrap';
+
 export default function LoginView() {
   const router = useRouter();
+  const [mode, setMode] = useState<Mode>('password');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [token, setToken] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -13,17 +18,26 @@ export default function LoginView() {
   const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     setError('');
-    if (!token.trim()) { setError('Please enter the admin token.'); return; }
+
+    if (mode === 'password') {
+      if (!email.trim() || !password.trim()) { setError('Email and password are required.'); return; }
+    } else {
+      if (!token.trim()) { setError('Admin token is required.'); return; }
+    }
 
     setLoading(true);
     try {
       const res = await fetch('/api/auth/login', {
-        method: 'POST',
+        method: mode === 'password' ? 'POST' : 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: token.trim() }),
+        body: JSON.stringify(
+          mode === 'password'
+            ? { email: email.trim(), password }
+            : { token: token.trim() }
+        ),
       });
       const data = (await res.json()) as { success?: boolean; error?: string };
-      if (!res.ok || !data.success) { setError(data.error ?? 'Invalid token. Please try again.'); return; }
+      if (!res.ok || !data.success) { setError(data.error ?? 'Sign-in failed. Please try again.'); return; }
       router.push(ROUTES.DASHBOARD);
       router.refresh();
     } catch {
@@ -39,11 +53,8 @@ export default function LoginView() {
       {/* ── Left hero panel ── */}
       <div className="hidden lg:flex lg:w-1/2 flex-col justify-center px-16 relative overflow-hidden"
         style={{ background: 'linear-gradient(135deg, #2E1F6B 0%, #0D0B1E 100%)' }}>
-        {/* Decorative orbs */}
-        <div className="absolute top-[-80px] right-[-60px] w-72 h-72 rounded-full opacity-20"
-          style={{ backgroundColor: '#A78BFA' }} />
-        <div className="absolute bottom-[-60px] left-[-40px] w-56 h-56 rounded-full opacity-10"
-          style={{ backgroundColor: '#85F8C4' }} />
+        <div className="absolute top-[-80px] right-[-60px] w-72 h-72 rounded-full opacity-20" style={{ backgroundColor: '#A78BFA' }} />
+        <div className="absolute bottom-[-60px] left-[-40px] w-56 h-56 rounded-full opacity-10" style={{ backgroundColor: '#85F8C4' }} />
 
         <div className="relative z-10">
           <div className="flex items-center gap-3 mb-10">
@@ -99,44 +110,77 @@ export default function LoginView() {
 
           <div className="mb-8">
             <h2 style={{ fontFamily: 'var(--font-headline)', fontSize: '1.75rem', fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--color-foreground)' }}>
-              Admin Login
+              {mode === 'password' ? 'Sign In' : 'Bootstrap Access'}
             </h2>
             <p className="mt-1 text-sm" style={{ color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}>
-              Enter your admin token to continue.
+              {mode === 'password'
+                ? 'Sign in with your admin account.'
+                : 'Use your ADMIN_API_TOKEN for first-time setup.'}
             </p>
           </div>
 
           <form onSubmit={(e) => { void handleSubmit(e); }} className="space-y-4">
-            <div className="space-y-2">
-              <label htmlFor="token" className="block text-xs font-semibold uppercase tracking-widest"
-                style={{ color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}>
-                Admin Token
-              </label>
-              <input
-                id="token"
-                type="password"
-                placeholder="Paste your ADMIN_API_TOKEN"
-                value={token}
-                onChange={(e) => { setToken(e.target.value); }}
-                autoFocus
-                autoComplete="current-password"
-                className="w-full h-14 rounded-2xl px-4 text-sm transition-all outline-none"
-                style={{
-                  backgroundColor: 'var(--color-surface-high)',
-                  border: 'none',
-                  color: 'var(--color-foreground)',
-                  fontFamily: 'var(--font-body)',
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.boxShadow = '0 0 0 2px var(--color-primary)';
-                  e.currentTarget.style.backgroundColor = 'var(--color-card)';
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.boxShadow = 'none';
-                  e.currentTarget.style.backgroundColor = 'var(--color-surface-high)';
-                }}
-              />
-            </div>
+            {mode === 'password' ? (
+              <>
+                <div className="space-y-2">
+                  <label htmlFor="email" className="block text-xs font-semibold uppercase tracking-widest"
+                    style={{ color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}>
+                    Email
+                  </label>
+                  <input
+                    id="email"
+                    type="email"
+                    placeholder="you@company.com"
+                    value={email}
+                    onChange={(e) => { setEmail(e.target.value); }}
+                    autoFocus
+                    autoComplete="email"
+                    className="w-full h-14 rounded-2xl px-4 text-sm transition-all outline-none"
+                    style={{ backgroundColor: 'var(--color-surface-high)', border: 'none', color: 'var(--color-foreground)', fontFamily: 'var(--font-body)' }}
+                    onFocus={(e) => { e.currentTarget.style.boxShadow = '0 0 0 2px var(--color-primary)'; e.currentTarget.style.backgroundColor = 'var(--color-card)'; }}
+                    onBlur={(e) => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.backgroundColor = 'var(--color-surface-high)'; }}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label htmlFor="password" className="block text-xs font-semibold uppercase tracking-widest"
+                    style={{ color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}>
+                    Password
+                  </label>
+                  <input
+                    id="password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => { setPassword(e.target.value); }}
+                    autoComplete="current-password"
+                    className="w-full h-14 rounded-2xl px-4 text-sm transition-all outline-none"
+                    style={{ backgroundColor: 'var(--color-surface-high)', border: 'none', color: 'var(--color-foreground)', fontFamily: 'var(--font-body)' }}
+                    onFocus={(e) => { e.currentTarget.style.boxShadow = '0 0 0 2px var(--color-primary)'; e.currentTarget.style.backgroundColor = 'var(--color-card)'; }}
+                    onBlur={(e) => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.backgroundColor = 'var(--color-surface-high)'; }}
+                  />
+                </div>
+              </>
+            ) : (
+              <div className="space-y-2">
+                <label htmlFor="token" className="block text-xs font-semibold uppercase tracking-widest"
+                  style={{ color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}>
+                  Admin Token
+                </label>
+                <input
+                  id="token"
+                  type="password"
+                  placeholder="Paste ADMIN_API_TOKEN"
+                  value={token}
+                  onChange={(e) => { setToken(e.target.value); }}
+                  autoFocus
+                  autoComplete="off"
+                  className="w-full h-14 rounded-2xl px-4 text-sm transition-all outline-none"
+                  style={{ backgroundColor: 'var(--color-surface-high)', border: 'none', color: 'var(--color-foreground)', fontFamily: 'var(--font-body)' }}
+                  onFocus={(e) => { e.currentTarget.style.boxShadow = '0 0 0 2px var(--color-primary)'; e.currentTarget.style.backgroundColor = 'var(--color-card)'; }}
+                  onBlur={(e) => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.backgroundColor = 'var(--color-surface-high)'; }}
+                />
+              </div>
+            )}
 
             {error && (
               <div className="rounded-xl px-4 py-3 text-sm"
@@ -149,19 +193,19 @@ export default function LoginView() {
               type="submit"
               disabled={loading}
               className="w-full h-14 rounded-2xl font-semibold text-white text-base transition-all disabled:opacity-50"
-              style={{
-                background: 'linear-gradient(135deg, #8856E5, #6E3ACA)',
-                boxShadow: '0 10px 28px rgba(110,58,202,0.28)',
-                fontFamily: 'var(--font-body)',
-              }}
+              style={{ background: 'linear-gradient(135deg, #8856E5, #6E3ACA)', boxShadow: '0 10px 28px rgba(110,58,202,0.28)', fontFamily: 'var(--font-body)' }}
             >
-              {loading ? 'Verifying…' : 'Sign In'}
+              {loading ? 'Signing in…' : 'Sign In'}
             </button>
           </form>
 
-          <p className="text-xs text-center mt-6" style={{ color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}>
-            Token is stored as a secure httpOnly cookie.
-          </p>
+          <button
+            onClick={() => { setMode(mode === 'password' ? 'bootstrap' : 'password'); setError(''); }}
+            className="w-full text-xs text-center mt-5 underline-offset-2 underline"
+            style={{ color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}
+          >
+            {mode === 'password' ? 'First-time setup? Use admin token →' : '← Back to email sign-in'}
+          </button>
         </div>
       </div>
     </div>

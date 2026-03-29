@@ -22,9 +22,10 @@ import {
   Users,
   Wallet,
   LogOut,
+  ShieldCheck,
 } from 'lucide-react';
 
-const navItems = [
+const baseNavItems = [
   { name: 'Dashboard', href: ROUTES.DASHBOARD, icon: LayoutDashboard },
   { name: 'Disputes',  href: ROUTES.DISPUTES,  icon: MessageSquareWarning },
   { name: 'Orders',    href: ROUTES.ORDERS,    icon: ClipboardList },
@@ -32,13 +33,21 @@ const navItems = [
   { name: 'Payouts',   href: ROUTES.PAYOUTS,   icon: Wallet },
 ];
 
-export function Navigation() {
+interface NavigationProps {
+  isSuperAdmin?: boolean;
+}
+
+export function Navigation({ isSuperAdmin = false }: NavigationProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   const { theme, setTheme } = useTheme();
 
   if (pathname === ROUTES.LOGIN || pathname === ROUTES.HOME) return null;
+
+  const navItems = isSuperAdmin
+    ? [...baseNavItems, { name: 'Team', href: ROUTES.TEAM, icon: ShieldCheck }]
+    : baseNavItems;
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });

@@ -1,6 +1,7 @@
-import { Controller, Get, Headers, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Headers, Param, Post, Query } from '@nestjs/common';
 import { ApiHeader, ApiTags } from '@nestjs/swagger';
 import {
+  AdminRole,
   DisputeStatus,
   EscrowStatus,
   OrderStatus,
@@ -27,7 +28,7 @@ export class AdminController {
   @ApiHeader({ name: adminHeaderName, required: true })
   @Get('metrics')
   async getMetrics(@Headers(adminHeaderName) adminToken?: string) {
-    this.adminAccessService.requireAdminAccess(adminToken);
+    await this.adminAccessService.requireAdminAccess(adminToken);
 
     const [
       totalOrders,
@@ -75,7 +76,7 @@ export class AdminController {
     @Headers(adminHeaderName) adminToken?: string,
     @Query('status') status?: string
   ) {
-    this.adminAccessService.requireAdminAccess(adminToken);
+    await this.adminAccessService.requireAdminAccess(adminToken);
 
     const statusFilter =
       status === 'OPEN'
@@ -112,7 +113,7 @@ export class AdminController {
     @Headers(adminHeaderName) adminToken?: string,
     @Query('status') status?: string
   ) {
-    this.adminAccessService.requireAdminAccess(adminToken);
+    await this.adminAccessService.requireAdminAccess(adminToken);
     return this.prisma.order.findMany({
       ...(status ? { where: { status: status as OrderStatus } } : {}),
       include: {
@@ -134,7 +135,7 @@ export class AdminController {
     @Headers(adminHeaderName) adminToken?: string,
     @Query('status') status?: string
   ) {
-    this.adminAccessService.requireAdminAccess(adminToken);
+    await this.adminAccessService.requireAdminAccess(adminToken);
     return this.prisma.user.findMany({
       ...(status ? { where: { status: status as UserStatus } } : {}),
       select: {
@@ -145,11 +146,70 @@ export class AdminController {
         tier: true,
         trustScore: true,
         status: true,
-        createdAt: true
+        disputeCount: true,
+        totalSales: true,
+        createdAt: true,
+        payoutAccount: {
+          select: { kycStatus: true, upiId: true }
+        }
       },
       orderBy: { createdAt: 'desc' },
       take: 100
     });
+  }
+
+  /** Approve KYC for a seller — enables automatic payouts. */
+  @ApiHeader({ name: adminHeaderName, required: true })
+  @Post('users/:id/approve-kyc')
+  async approveKyc(
+    @Param('id') id: string,
+    @Headers(adminHeaderName) adminToken?: string
+  ) {
+    await this.adminAccessService.requireAdminAccess(adminToken);
+
+    const account = await this.prisma.sellerPayoutAccount.update({
+      where: { userId: id },
+      data: { kycStatus: 'VERIFIED', verifiedAt: new Date() }
+    });
+
+    await this.prisma.auditLog.create({
+      data: {
+        entityType: 'sellerPayoutAccount',
+        entityId: account.id,
+        action: 'kyc.approved',
+        actorId: null,
+        metadata: { userId: id }
+      }
+    });
+
+    return account;
+  }
+
+  /** Reject KYC for a seller — payouts remain blocked until re-approved. */
+  @ApiHeader({ name: adminHeaderName, required: true })
+  @Post('users/:id/reject-kyc')
+  async rejectKyc(
+    @Param('id') id: string,
+    @Headers(adminHeaderName) adminToken?: string
+  ) {
+    await this.adminAccessService.requireAdminAccess(adminToken);
+
+    const account = await this.prisma.sellerPayoutAccount.update({
+      where: { userId: id },
+      data: { kycStatus: 'REJECTED' }
+    });
+
+    await this.prisma.auditLog.create({
+      data: {
+        entityType: 'sellerPayoutAccount',
+        entityId: account.id,
+        action: 'kyc.rejected',
+        actorId: null,
+        metadata: { userId: id }
+      }
+    });
+
+    return account;
   }
 
   /** Suspend a user account. Immediately invalidates all their sessions. */
@@ -159,7 +219,7 @@ export class AdminController {
     @Param('id') id: string,
     @Headers(adminHeaderName) adminToken?: string
   ) {
-    this.adminAccessService.requireAdminAccess(adminToken);
+    await this.adminAccessService.requireAdminAccess(adminToken);
 
     const user = await this.prisma.user.update({
       where: { id },
@@ -186,7 +246,7 @@ export class AdminController {
     @Param('id') id: string,
     @Headers(adminHeaderName) adminToken?: string
   ) {
-    this.adminAccessService.requireAdminAccess(adminToken);
+    await this.adminAccessService.requireAdminAccess(adminToken);
 
     const user = await this.prisma.user.update({
       where: { id },
@@ -213,7 +273,7 @@ export class AdminController {
   @ApiHeader({ name: adminHeaderName, required: true })
   @Get('payouts/pending')
   async getPendingPayouts(@Headers(adminHeaderName) adminToken?: string) {
-    this.adminAccessService.requireAdminAccess(adminToken);
+    await this.adminAccessService.requireAdminAccess(adminToken);
 
     return this.prisma.order.findMany({
       where: {
@@ -249,7 +309,7 @@ export class AdminController {
     @Param('orderId') orderId: string,
     @Headers(adminHeaderName) adminToken?: string
   ) {
-    this.adminAccessService.requireAdminAccess(adminToken);
+    await this.adminAccessService.requireAdminAccess(adminToken);
 
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
@@ -316,7 +376,7 @@ export class AdminController {
     @Param('orderId') orderId: string,
     @Headers(adminHeaderName) adminToken?: string
   ) {
-    this.adminAccessService.requireAdminAccess(adminToken);
+    await this.adminAccessService.requireAdminAccess(adminToken);
 
     const payment = await this.prisma.payment.findUnique({ where: { orderId } });
     if (!payment) {
@@ -345,5 +405,102 @@ export class AdminController {
     });
 
     return { success: true, payment: updated };
+  }
+
+  // ─── Admin Auth ───────────────────────────────────────────────────────────────
+
+  /** Login with email + password. Returns a session token (8h TTL). */
+  @Post('auth/login')
+  async adminLogin(@Body() body: { email: string; password: string }) {
+    return this.adminAccessService.login(body.email, body.password);
+  }
+
+  /** Logout — revokes the current session token. */
+  @ApiHeader({ name: adminHeaderName, required: true })
+  @Post('auth/logout')
+  async adminLogout(@Headers(adminHeaderName) adminToken?: string) {
+    await this.adminAccessService.logout(adminToken);
+    return { success: true };
+  }
+
+  /** Get the currently authenticated admin's profile. */
+  @ApiHeader({ name: adminHeaderName, required: true })
+  @Get('me')
+  async getMe(@Headers(adminHeaderName) adminToken?: string) {
+    const identity = await this.adminAccessService.requireAdminAccess(adminToken);
+    if (identity.kind === 'bootstrap') {
+      return { id: null, name: 'Bootstrap', email: null, role: 'SUPER_ADMIN', kind: 'bootstrap' };
+    }
+    return { id: identity.adminId, name: identity.name, email: identity.email, role: identity.role, kind: 'session' };
+  }
+
+  // ─── Team Management (SUPER_ADMIN only) ──────────────────────────────────────
+
+  /** List all admin users. */
+  @ApiHeader({ name: adminHeaderName, required: true })
+  @Get('team')
+  async getTeam(@Headers(adminHeaderName) adminToken?: string) {
+    await this.adminAccessService.requireSuperAdmin(adminToken);
+    return this.prisma.adminUser.findMany({
+      select: { id: true, email: true, name: true, role: true, active: true, createdAt: true },
+      orderBy: { createdAt: 'asc' }
+    });
+  }
+
+  /** Create a new admin user. */
+  @ApiHeader({ name: adminHeaderName, required: true })
+  @Post('team')
+  async createTeamMember(
+    @Body() body: { email: string; name: string; password: string; role?: AdminRole },
+    @Headers(adminHeaderName) adminToken?: string
+  ) {
+    await this.adminAccessService.requireSuperAdmin(adminToken);
+    return this.adminAccessService.createAdminUser({
+      email: body.email,
+      name: body.name,
+      password: body.password,
+      ...(body.role ? { role: body.role } : {})
+    });
+  }
+
+  /** Deactivate an admin user (blocks login, revokes all sessions). */
+  @ApiHeader({ name: adminHeaderName, required: true })
+  @Post('team/:id/deactivate')
+  async deactivateTeamMember(
+    @Param('id') id: string,
+    @Headers(adminHeaderName) adminToken?: string
+  ) {
+    await this.adminAccessService.requireSuperAdmin(adminToken);
+    await this.prisma.adminUser.update({ where: { id }, data: { active: false } });
+    await this.prisma.adminSession.updateMany({
+      where: { adminId: id, revokedAt: null },
+      data: { revokedAt: new Date() }
+    });
+    return { success: true };
+  }
+
+  /** Reactivate a deactivated admin user. */
+  @ApiHeader({ name: adminHeaderName, required: true })
+  @Post('team/:id/activate')
+  async activateTeamMember(
+    @Param('id') id: string,
+    @Headers(adminHeaderName) adminToken?: string
+  ) {
+    await this.adminAccessService.requireSuperAdmin(adminToken);
+    await this.prisma.adminUser.update({ where: { id }, data: { active: true } });
+    return { success: true };
+  }
+
+  /** Set a new password for an admin user. Revokes all their existing sessions. */
+  @ApiHeader({ name: adminHeaderName, required: true })
+  @Post('team/:id/set-password')
+  async setTeamMemberPassword(
+    @Param('id') id: string,
+    @Body() body: { password: string },
+    @Headers(adminHeaderName) adminToken?: string
+  ) {
+    await this.adminAccessService.requireSuperAdmin(adminToken);
+    await this.adminAccessService.setPassword(id, body.password);
+    return { success: true };
   }
 }

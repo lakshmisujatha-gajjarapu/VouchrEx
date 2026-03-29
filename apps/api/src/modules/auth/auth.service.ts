@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   UnauthorizedException
 } from '@nestjs/common';
@@ -15,22 +16,94 @@ import { VerifyOtpDto } from './dto/verify-otp.dto';
 export class AuthService {
   private readonly maxOtpAttempts = Number(process.env.OTP_MAX_ATTEMPTS ?? 5);
   private readonly sessionTtlHours = Number(process.env.SESSION_TTL_HOURS ?? 24 * 30);
+  private readonly otpResendCooldownSeconds = Number(process.env.OTP_RESEND_COOLDOWN_SECONDS ?? 60);
+  private readonly otpMaxPerPhoneHour = Number(process.env.OTP_MAX_PER_PHONE_HOUR ?? 3);
+  private readonly otpMaxPerDeviceHour = Number(process.env.OTP_MAX_PER_DEVICE_HOUR ?? 4);
+  private readonly otpMaxDistinctPhonesPerDeviceDay = Number(process.env.OTP_MAX_DISTINCT_PHONES_PER_DEVICE_DAY ?? 3);
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly otpProviderService: OtpProviderService
   ) {}
 
-  async requestOtp(dto: RequestOtpDto) {
+  async requestOtp(dto: RequestOtpDto, clientIp?: string) {
     const phone = this.normalizePhone(dto.phone);
+    const deviceId = dto.deviceId ?? null;
+    const now = Date.now();
+    const oneHourAgo = new Date(now - 60 * 60 * 1000);
+    const oneDayAgo = new Date(now - 24 * 60 * 60 * 1000);
 
-    // Rate limit: max 5 OTP requests per phone per hour (DB-based)
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-    const recentCount = await this.prisma.otpChallenge.count({
+    // Resend cooldown: block requests within OTP_RESEND_COOLDOWN_SECONDS of the last one
+    const lastChallenge = await this.prisma.otpChallenge.findFirst({
+      where: { phone },
+      orderBy: { createdAt: 'desc' },
+      select: { createdAt: true }
+    });
+    if (lastChallenge) {
+      const secondsSinceLast = (now - lastChallenge.createdAt.getTime()) / 1000;
+      if (secondsSinceLast < this.otpResendCooldownSeconds) {
+        const waitSeconds = Math.ceil(this.otpResendCooldownSeconds - secondsSinceLast);
+        throw new BadRequestException(`Please wait ${waitSeconds}s before requesting a new code.`);
+      }
+    }
+
+    // Rate limit: max OTP_MAX_PER_PHONE_HOUR requests per phone per hour
+    const phoneHourCount = await this.prisma.otpChallenge.count({
       where: { phone, createdAt: { gte: oneHourAgo } }
     });
-    if (recentCount >= 5) {
+    if (phoneHourCount >= this.otpMaxPerPhoneHour) {
       throw new BadRequestException('Too many OTP requests. Please wait before requesting a new code.');
+    }
+
+    // Device-level checks (only when deviceId is provided)
+    if (deviceId) {
+      // Check if this device is associated with a suspended/blocked user
+      const suspendedOnDevice = await this.prisma.otpChallenge.findFirst({
+        where: {
+          deviceId,
+          createdAt: { gte: oneDayAgo }
+        },
+        select: { phone: true },
+        distinct: ['phone']
+      });
+      if (suspendedOnDevice) {
+        // Check all phones seen from this device for suspended/blocked users
+        const phonesFromDevice = await this.prisma.otpChallenge.findMany({
+          where: { deviceId, createdAt: { gte: oneDayAgo } },
+          select: { phone: true },
+          distinct: ['phone']
+        });
+        const uniquePhones = phonesFromDevice.map((r) => r.phone);
+        const suspendedUser = await this.prisma.user.findFirst({
+          where: {
+            phone: { in: uniquePhones },
+            status: { in: [UserStatus.SUSPENDED, UserStatus.BLOCKED] }
+          },
+          select: { id: true }
+        });
+        if (suspendedUser) {
+          throw new ForbiddenException('Account access restricted from this device.');
+        }
+      }
+
+      // Rate limit: max OTP_MAX_PER_DEVICE_HOUR requests per device per hour
+      const deviceHourCount = await this.prisma.otpChallenge.count({
+        where: { deviceId, createdAt: { gte: oneHourAgo } }
+      });
+      if (deviceHourCount >= this.otpMaxPerDeviceHour) {
+        throw new BadRequestException('Too many OTP requests from this device. Please wait.');
+      }
+
+      // Multi-account signal: max OTP_MAX_DISTINCT_PHONES_PER_DEVICE_DAY distinct phones per device per day
+      const distinctPhonesOnDevice = await this.prisma.otpChallenge.findMany({
+        where: { deviceId, createdAt: { gte: oneDayAgo } },
+        select: { phone: true },
+        distinct: ['phone']
+      });
+      const phonesNotCurrentPhone = distinctPhonesOnDevice.filter((r) => r.phone !== phone);
+      if (phonesNotCurrentPhone.length >= this.otpMaxDistinctPhonesPerDeviceDay) {
+        throw new BadRequestException('Too many accounts accessed from this device.');
+      }
     }
 
     const otpChallenge = await this.otpProviderService.startVerification(phone);
@@ -42,6 +115,8 @@ export class AuthService {
         provider: otpChallenge.provider,
         codeHash: otpChallenge.codeHash,
         expiresAt: otpChallenge.expiresAt,
+        deviceId,
+        clientIp: clientIp ?? null,
         ...(otpChallenge.providerRequestId
           ? { providerRequestId: otpChallenge.providerRequestId }
           : {})

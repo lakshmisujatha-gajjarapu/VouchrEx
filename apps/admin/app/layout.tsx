@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Manrope, Work_Sans, JetBrains_Mono } from "next/font/google";
 import { Suspense } from "react";
 import "./globals.css";
-import { Navigation } from "@/components/Navigation";
+import { NavigationWrapper } from "@/components/NavigationWrapper";
 import { ThemeProvider } from "@/components/theme-provider";
 import { PageWrapper } from "@/components/PageWrapper";
 
@@ -43,7 +43,7 @@ export default function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <div className="min-h-screen">
             <Suspense fallback={null}>
-              <Navigation />
+              <NavigationWrapper />
             </Suspense>
             <Suspense fallback={<main>{children}</main>}>
               <PageWrapper>{children}</PageWrapper>
