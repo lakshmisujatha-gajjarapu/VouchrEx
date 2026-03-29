@@ -72,7 +72,7 @@ export default function TabsLayout() {
 
   return (
     <Tabs
-      initialRouteName="bazaar"
+      initialRouteName="shop"
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: theme.colors.brand,
@@ -84,9 +84,9 @@ export default function TabsLayout() {
         tabBarButton: TabBarButton,
       }}>
       <Tabs.Screen
-        name="bazaar"
+        name="shop"
         options={{
-          title: 'Bazaar',
+          title: 'Shop',
           tabBarIcon: ({ color, size }) => <Ionicons color={color} name="search-outline" size={size} />,
         }}
       />

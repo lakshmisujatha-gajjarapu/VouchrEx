@@ -17,6 +17,7 @@
 		"@expo-google-fonts/ibm-plex-sans": "^0.4.1",
 		"@expo-google-fonts/jetbrains-mono": "^0.4.1",
 		"@expo-google-fonts/manrope": "^0.4.2",
+		"@expo-google-fonts/montserrat": "^0.4.2",
 		"@expo-google-fonts/work-sans": "^0.4.2",
 		"@react-native-community/datetimepicker": "8.4.4",
 		"@react-navigation/bottom-tabs": "^7.7.3",

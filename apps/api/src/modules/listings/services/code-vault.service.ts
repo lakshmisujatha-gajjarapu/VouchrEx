@@ -79,7 +79,7 @@ export class CodeVaultService {
   </defs>
   <rect width="960" height="540" rx="36" fill="url(#card)" />
   <rect x="30" y="30" width="900" height="480" rx="28" fill="url(#watermark)" stroke="rgba(31, 41, 55, 0.12)" />
-  <text x="72" y="112" fill="#92400e" font-family="monospace" font-size="24">Vouchrex escrow reveal</text>
+  <text x="72" y="112" fill="#92400e" font-family="monospace" font-size="24">VouchrEx escrow reveal</text>
   <text x="72" y="168" fill="#111827" font-family="Arial, sans-serif" font-size="48" font-weight="700">${safeBrandName}</text>
   <text x="72" y="250" fill="#1f2937" font-family="monospace" font-size="56" font-weight="700">${safeCode}</text>
   <text x="72" y="320" fill="#374151" font-family="Arial, sans-serif" font-size="26">Verification deadline: ${safeDeadline}</text>

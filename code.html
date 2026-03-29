@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vouchrex App Icon</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 40px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background-color: #F4F3FB;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    .previews {
+      display: flex;
+      gap: 32px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .preview-label {
+      text-align: center;
+      margin-top: 10px;
+      font-size: 12px;
+      color: #7B7485;
+      font-weight: 600;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+  <div class="previews">
+
+    <!-- 1024px master -->
+    <div>
+      <svg width="256" height="256" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <!-- Background: background dark token -->
+          <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#13102B"/>
+            <stop offset="100%" stop-color="#0D0B1E"/>
+          </linearGradient>
+
+          <!-- Ticket fill: brandBright → brand (pure violet, no magenta) -->
+          <linearGradient id="ticketGrad" x1="0" y1="0" x2="0.3" y2="1">
+            <stop offset="0%" stop-color="#9B6BF2"/>
+            <stop offset="100%" stop-color="#5B21B6"/>
+          </linearGradient>
+
+          <!-- Top highlight for depth -->
+          <linearGradient id="ticketHighlight" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="rgba(255,255,255,0.18)"/>
+            <stop offset="50%" stop-color="rgba(255,255,255,0)"/>
+          </linearGradient>
+
+          <!-- Drop shadow filter -->
+          <filter id="ticketShadow" x="-10%" y="-20%" width="120%" height="160%">
+            <feDropShadow dx="0" dy="18" stdDeviation="28" flood-color="#000000" flood-opacity="0.55"/>
+          </filter>
+
+          <!-- Inner shadow for emboss -->
+          <filter id="innerGlow" x="-5%" y="-5%" width="110%" height="110%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="6" result="blur"/>
+            <feOffset dx="0" dy="-4" result="offsetBlur"/>
+            <feComposite in="SourceGraphic" in2="offsetBlur" operator="over"/>
+          </filter>
+        </defs>
+
+        <!-- Background rounded square -->
+        <rect width="1024" height="1024" rx="225" fill="url(#bgGrad)"/>
+
+        <!-- Subtle violet ambient glow behind ticket -->
+        <ellipse cx="512" cy="520" rx="340" ry="180" fill="#6E3ACA" opacity="0.20"/>
+
+        <!-- Ticket shape: rounded rect with semicircle notches on each side
+             Ticket: x=142, y=352, w=740, h=320, center=(512,512)
+             Corner radius: 22
+             Notch radius: 54, centers at (142,512) and (882,512)
+        -->
+        <path
+          fill="url(#ticketGrad)"
+          filter="url(#ticketShadow)"
+          d="
+            M 164,352
+            L 860,352
+            Q 882,352 882,374
+            L 882,458
+            A 54,54 0 1,0 882,566
+            L 882,650
+            Q 882,672 860,672
+            L 164,672
+            Q 142,672 142,650
+            L 142,566
+            A 54,54 0 1,1 142,458
+            L 142,374
+            Q 142,352 164,352
+            Z
+          "
+        />
+
+        <!-- Highlight overlay (top half of ticket only) -->
+        <path
+          fill="url(#ticketHighlight)"
+          d="
+            M 164,352
+            L 860,352
+            Q 882,352 882,374
+            L 882,458
+            A 54,54 0 1,0 882,566
+            L 882,512
+            L 142,512
+            L 142,566
+            A 54,54 0 1,1 142,458
+            L 142,374
+            Q 142,352 164,352
+            Z
+          "
+        />
+
+        <!-- V mark — brandBright light lavender, thick rounded strokes -->
+        <path
+          d="M 398,408 L 512,578 L 626,408"
+          fill="none"
+          stroke="#C4B5FD"
+          stroke-width="72"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          opacity="0.95"
+        />
+      </svg>
+      <div class="preview-label">1024 × 1024</div>
+    </div>
+
+    <!-- 60px — tab bar / small -->
+    <div>
+      <svg width="60" height="60" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="bgGrad2" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#13102B"/>
+            <stop offset="100%" stop-color="#0D0B1E"/>
+          </linearGradient>
+          <linearGradient id="ticketGrad2" x1="0" y1="0" x2="0.3" y2="1">
+            <stop offset="0%" stop-color="#9B6BF2"/>
+            <stop offset="100%" stop-color="#5B21B6"/>
+          </linearGradient>
+        </defs>
+        <rect width="1024" height="1024" rx="225" fill="url(#bgGrad2)"/>
+        <path
+          fill="url(#ticketGrad2)"
+          d="M 164,352 L 860,352 Q 882,352 882,374 L 882,458 A 54,54 0 1,0 882,566 L 882,650 Q 882,672 860,672 L 164,672 Q 142,672 142,650 L 142,566 A 54,54 0 1,1 142,458 L 142,374 Q 142,352 164,352 Z"
+        />
+        <path d="M 398,408 L 512,578 L 626,408" fill="none" stroke="#C4B5FD" stroke-width="72" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <div class="preview-label">60px</div>
+    </div>
+
+    <!-- 40px — notification / favicon -->
+    <div>
+      <svg width="40" height="40" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="bgGrad3" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#13102B"/>
+            <stop offset="100%" stop-color="#0D0B1E"/>
+          </linearGradient>
+          <linearGradient id="ticketGrad3" x1="0" y1="0" x2="0.3" y2="1">
+            <stop offset="0%" stop-color="#9B6BF2"/>
+            <stop offset="100%" stop-color="#5B21B6"/>
+          </linearGradient>
+        </defs>
+        <rect width="1024" height="1024" rx="225" fill="url(#bgGrad3)"/>
+        <path
+          fill="url(#ticketGrad3)"
+          d="M 164,352 L 860,352 Q 882,352 882,374 L 882,458 A 54,54 0 1,0 882,566 L 882,650 Q 882,672 860,672 L 164,672 Q 142,672 142,650 L 142,566 A 54,54 0 1,1 142,458 L 142,374 Q 142,352 164,352 Z"
+        />
+        <path d="M 398,408 L 512,578 L 626,408" fill="none" stroke="#C4B5FD" stroke-width="72" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <div class="preview-label">40px</div>
+    </div>
+
+  </div>
+</body>
+</html>

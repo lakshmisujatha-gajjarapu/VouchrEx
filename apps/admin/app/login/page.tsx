@@ -6,7 +6,7 @@ import LoginView from './LoginView';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Admin Login | Vouchrex',
+  title: 'Admin Login | VouchrEx',
 };
 
 export default async function LoginPage() {

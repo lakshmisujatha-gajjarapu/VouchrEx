@@ -64,7 +64,6 @@ export default function RootLayout() {
   const [manropeLoaded] = useManropeFonts({ Manrope_700Bold, Manrope_800ExtraBold });
   const [workSansLoaded] = useWorkSansFonts({ WorkSans_400Regular, WorkSans_500Medium, WorkSans_600SemiBold });
   const [jetbrainsLoaded] = useJetBrainsMonoFonts({ JetBrainsMono_500Medium });
-
   const fontsLoaded = manropeLoaded && workSansLoaded && jetbrainsLoaded;
 
   if (!fontsLoaded) {

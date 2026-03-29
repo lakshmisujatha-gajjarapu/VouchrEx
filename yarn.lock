@@ -1405,6 +1405,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@expo-google-fonts/montserrat@npm:^0.4.2":
+  version: 0.4.2
+  resolution: "@expo-google-fonts/montserrat@npm:0.4.2"
+  checksum: 10c0/6b040a64adef7aa1595d013865c7efa7d9a8c6e20ebeeba338f5024492772b5ea7c1476a9a7911bda55a9c55c7a38112607c6a2b74e5079088fb6ac6baf083f9
+  languageName: node
+  linkType: hard
+
 "@expo-google-fonts/work-sans@npm:^0.4.2":
   version: 0.4.2
   resolution: "@expo-google-fonts/work-sans@npm:0.4.2"
@@ -14056,6 +14063,7 @@ __metadata:
     "@expo-google-fonts/ibm-plex-sans": "npm:^0.4.1"
     "@expo-google-fonts/jetbrains-mono": "npm:^0.4.1"
     "@expo-google-fonts/manrope": "npm:^0.4.2"
+    "@expo-google-fonts/montserrat": "npm:^0.4.2"
     "@expo-google-fonts/work-sans": "npm:^0.4.2"
     "@react-native-community/datetimepicker": "npm:8.4.4"
     "@react-navigation/bottom-tabs": "npm:^7.7.3"

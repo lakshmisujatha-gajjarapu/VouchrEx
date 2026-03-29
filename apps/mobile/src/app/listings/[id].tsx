@@ -126,7 +126,7 @@ export default function ListingDetailScreen() {
             letterSpacing: -0.3,
             color: theme.colors.ink,
           }}>
-            Vouchrex
+            VouchrEx
           </Text>
         </View>
 

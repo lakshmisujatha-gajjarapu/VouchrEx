@@ -568,7 +568,7 @@ export default function OrderDetailScreen() {
               <Ionicons name="shield-checkmark" size={22} color={theme.colors.brand} />
               <View style={{ flex: 1 }}>
                 <Text style={{ fontFamily: theme.fontFamily.headline, fontSize: 14, fontWeight: '700', color: theme.colors.ink, marginBottom: 4 }}>
-                  Protected by Vouchrex Escrow
+                  Protected by VouchrEx Escrow
                 </Text>
                 <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 13, color: theme.colors.inkSecondary, lineHeight: 18 }}>
                   Your funds are held securely until you confirm receipt. The seller only receives payment after your approval.

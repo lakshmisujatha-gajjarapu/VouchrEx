@@ -2,7 +2,7 @@ import { getUsers } from '@/lib/api';
 import UsersView from './UsersView';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = { title: 'Users | Vouchrex Admin' };
+export const metadata: Metadata = { title: 'Users | VouchrEx Admin' };
 
 const TABS = [
   { label: 'All',       value: undefined },

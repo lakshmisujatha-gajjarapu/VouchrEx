@@ -5,7 +5,7 @@ import { formatCurrency } from '@/lib/utils';
 import { ROUTES } from '@/lib/routes';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = { title: 'Dashboard | Vouchrex Admin' };
+export const metadata: Metadata = { title: 'Dashboard | VouchrEx Admin' };
 
 export default async function DashboardPage() {
   const metrics = await getMetrics();

@@ -23,7 +23,7 @@ function sortLabel(o: SortOption) {
   return o === 'price-low' ? 'Price ↑' : o === 'best-discount' ? 'Best deal' : o === 'expiring' ? 'Expiring' : 'Latest';
 }
 
-export default function BazaarScreen() {
+export default function ShopScreen() {
   const router = useRouter();
   const theme = useTheme();
   const [query, setQuery] = useState('');
@@ -73,7 +73,7 @@ export default function BazaarScreen() {
                 letterSpacing: -1.5,
                 color: theme.colors.ink,
               }}>
-                Bazaar
+                Shop
               </Text>
               <Text style={{
                 fontFamily: theme.fontFamily.body,

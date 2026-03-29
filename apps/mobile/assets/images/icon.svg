@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#8B5CF6"/>
+      <stop offset="100%" stop-color="#4C1D95"/>
+    </linearGradient>
+    <radialGradient id="shine" cx="35%" cy="20%" r="65%">
+      <stop offset="0%" stop-color="white" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="white" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="200" height="200" rx="42" fill="url(#bg)"/>
+  <rect width="200" height="200" rx="42" fill="url(#shine)"/>
+  <rect width="200" height="200" rx="42" fill="none" stroke="white" stroke-width="1.5" opacity="0.15"/>
+
+  <!-- V -->
+  <path d="M23,44 L58,154 L93,44"
+    fill="none" stroke="white" stroke-width="15"
+    stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- x — crown proportions: top arms ~90px, bottom arms ~59px -->
+  <!-- center at (149, 118) -->
+  <line x1="149" y1="118" x2="107" y2="38"  stroke="white" stroke-width="15" stroke-linecap="round"/>
+  <line x1="149" y1="118" x2="191" y2="38"  stroke="white" stroke-width="15" stroke-linecap="round"/>
+  <line x1="149" y1="118" x2="114" y2="165" stroke="white" stroke-width="15" stroke-linecap="round"/>
+  <line x1="149" y1="118" x2="184" y2="165" stroke="white" stroke-width="15" stroke-linecap="round"/>
+
+  <!-- Crown gem at intersection -->
+  <circle cx="149" cy="118" r="9" fill="#34D399" opacity="0.95"/>
+  <circle cx="149" cy="118" r="5" fill="#A7F3D0"/>
+</svg>

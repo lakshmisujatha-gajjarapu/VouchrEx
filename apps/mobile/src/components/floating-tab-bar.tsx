@@ -18,7 +18,7 @@ type Tab = {
 };
 
 const TABS: readonly Tab[] = [
-  { name: 'Bazaar',   segment: 'bazaar',   href: '/(tabs)/bazaar',   icon: 'search-outline',        iconActive: 'search' },
+  { name: 'Shop',     segment: 'shop',     href: '/(tabs)/shop',     icon: 'search-outline',        iconActive: 'search' },
   { name: 'Listings', segment: 'listings', href: '/(tabs)/listings',  icon: 'albums-outline',        iconActive: 'albums' },
   { name: 'Sell',     segment: 'sell',     href: '/(tabs)/sell',      icon: 'pricetag-outline',      iconActive: 'pricetag' },
   { name: 'Orders',   segment: 'orders',   href: '/(tabs)/orders',    icon: 'receipt-outline',       iconActive: 'receipt' },
@@ -26,7 +26,7 @@ const TABS: readonly Tab[] = [
 ];
 
 // These are the native tab screens — they already have a tab bar from the Tabs navigator.
-const TAB_PATHNAMES = new Set(['/bazaar', '/listings', '/sell', '/orders', '/inbox']);
+const TAB_PATHNAMES = new Set(['/shop', '/listings', '/sell', '/orders', '/inbox']);
 
 export function FloatingTabBar() {
   const theme = useTheme();

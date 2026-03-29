@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Redirect } from 'expo-router';
 import React, { useState } from 'react';
 import {
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -14,12 +15,13 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import voucherIcon from '../../assets/images/voucher-icon.png';
+
 import { PrimaryButton } from '@/components/primary-button';
-import { StatusPill } from '@/components/status-pill';
 import { useAuth } from '@/hooks/use-auth';
 
-// Sign-in always uses dark gradient background regardless of system theme
-const GRADIENT = ['#0D0B1E', '#1A1640', '#2E1F6B'] as const;
+// Design system dark gradient: background → surfaceRaised → brandSoft
+const GRADIENT = ['#0D0B1E', '#1A173D', '#2E1F6B'] as const;
 
 function normalizeDigits(value: string) {
   return value.replace(/\D/g, '').slice(0, 10);
@@ -35,7 +37,7 @@ export default function SignInScreen() {
   const [error, setError] = useState<string | null>(null);
 
   if (status === 'signedIn') {
-    return <Redirect href="/(tabs)/bazaar" />;
+    return <Redirect href="/(tabs)/shop" />;
   }
 
   const fullPhone = `+91${phoneDigits}`;
@@ -44,7 +46,6 @@ export default function SignInScreen() {
   const otpDeadline = otpRequest
     ? new Date(otpRequest.expiresAt).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })
     : null;
-  const ctaLabel = otpRequest ? 'Verify OTP' : 'Continue';
 
   async function handleRequestOtp() {
     if (phoneDigits.length !== 10) { setError('Enter a valid 10-digit mobile number.'); return; }
@@ -74,12 +75,15 @@ export default function SignInScreen() {
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1 }}>
       <StatusBar style="light" />
+
       <LinearGradient
         colors={GRADIENT}
-        end={{ x: 0.8, y: 1 }}
-        start={{ x: 0, y: 0 }}
+        end={{ x: 0.6, y: 1 }}
+        start={{ x: 0.2, y: 0 }}
         style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 }}
       />
+
+      {/* Brand violet glow — top right */}
       <View
         style={{
           position: 'absolute',
@@ -91,6 +95,7 @@ export default function SignInScreen() {
           backgroundColor: 'rgba(167,139,250,0.15)',
         }}
       />
+      {/* Emerald glow — bottom left */}
       <View
         style={{
           position: 'absolute',
@@ -99,215 +104,288 @@ export default function SignInScreen() {
           width: 260,
           height: 260,
           borderRadius: 130,
-          backgroundColor: 'rgba(16,185,129,0.10)',
+          backgroundColor: 'rgba(52,211,153,0.08)',
         }}
       />
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        className="flex-1">
+        style={{ flex: 1 }}>
         <ScrollView
           contentContainerStyle={{ flexGrow: 1 }}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
-          <View className="flex-1 px-5 pb-8 pt-2">
-            <View className="flex-row items-center gap-3">
-              <View
-                className="h-[38px] w-[38px] items-center justify-center overflow-hidden rounded-[14px] border"
+          <View style={{ flex: 1, paddingHorizontal: 20, paddingTop: 20, paddingBottom: 40 }}>
+
+            {/* ── Brand mark ── */}
+            <View style={{ alignItems: 'center', marginTop: 36, marginBottom: 48 }}>
+              {/* Icon badge — glassmorphic */}
+              <BlurView
+                intensity={20}
+                tint="dark"
                 style={{
-                  backgroundColor: 'rgba(255,255,255,0.14)',
-                  borderColor: 'rgba(255,255,255,0.35)',
+                  width: 84,
+                  height: 84,
+                  borderRadius: 24,
+                  overflow: 'hidden',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginBottom: 20,
+                  borderWidth: 1,
+                  borderColor: 'rgba(255,255,255,0.18)',
                 }}>
                 <View
-                  className="h-[14px] w-[14px] rounded-full"
-                  style={{ backgroundColor: '#A78BFA' }}
-                />
-              </View>
-              <Text className="font-headline text-2xl font-extrabold tracking-[-0.3px] text-white">
-                Vouchrex
-              </Text>
-            </View>
-
-            <View className="mt-7 gap-2">
-              <Text className="font-headline text-[34px] font-extrabold leading-[38px] tracking-[-0.8px] text-white">
-                {otpRequest ? 'Verify OTP' : 'Login or sign up'}
-              </Text>
-              <Text
-                className="max-w-[320px] text-body leading-[22px]"
-                style={{ color: 'rgba(255,255,255,0.72)' }}>
-                {otpRequest
-                  ? `Enter the 6-digit code sent to ${activePhone}${otpDeadline ? ` before ${otpDeadline}` : ''}.`
-                  : 'Buy and sell vouchers with your payment held safely until delivery.'}
-              </Text>
-            </View>
-
-            <View
-              className="mt-7 gap-4 overflow-hidden rounded-[28px] border p-5"
-              style={{
-                borderColor: 'rgba(255,255,255,0.20)',
-                shadowColor: 'rgba(0,0,0,0.50)',
-                shadowOffset: { width: 0, height: 16 },
-                shadowOpacity: 1,
-                shadowRadius: 40,
-                elevation: 10,
-              }}>
-              <BlurView
-                intensity={50}
-                style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 }}
-                tint="dark"
-              />
-              <View
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  right: 0,
-                  bottom: 0,
-                  left: 0,
-                  backgroundColor: 'rgba(255,255,255,0.06)',
-                }}
-              />
-
-              <Text className="font-headline text-title font-extrabold text-white">
-                {!otpRequest ? 'Continue with mobile' : isNewUser ? 'Create your account' : 'Welcome back'}
-              </Text>
-              <Text
-                className="text-[14px] leading-5"
-                style={{ color: 'rgba(255,255,255,0.60)' }}>
-                {!otpRequest
-                  ? 'OTP is the only login step for buyers and sellers.'
-                  : isNewUser
-                    ? 'Enter the OTP and your name to get started.'
-                    : `Enter the 6-digit code sent to ${activePhone}.`}
-              </Text>
-
-              {!otpRequest ? (
-                <View
-                  className="flex-row items-center overflow-hidden rounded-[22px] border"
                   style={{
-                    borderColor: 'rgba(255,255,255,0.30)',
-                    backgroundColor: 'rgba(255,255,255,0.10)',
-                  }}>
-                  <View
-                    className="h-14 justify-center border-r px-4"
-                    style={{ borderRightColor: 'rgba(255,255,255,0.16)' }}>
-                    <Text className="text-[18px] font-bold text-white">+91</Text>
+                    position: 'absolute',
+                    top: 0, right: 0, bottom: 0, left: 0,
+                    backgroundColor: 'rgba(167,139,250,0.18)',
+                  }}
+                />
+                <Image
+                  source={voucherIcon}
+                  style={{ width: 44, height: 44, tintColor: '#FFFFFF' }}
+                />
+              </BlurView>
+
+              {/* Wordmark */}
+              <Text style={{ fontFamily: 'Manrope_800ExtraBold', fontSize: 36, letterSpacing: -0.8, lineHeight: 40 }}>
+                <Text style={{ color: '#FFFFFF' }}>Vouchr</Text>
+                <Text style={{ color: '#A78BFA' }}>Ex</Text>
+              </Text>
+
+              {/* Tagline */}
+              <Text
+                style={{
+                  marginTop: 10,
+                  fontSize: 14,
+                  lineHeight: 21,
+                  textAlign: 'center',
+                  fontFamily: 'WorkSans_400Regular',
+                  color: 'rgba(255,255,255,0.52)',
+                  letterSpacing: 0.1,
+                }}>
+                Buy &amp; sell vouchers.{' '}
+                <Text style={{ color: 'rgba(255,255,255,0.72)' }}>Payment protected.</Text>
+              </Text>
+            </View>
+
+            {/* ── Form ── */}
+            <View
+              style={{
+                borderTopWidth: 1,
+                borderTopColor: 'rgba(255,255,255,0.10)',
+                paddingTop: 32,
+              }}>
+
+              <Text
+                style={{
+                  fontFamily: 'Manrope_800ExtraBold',
+                  fontSize: 22,
+                  color: '#F5F3FF',
+                  letterSpacing: -0.4,
+                  marginBottom: 6,
+                }}>
+                {otpRequest ? (isNewUser ? 'Create account' : 'Welcome back') : 'Login or sign up'}
+              </Text>
+
+              <Text
+                style={{
+                  fontSize: 14,
+                  fontFamily: 'WorkSans_400Regular',
+                  color: 'rgba(255,255,255,0.48)',
+                  marginBottom: 28,
+                  lineHeight: 20,
+                }}>
+                {otpRequest
+                  ? `Code sent to ${activePhone}${otpDeadline ? ` · expires ${otpDeadline}` : ''}`
+                  : 'OTP is the only login step — no password needed.'}
+              </Text>
+
+              {/* Phone input */}
+              {!otpRequest ? (
+                <View style={{ marginBottom: 24 }}>
+                  <Text style={styles.fieldLabel}>MOBILE NUMBER</Text>
+                  <View style={styles.underlineRow}>
+                    <Text style={styles.prefix}>+91</Text>
+                    <View style={styles.prefixDivider} />
+                    <TextInput
+                      keyboardType="phone-pad"
+                      maxLength={10}
+                      onChangeText={(v) => { setPhoneDigits(normalizeDigits(v)); setError(null); }}
+                      placeholder="0000000000"
+                      placeholderTextColor="rgba(255,255,255,0.22)"
+                      style={styles.underlineInput}
+                      value={phoneDigits}
+                    />
                   </View>
-                  <TextInput
-                    keyboardType="phone-pad"
-                    maxLength={10}
-                    onChangeText={(v) => { setPhoneDigits(normalizeDigits(v)); setError(null); }}
-                    placeholder="Enter mobile number"
-                    placeholderTextColor="rgba(255,255,255,0.38)"
-                    className="h-14 flex-1 px-4 text-[18px] font-semibold text-white"
-                    value={phoneDigits}
-                  />
+                  <View style={styles.underlineLine} />
                 </View>
               ) : (
-                <View className="gap-3">
-                  <View className="gap-1">
-                    <Text
-                      className="font-label text-caption font-extrabold uppercase tracking-[0.6px]"
-                      style={{ color: 'rgba(255,255,255,0.55)' }}>
-                      Mobile
+                <View style={{ gap: 24, marginBottom: 24 }}>
+                  {/* Locked phone */}
+                  <View>
+                    <Text style={styles.fieldLabel}>MOBILE</Text>
+                    <Text style={[styles.underlineInput, { paddingLeft: 0, paddingVertical: 10 }]}>
+                      {activePhone}
                     </Text>
-                    <Text className="text-[17px] font-bold text-white">{activePhone}</Text>
+                    <View style={styles.underlineLine} />
                   </View>
+
+                  {/* Name — new users only */}
                   {isNewUser ? (
-                    <View
-                      className="overflow-hidden rounded-[22px] border"
-                      style={{
-                        borderColor: 'rgba(255,255,255,0.30)',
-                        backgroundColor: 'rgba(255,255,255,0.10)',
-                      }}>
+                    <View>
+                      <Text style={styles.fieldLabel}>YOUR NAME</Text>
                       <TextInput
                         autoCapitalize="words"
                         autoFocus
-                        onChangeText={(value) => { setProfileName(value); setError(null); }}
-                        placeholder="Your full name"
-                        placeholderTextColor="rgba(255,255,255,0.38)"
-                        className="h-14 px-4 text-[18px] font-semibold text-white"
+                        onChangeText={(v) => { setProfileName(v); setError(null); }}
+                        placeholder="Full name"
+                        placeholderTextColor="rgba(255,255,255,0.22)"
+                        style={styles.underlineInput}
                         value={profileName}
                       />
+                      <View style={styles.underlineLine} />
                     </View>
                   ) : null}
+
+                  {/* OTP */}
+                  <View>
+                    <Text style={styles.fieldLabel}>OTP CODE</Text>
+                    <TextInput
+                      autoFocus={!isNewUser}
+                      keyboardType="number-pad"
+                      maxLength={6}
+                      onChangeText={(v) => { setCode(v.replace(/\D/g, '').slice(0, 6)); setError(null); }}
+                      placeholder="· · · · · ·"
+                      placeholderTextColor="rgba(255,255,255,0.22)"
+                      style={[styles.underlineInput, {
+                        letterSpacing: 12,
+                        fontSize: 24,
+                        fontFamily: 'JetBrainsMono_500Medium',
+                      }]}
+                      value={code}
+                    />
+                    {/* Active underline turns brand violet */}
+                    <View style={[styles.underlineLine, code.length > 0 && { backgroundColor: '#A78BFA' }]} />
+                  </View>
                 </View>
               )}
 
-              {otpRequest ? (
-                <TextInput
-                  keyboardType="number-pad"
-                  maxLength={6}
-                  onChangeText={(v) => { setCode(v.replace(/\D/g, '').slice(0, 6)); setError(null); }}
-                  placeholder="123456"
-                  placeholderTextColor="rgba(255,255,255,0.38)"
-                  className="h-[58px] rounded-[22px] border text-center text-[26px] font-bold tracking-[8px] text-white"
-                  style={{
-                    borderColor: 'rgba(255,255,255,0.30)',
-                    backgroundColor: 'rgba(255,255,255,0.10)',
-                  }}
-                  value={code}
-                />
-              ) : null}
-
+              {/* Dev OTP hint */}
               {typeof __DEV__ !== 'undefined' && __DEV__ && otpRequest?.debugCode ? (
                 <View
-                  className="self-start rounded-[14px] border px-3 py-2"
                   style={{
-                    backgroundColor: 'rgba(255,255,255,0.10)',
-                    borderColor: 'rgba(255,255,255,0.20)',
+                    alignSelf: 'flex-start',
+                    borderRadius: 10,
+                    borderWidth: 1,
+                    paddingHorizontal: 12,
+                    paddingVertical: 6,
+                    marginBottom: 16,
+                    backgroundColor: 'rgba(167,139,250,0.12)',
+                    borderColor: 'rgba(167,139,250,0.25)',
                   }}>
-                  <Text
-                    className="text-caption font-bold"
-                    style={{ color: 'rgba(255,255,255,0.70)' }}>
+                  <Text style={{
+                    color: '#C4B5FD',
+                    fontSize: 13,
+                    fontFamily: 'JetBrainsMono_500Medium',
+                  }}>
                     Dev OTP: {otpRequest.debugCode}
                   </Text>
                 </View>
               ) : null}
 
+              {/* Error */}
               {error ? (
                 <View
-                  className="rounded-[14px] border p-3"
                   style={{
-                    borderColor: 'rgba(248,113,113,0.30)',
-                    backgroundColor: 'rgba(239,68,68,0.15)',
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    padding: 12,
+                    marginBottom: 8,
+                    borderColor: 'rgba(248,113,113,0.28)',
+                    backgroundColor: 'rgba(147,0,10,0.30)',
                   }}>
-                  <Text
-                    className="text-[14px] font-semibold leading-5"
-                    style={{ color: '#FCA5A5' }}>
+                  <Text style={{
+                    color: '#FFB4AB',
+                    fontSize: 14,
+                    fontFamily: 'WorkSans_500Medium',
+                    lineHeight: 20,
+                  }}>
                     {error}
                   </Text>
                 </View>
               ) : null}
 
-              <PrimaryButton
-                label={ctaLabel}
-                loading={loading}
-                onPress={() => { void (otpRequest ? handleVerifyOtp() : handleRequestOtp()); }}
-                tone="brand"
-                variant="gradient"
-              />
+              <View style={{ marginTop: 8 }}>
+                <PrimaryButton
+                  label={otpRequest ? 'Verify OTP' : 'Continue'}
+                  loading={loading}
+                  onPress={() => { void (otpRequest ? handleVerifyOtp() : handleRequestOtp()); }}
+                  tone="brand"
+                  variant="gradient"
+                />
+              </View>
 
               {otpRequest ? (
                 <Pressable
-                  className="self-center pt-1"
+                  style={{ alignSelf: 'center', paddingTop: 20 }}
                   onPress={() => { auth.clearOtpRequest(); setCode(''); setError(null); }}>
-                  <Text
-                    className="text-[14px] font-bold"
-                    style={{ color: 'rgba(255,255,255,0.65)' }}>
+                  <Text style={{
+                    fontSize: 14,
+                    fontFamily: 'WorkSans_600SemiBold',
+                    color: 'rgba(255,255,255,0.44)',
+                  }}>
                     Change number
                   </Text>
                 </Pressable>
               ) : null}
             </View>
 
-            <View className="mt-5 flex-row flex-wrap gap-2">
-              <StatusPill label="Payment protected" tone="glass" />
-              <StatusPill label="Watermarked reveal" tone="glass" />
-              <StatusPill label="2h verification" tone="glass" />
-            </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
+
+const styles = {
+  fieldLabel: {
+    fontSize: 12,
+    letterSpacing: 0.8,
+    fontFamily: 'WorkSans_600SemiBold',
+    color: 'rgba(255,255,255,0.38)',
+    marginBottom: 10,
+    textTransform: 'uppercase' as const,
+  },
+  underlineRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+  },
+  prefix: {
+    fontSize: 18,
+    fontFamily: 'Manrope_700Bold',
+    color: '#F5F3FF',
+    paddingBottom: 8,
+    paddingRight: 12,
+  },
+  prefixDivider: {
+    width: 1,
+    height: 20,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    marginRight: 12,
+    marginBottom: 8,
+  },
+  underlineInput: {
+    fontSize: 18,
+    fontFamily: 'WorkSans_500Medium',
+    color: '#F5F3FF',
+    paddingVertical: 8,
+    paddingLeft: 2,
+    flex: 1,
+  } as const,
+  underlineLine: {
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    marginTop: 2,
+  },
+} as const;

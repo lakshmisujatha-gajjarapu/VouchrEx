@@ -25,8 +25,8 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Vouchrex Admin",
-  description: "Admin console for Vouchrex operations",
+  title: "VouchrEx Admin",
+  description: "Admin console for VouchrEx operations",
   robots: { index: false, follow: false },
 };
 

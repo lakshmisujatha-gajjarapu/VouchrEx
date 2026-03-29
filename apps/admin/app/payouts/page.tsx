@@ -3,7 +3,7 @@ import PayoutsView from './PayoutsView';
 import { formatCurrency } from '@/lib/utils';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = { title: 'Payouts | Vouchrex Admin' };
+export const metadata: Metadata = { title: 'Payouts | VouchrEx Admin' };
 
 export default async function PayoutsPage() {
   const payouts = await getPendingPayouts();

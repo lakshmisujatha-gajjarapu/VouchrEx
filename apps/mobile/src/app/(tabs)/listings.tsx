@@ -349,11 +349,11 @@ export default function ListingsScreen() {
         ]}>
         <Ionicons color={theme.colors.inkMuted} name="search-outline" size={18} />
         <TextInput
-          className="flex-1 font-label text-body"
+          className="flex-1 font-body text-body"
           onChangeText={setSearchQuery}
           placeholder="Search by brand or type"
           placeholderTextColor={theme.colors.inkMuted}
-          style={{ color: theme.colors.ink }}
+          style={{ color: theme.colors.ink, letterSpacing: 0 }}
           value={searchQuery}
         />
         {searchQuery ? (

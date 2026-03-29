@@ -100,8 +100,8 @@ async function bootstrap() {
   app.useGlobalPipes(new ZodValidationPipe());
 
   const swaggerConfig = new DocumentBuilder()
-    .setTitle('Vouchrex API')
-    .setDescription('Phase 1 API for the Vouchrex voucher resale marketplace.')
+    .setTitle('VouchrEx API')
+    .setDescription('Phase 1 API for the VouchrEx voucher resale marketplace.')
     .setVersion('0.1.0')
     .addTag('health')
     .addTag('auth')
@@ -119,14 +119,14 @@ async function bootstrap() {
 
   SwaggerModule.setup('docs', app, documentFactory, {
     jsonDocumentUrl: 'docs/json',
-    customSiteTitle: 'Vouchrex API Docs'
+    customSiteTitle: 'VouchrEx API Docs'
   });
 
   const port = Number(process.env.PORT ?? 3010);
   await app.listen(port);
 
   const logger = new Logger('bootstrap');
-  logger.log(`Vouchrex API listening on http://localhost:${String(port)}`);
+  logger.log(`VouchrEx API listening on http://localhost:${String(port)}`);
   logger.log(`Swagger docs available at http://localhost:${String(port)}/docs`);
 }
 
