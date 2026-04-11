@@ -4,6 +4,8 @@ import { Platform } from 'react-native';
 import type { ThemePreference } from '@/theme/tokens';
 
 const sessionTokenKey = 'vouchrex.session-token';
+const refreshTokenKey = 'vouchrex.refresh-token';
+const accessTokenExpiresAtKey = 'vouchrex.access-token-expires-at';
 const themePreferenceKey = 'vouchrex.theme-preference';
 
 async function readPersistedValue(key: string) {
@@ -72,6 +74,33 @@ export async function writeSessionToken(token: string) {
 
 export async function clearSessionToken() {
   await clearPersistedValue(sessionTokenKey);
+}
+
+export async function readRefreshToken() {
+  return readPersistedValue(refreshTokenKey);
+}
+
+export async function writeRefreshToken(token: string) {
+  await writePersistedValue(refreshTokenKey, token);
+}
+
+export async function clearRefreshToken() {
+  await clearPersistedValue(refreshTokenKey);
+}
+
+export async function readAccessTokenExpiresAt(): Promise<Date | null> {
+  const raw = await readPersistedValue(accessTokenExpiresAtKey);
+  if (!raw) return null;
+  const d = new Date(raw);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+export async function writeAccessTokenExpiresAt(expiresAt: Date) {
+  await writePersistedValue(accessTokenExpiresAtKey, expiresAt.toISOString());
+}
+
+export async function clearAccessTokenExpiresAt() {
+  await clearPersistedValue(accessTokenExpiresAtKey);
 }
 
 export async function readThemePreference(): Promise<ThemePreference> {

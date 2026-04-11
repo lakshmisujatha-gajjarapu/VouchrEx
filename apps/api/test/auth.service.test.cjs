@@ -118,7 +118,8 @@ test('AuthService verifies OTP and creates a session for a new user', async () =
     name: 'Priya'
   });
 
-  assert.match(result.sessionToken, /^[a-f0-9]{64}$/u);
+  assert.match(result.accessToken, /^[a-f0-9]{64}$/u);
+  assert.match(result.refreshToken, /^[a-f0-9]{64}$/u);
   assert.equal(result.user.phone, '+919876543210');
   assert.equal(result.user.name, 'Priya');
   assert.deepEqual(

@@ -11,11 +11,13 @@ import { PrismaService } from '../prisma/prisma.service';
 import { RequestOtpDto } from './dto/request-otp.dto';
 import { OtpProviderService } from './otp-provider.service';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
 
 @Injectable()
 export class AuthService {
   private readonly maxOtpAttempts = Number(process.env.OTP_MAX_ATTEMPTS ?? 5);
-  private readonly sessionTtlHours = Number(process.env.SESSION_TTL_HOURS ?? 24 * 30);
+  private readonly accessTokenTtlMinutes = Number(process.env.ACCESS_TOKEN_TTL_MINUTES ?? 15);
+  private readonly refreshTokenTtlDays = Number(process.env.REFRESH_TOKEN_TTL_DAYS ?? 90);
   private readonly otpResendCooldownSeconds = Number(process.env.OTP_RESEND_COOLDOWN_SECONDS ?? 60);
   private readonly otpMaxPerPhoneHour = Number(process.env.OTP_MAX_PER_PHONE_HOUR ?? 3);
   private readonly otpMaxPerDeviceHour = Number(process.env.OTP_MAX_PER_DEVICE_HOUR ?? 4);
@@ -195,10 +197,9 @@ export class AuthService {
       throw new BadRequestException('OTP is invalid.');
     }
 
-    const token = randomBytes(32).toString('hex');
-    const tokenHash = this.hashSessionToken(token);
     const now = new Date();
-    const expiresAt = new Date(now.getTime() + this.sessionTtlHours * 60 * 60 * 1000);
+    const { accessToken, accessTokenHash, accessTokenExpiresAt, refreshToken, refreshTokenHash, refreshTokenExpiresAt } =
+      this.generateTokenPair(now);
 
     const user = await this.prisma.$transaction(async (tx) => {
       await tx.otpChallenge.update({
@@ -236,8 +237,11 @@ export class AuthService {
       await tx.userSession.create({
         data: {
           userId: resolvedUser.id,
-          tokenHash,
-          expiresAt,
+          accessTokenHash,
+          accessTokenExpiresAt,
+          refreshTokenHash,
+          refreshTokenExpiresAt,
+          deviceId: dto.deviceId ?? null,
           lastUsedAt: now
         }
       });
@@ -258,20 +262,19 @@ export class AuthService {
     });
 
     return {
-      sessionToken: token,
-      expiresAt,
+      accessToken,
+      accessTokenExpiresAt,
+      refreshToken,
+      refreshTokenExpiresAt,
       user
     };
   }
 
-  async getSessionUser(sessionToken: string | undefined) {
-    if (!sessionToken) {
-      return null;
-    }
+  async refreshTokens(dto: RefreshTokenDto) {
+    const incomingHash = this.hashToken(dto.refreshToken);
 
-    const tokenHash = this.hashSessionToken(sessionToken);
     const session = await this.prisma.userSession.findUnique({
-      where: { tokenHash },
+      where: { refreshTokenHash: incomingHash },
       include: {
         user: {
           select: {
@@ -286,21 +289,107 @@ export class AuthService {
       }
     });
 
-    if (!session || session.revokedAt || session.expiresAt <= new Date()) {
+    if (!session) {
+      throw new UnauthorizedException('Invalid refresh token.');
+    }
+
+    // Reuse detection: this token was already rotated — likely stolen
+    if (session.refreshTokenConsumedAt) {
+      await this.prisma.userSession.updateMany({
+        where: { userId: session.userId, revokedAt: null },
+        data: { revokedAt: new Date() }
+      });
+      await this.prisma.auditLog.create({
+        data: {
+          entityType: 'auth',
+          entityId: session.userId,
+          action: 'auth.refresh_token_reuse_detected',
+          actorId: session.userId,
+          metadata: { deviceId: session.deviceId }
+        }
+      });
+      throw new UnauthorizedException('Session invalidated due to suspicious activity. Please sign in again.');
+    }
+
+    if (session.revokedAt) {
+      throw new UnauthorizedException('Session has been revoked. Please sign in again.');
+    }
+
+    if (session.refreshTokenExpiresAt <= new Date()) {
+      throw new UnauthorizedException('Session expired. Please sign in again.');
+    }
+
+    if (session.user.status !== UserStatus.ACTIVE) {
+      throw new UnauthorizedException('Your account has been suspended. Please contact support.');
+    }
+
+    const now = new Date();
+    const { accessToken, accessTokenHash, accessTokenExpiresAt, refreshToken, refreshTokenHash, refreshTokenExpiresAt } =
+      this.generateTokenPair(now);
+
+    await this.prisma.$transaction(async (tx) => {
+      // Mark old refresh token as consumed (rotation — invalidates it for future use)
+      await tx.userSession.update({
+        where: { id: session.id },
+        data: { refreshTokenConsumedAt: now }
+      });
+
+      // Create new session with rotated tokens; sliding: refreshTokenExpiresAt resets from now
+      await tx.userSession.create({
+        data: {
+          userId: session.userId,
+          accessTokenHash,
+          accessTokenExpiresAt,
+          refreshTokenHash,
+          refreshTokenExpiresAt,
+          deviceId: session.deviceId,
+          lastUsedAt: now
+        }
+      });
+    });
+
+    return {
+      accessToken,
+      accessTokenExpiresAt,
+      refreshToken,
+      refreshTokenExpiresAt
+    };
+  }
+
+  async getSessionUser(sessionToken: string | undefined) {
+    if (!sessionToken) {
       return null;
     }
 
-    // Block suspended/banned users immediately even if they have a valid session token
+    const tokenHash = this.hashToken(sessionToken);
+    const session = await this.prisma.userSession.findUnique({
+      where: { accessTokenHash: tokenHash },
+      include: {
+        user: {
+          select: {
+            id: true,
+            phone: true,
+            name: true,
+            email: true,
+            status: true,
+            tier: true
+          }
+        }
+      }
+    });
+
+    if (!session || session.revokedAt || session.accessTokenExpiresAt <= new Date()) {
+      return null;
+    }
+
+    // Block suspended/banned users immediately even if they have a valid token
     if (session.user.status !== UserStatus.ACTIVE) {
       return null;
     }
 
     await this.prisma.userSession.update({
       where: { id: session.id },
-      data: {
-        lastUsedAt: new Date(),
-        expiresAt: new Date(Date.now() + this.sessionTtlHours * 60 * 60 * 1000)
-      }
+      data: { lastUsedAt: new Date() }
     });
 
     return session.user;
@@ -320,9 +409,9 @@ export class AuthService {
       throw new UnauthorizedException('A valid session token is required.');
     }
 
-    const tokenHash = this.hashSessionToken(sessionToken);
+    const tokenHash = this.hashToken(sessionToken);
     const session = await this.prisma.userSession.findUnique({
-      where: { tokenHash }
+      where: { accessTokenHash: tokenHash }
     });
 
     if (!session || session.revokedAt) {
@@ -331,13 +420,25 @@ export class AuthService {
 
     await this.prisma.userSession.update({
       where: { id: session.id },
-      data: {
-        revokedAt: new Date()
-      }
+      data: { revokedAt: new Date() }
     });
 
+    return { success: true };
+  }
+
+  private generateTokenPair(now: Date) {
+    const accessToken = randomBytes(32).toString('hex');
+    const refreshToken = randomBytes(32).toString('hex');
+    const accessTokenExpiresAt = new Date(now.getTime() + this.accessTokenTtlMinutes * 60 * 1000);
+    const refreshTokenExpiresAt = new Date(now.getTime() + this.refreshTokenTtlDays * 24 * 60 * 60 * 1000);
+
     return {
-      success: true
+      accessToken,
+      accessTokenHash: this.hashToken(accessToken),
+      accessTokenExpiresAt,
+      refreshToken,
+      refreshTokenHash: this.hashToken(refreshToken),
+      refreshTokenExpiresAt
     };
   }
 
@@ -345,7 +446,7 @@ export class AuthService {
     return `+${phone.replace(/\D/g, '')}`;
   }
 
-  private hashSessionToken(token: string) {
+  private hashToken(token: string) {
     return createHash('sha256').update(token).digest('hex');
   }
 }

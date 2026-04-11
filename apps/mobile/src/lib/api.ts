@@ -20,8 +20,10 @@ export type OtpRequestResult = {
 };
 
 export type OtpVerifyResult = {
-  readonly sessionToken: string;
-  readonly expiresAt: string;
+  readonly accessToken: string;
+  readonly accessTokenExpiresAt: string;
+  readonly refreshToken: string;
+  readonly refreshTokenExpiresAt: string;
   readonly user: SessionUser;
 };
 
@@ -241,10 +243,17 @@ export const api = {
     readonly code: string;
     readonly name?: string;
     readonly email?: string;
+    readonly deviceId?: string;
   }) {
     return apiRequest<OtpVerifyResult>('/auth/otp/verify', {
       method: 'POST',
       body: input
+    });
+  },
+  refreshTokens(refreshToken: string) {
+    return apiRequest<Omit<OtpVerifyResult, 'user'>>('/auth/token/refresh', {
+      method: 'POST',
+      body: { refreshToken }
     });
   },
   me(sessionToken: string) {

@@ -289,17 +289,24 @@ model OtpChallenge {
 }
 
 model UserSession {
-  id         String    @id @default(cuid())
-  userId     String
-  tokenHash  String    @unique
-  expiresAt  DateTime
-  revokedAt  DateTime?
-  lastUsedAt DateTime?
-  createdAt  DateTime  @default(now())
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                     String    @id @default(cuid())
+  userId                 String
+  // Short-lived access token (~15 min) — sent with every API call
+  accessTokenHash        String    @unique
+  accessTokenExpiresAt   DateTime
+  // Long-lived refresh token (~90 days) — used only to rotate tokens
+  refreshTokenHash       String    @unique
+  refreshTokenExpiresAt  DateTime
+  refreshTokenConsumedAt DateTime? // set on rotation; if presented again = theft detected
+  deviceId               String?
+  revokedAt              DateTime?
+  lastUsedAt             DateTime?
+  createdAt              DateTime  @default(now())
+  user                   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
-  @@index([expiresAt])
+  @@index([accessTokenExpiresAt])
+  @@index([refreshTokenExpiresAt])
 }
 
 model Notification {

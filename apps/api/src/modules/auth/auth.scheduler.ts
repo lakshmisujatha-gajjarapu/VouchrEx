@@ -63,16 +63,14 @@ export class AuthScheduler {
       Date.now() - auditRetentionDays * 24 * 60 * 60 * 1000
     );
 
+    // A session is fully dead when its refresh token has expired (the longer-lived token).
+    // Consumed sessions (rotated) and revoked sessions are also pruned after the retention window.
     const { count } = await this.prisma.userSession.deleteMany({
       where: {
         OR: [
-          { expiresAt: { lte: retentionCutoff } },
-          {
-            revokedAt: {
-              not: null,
-              lte: retentionCutoff
-            }
-          }
+          { refreshTokenExpiresAt: { lte: retentionCutoff } },
+          { revokedAt: { not: null, lte: retentionCutoff } },
+          { refreshTokenConsumedAt: { not: null, lte: retentionCutoff } }
         ]
       }
     });

@@ -5,6 +5,7 @@ import { Throttle } from '@nestjs/throttler';
 import { sessionHeaderName } from './auth.constants';
 import { AuthService } from './auth.service';
 import { RequestOtpDto } from './dto/request-otp.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 
 @ApiTags('auth')
@@ -26,10 +27,15 @@ export class AuthController {
     return this.authService.verifyOtp(verifyOtpDto);
   }
 
+  @Post('token/refresh')
+  refreshTokens(@Body() refreshTokenDto: RefreshTokenDto) {
+    return this.authService.refreshTokens(refreshTokenDto);
+  }
+
   @ApiHeader({
     name: sessionHeaderName,
     required: true,
-    description: 'Session token returned from OTP verification.'
+    description: 'Access token returned from OTP verification or token refresh.'
   })
   @Get('me')
   me(@Headers(sessionHeaderName) sessionToken?: string) {
