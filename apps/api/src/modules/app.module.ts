@@ -25,6 +25,7 @@ import { WebhooksModule } from './webhooks/webhooks.module';
     EventEmitterModule.forRoot(),
     ThrottlerModule.forRootAsync({
       useFactory: () => ({
+        skipIf: () => process.env.NODE_ENV !== 'production',
         throttlers: [
           { name: 'short',  ttl: Number(process.env.THROTTLE_SHORT_TTL_MS  ?? 1000),   limit: Number(process.env.THROTTLE_SHORT_LIMIT  ?? 10)  },
           { name: 'medium', ttl: Number(process.env.THROTTLE_MEDIUM_TTL_MS ?? 60000),  limit: Number(process.env.THROTTLE_MEDIUM_LIMIT ?? 100) },

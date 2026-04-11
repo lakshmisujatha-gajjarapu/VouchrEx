@@ -1,3 +1,4 @@
+import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { openBrowserAsync } from 'expo-web-browser';
@@ -13,7 +14,8 @@ import {
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useColorScheme } from 'nativewind';
 
 import { PrimaryButton } from '@/components/primary-button';
 import { RevealCodeButton } from '@/components/reveal-code-button';
@@ -90,6 +92,8 @@ export default function OrderDetailScreen() {
   const { sessionToken, user } = useAuth();
   const theme = useTheme();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { colorScheme } = useColorScheme();
   const [checkout, setCheckout] = useState<Checkout | null>(() => buildCheckoutFromRoute(params));
   const [reveal, setReveal] = useState<RevealResult | null>(null);
   const [disputeOpen, setDisputeOpen] = useState(false);
@@ -384,10 +388,10 @@ export default function OrderDetailScreen() {
               {/* Top section */}
               <View style={{ padding: 24, paddingLeft: 28, flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
                 <View style={{ flexDirection: 'row', gap: 16, alignItems: 'flex-start', flex: 1 }}>
-                  {/* Brand avatar */}
+                  {/* Brand avatar — bg-surface-container-high per spec */}
                   <View style={{
                     width: 56, height: 56, borderRadius: 16,
-                    backgroundColor: theme.colors.surfaceHigh,
+                    backgroundColor: colorScheme === 'dark' ? '#28244a' : theme.colors.surfaceHigh,
                     alignItems: 'center', justifyContent: 'center',
                   }}>
                     <Text style={{ fontFamily: theme.fontFamily.headlineExtra, fontSize: 22, color: theme.colors.brand }}>
@@ -428,8 +432,8 @@ export default function OrderDetailScreen() {
                 <View style={{ position: 'absolute', right: -28, top: -10, width: 20, height: 20, borderRadius: 10, backgroundColor: theme.colors.background }} />
               </View>
 
-              {/* Bottom section */}
-              <View style={{ padding: 24, paddingLeft: 28, gap: 16 }}>
+              {/* Bottom section — bg-surface-container-low/50 per spec */}
+              <View style={{ padding: 24, paddingLeft: 28, gap: 16, backgroundColor: colorScheme === 'dark' ? 'rgba(26,22,53,0.5)' : 'transparent' }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                   <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 13, color: theme.colors.inkMuted }}>Voucher Validity</Text>
                   <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 13, fontWeight: '600', color: theme.colors.ink }}>
@@ -556,9 +560,9 @@ export default function OrderDetailScreen() {
               </View>
             ) : null}
 
-            {/* ── Security notice ── */}
+            {/* ── Security notice ── bg-surface-container-low per spec */}
             <View style={{
-              backgroundColor: theme.colors.surfaceTray,
+              backgroundColor: colorScheme === 'dark' ? '#1e1a3d' : theme.colors.surfaceRaised,
               borderRadius: 16,
               padding: 20,
               flexDirection: 'row',
@@ -600,20 +604,29 @@ export default function OrderDetailScreen() {
           </View>
         </ScrollView>
 
-        {/* ── Sticky footer ── */}
+        {/* ── Sticky footer — glassmorphic ── */}
         <View style={{
           position: 'absolute',
           bottom: 0,
           left: 0,
           right: 0,
-          backgroundColor: theme.colors.surface,
-          borderTopWidth: 1,
-          borderTopColor: theme.colors.surfaceHigh,
           paddingHorizontal: 20,
           paddingTop: 16,
-          paddingBottom: 32,
+          paddingBottom: Math.max(insets.bottom, 24),
           gap: 8,
+          overflow: 'hidden',
         }}>
+          <BlurView
+            intensity={60}
+            style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 }}
+            tint={colorScheme === 'dark' ? 'dark' : 'light'}
+          />
+          <View style={{
+            position: 'absolute', top: 0, right: 0, bottom: 0, left: 0,
+            backgroundColor: colorScheme === 'dark' ? 'rgba(13,11,30,0.80)' : 'rgba(250,248,255,0.85)',
+            borderTopWidth: 1,
+            borderTopColor: colorScheme === 'dark' ? theme.colors.surfaceHighest : `${theme.colors.border}30`,
+          }} />
           {/* Buyer payment flow */}
           {isBuyer && order.status === 'PAYMENT_PENDING' ? (
             <PrimaryButton

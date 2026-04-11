@@ -44,9 +44,10 @@ export function PrimaryButton({
         : { bg: flatBrandBg, border: 'transparent', text: flatBrandText }; // brand | action flat
 
   // Gradient configs (sign-in / gradient variant only)
-  const gradientColors: Record<string, readonly [string, string]> = {
-    brand:  ['#8B5CF6', '#6D28D9'],
-    action: [theme.colors.actionBright, theme.colors.action],
+  // spec: sign_in_dark → from-secondary-container(#7c3aed) to-secondary(#A78BFA), direction br
+  const gradientColors: Record<string, readonly [string, string, string, string]> = {
+    brand:  ['#7C3AED', '#8B5CF6', '#9D77F5', '#A78BFA'],
+    action: [theme.colors.actionBright, theme.colors.actionBright, theme.colors.action, theme.colors.action],
   };
 
   const useGradient = variant === 'gradient' && !disabled && (tone === 'brand' || tone === 'action');
@@ -73,8 +74,8 @@ export function PrimaryButton({
         width: '100%',
         shadowColor,
         shadowOffset: { width: 0, height: disabled ? 0 : 6 },
-        shadowOpacity: disabled ? 0 : tone === 'secondary' ? 0.12 : useGradient ? 0.38 : 0.22,
-        shadowRadius: disabled ? 0 : tone === 'secondary' ? 16 : useGradient ? 22 : 14,
+        shadowOpacity: disabled ? 0 : tone === 'secondary' ? 0.12 : useGradient ? 0.20 : 0.22,
+        shadowRadius: disabled ? 0 : tone === 'secondary' ? 16 : useGradient ? 28 : 14,
         elevation: disabled ? 0 : tone === 'secondary' ? 2 : 4,
         opacity: loading ? 0.7 : pressed ? 0.88 : 1,
         transform: [{ scale: pressed && !disabled && !loading ? 0.982 : 1 }],
@@ -83,8 +84,8 @@ export function PrimaryButton({
       })}>
       {useGradient ? (
         <LinearGradient
-          colors={gradientColors[tone] ?? ['#8B5CF6', '#6D28D9']}
-          end={{ x: 0.6, y: 1 }}
+          colors={gradientColors[tone] ?? ['#7C3AED', '#8B5CF6', '#9D77F5', '#A78BFA']}
+          end={{ x: 1, y: 1 }}
           start={{ x: 0, y: 0 }}
           style={{
             minHeight: 56,

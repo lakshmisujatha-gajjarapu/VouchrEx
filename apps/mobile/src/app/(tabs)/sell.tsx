@@ -63,15 +63,18 @@ function SubmergedInput({
   const theme = useTheme();
   const [focused, setFocused] = useState(false);
 
+  // spec: bg-surface-container-high (#231f4a dark), focused → bg-surface-container-highest + ring-primary/20
+  const inputBg = focused ? theme.colors.surfaceHighest : theme.colors.surfaceHigh;
+
   return (
     <View style={{
       flexDirection: 'row',
       alignItems: 'center',
       height: 56,
       borderRadius: 14,
-      backgroundColor: focused ? theme.colors.surface : theme.colors.surfaceHigh,
+      backgroundColor: inputBg,
       borderWidth: focused ? 1.5 : 0,
-      borderColor: focused ? theme.colors.brand : 'transparent',
+      borderColor: focused ? `${theme.colors.brand}33` : 'transparent',
       shadowColor: theme.colors.brand,
       shadowOffset: { width: 0, height: 0 },
       shadowOpacity: focused ? 0.12 : 0,
@@ -400,11 +403,11 @@ export default function SellScreen() {
               {payoutAccount?.kycStatus === 'PENDING' && (
                 <View style={{
                   flexDirection: 'row', gap: 10, alignItems: 'flex-start',
-                  backgroundColor: '#fefce8',
+                  backgroundColor: theme.colors.warningSoft,
                   borderRadius: 12, padding: 14,
                 }}>
-                  <Ionicons name="time-outline" size={18} color="#b45309" style={{ marginTop: 1 }} />
-                  <Text style={{ flex: 1, fontSize: 13, fontFamily: theme.fontFamily.body, color: '#92400e', lineHeight: 19 }}>
+                  <Ionicons name="time-outline" size={18} color={theme.colors.warning} style={{ marginTop: 1 }} />
+                  <Text style={{ flex: 1, fontSize: 13, fontFamily: theme.fontFamily.body, color: theme.colors.warning, lineHeight: 19 }}>
                     Your payout account is under review. You can list vouchers, but your first payout will be held until our team verifies your account (usually within 24h).
                   </Text>
                 </View>
@@ -412,11 +415,11 @@ export default function SellScreen() {
               {payoutAccount?.kycStatus === 'REJECTED' && (
                 <View style={{
                   flexDirection: 'row', gap: 10, alignItems: 'flex-start',
-                  backgroundColor: '#fef2f2',
+                  backgroundColor: theme.colors.dangerSoft,
                   borderRadius: 12, padding: 14,
                 }}>
-                  <Ionicons name="alert-circle-outline" size={18} color="#dc2626" style={{ marginTop: 1 }} />
-                  <Text style={{ flex: 1, fontSize: 13, fontFamily: theme.fontFamily.body, color: '#991b1b', lineHeight: 19 }}>
+                  <Ionicons name="alert-circle-outline" size={18} color={theme.colors.danger} style={{ marginTop: 1 }} />
+                  <Text style={{ flex: 1, fontSize: 13, fontFamily: theme.fontFamily.body, color: theme.colors.danger, lineHeight: 19 }}>
                     Payout verification failed. Please contact support to resolve this before your earnings can be released.
                   </Text>
                 </View>
@@ -532,13 +535,13 @@ export default function SellScreen() {
                 <DateField label="Expiry date" minimumDate={new Date()} onChange={setExpiryDate} value={expiryDate} />
               </View>
 
-              {/* ── Trust Panel ── */}
+              {/* ── Trust Panel ── bg-surface-container-low per spec */}
               <View style={{
-                backgroundColor: theme.colors.surfaceRaised,
+                backgroundColor: theme.colors.surface,
                 borderRadius: 14,
                 padding: 20,
                 borderLeftWidth: 4,
-                borderLeftColor: theme.colors.actionFixed,
+                borderLeftColor: theme.colors.brand,
                 gap: 12,
               }}>
                 <Text style={{ fontFamily: theme.fontFamily.headline, fontSize: 16, fontWeight: '700', color: theme.colors.ink }}>

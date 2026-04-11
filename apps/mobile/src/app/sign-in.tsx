@@ -2,6 +2,7 @@ import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { Redirect } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import {
   Image,
@@ -338,7 +339,36 @@ export default function SignInScreen() {
                     Change number
                   </Text>
                 </Pressable>
-              ) : null}
+              ) : (
+                /* Trust indicator panel — spec: mt-12 bg-surface-container-low border-l-8 border-secondary */
+                <View style={{
+                  marginTop: 40,
+                  padding: 20,
+                  backgroundColor: '#13102B',
+                  borderRadius: 24,
+                  borderLeftWidth: 6,
+                  borderLeftColor: '#7C3AED',
+                  flexDirection: 'row',
+                  gap: 14,
+                  alignItems: 'flex-start',
+                }}>
+                  <View style={{
+                    padding: 8,
+                    backgroundColor: 'rgba(124,58,237,0.10)',
+                    borderRadius: 10,
+                  }}>
+                    <Ionicons name="shield-checkmark" size={22} color="#A78BFA" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontFamily: 'Manrope_700Bold', fontSize: 15, color: '#F1F0F8', marginBottom: 4 }}>
+                      Secure Verification
+                    </Text>
+                    <Text style={{ fontFamily: 'WorkSans_400Regular', fontSize: 13, color: 'rgba(255,255,255,0.52)', lineHeight: 19 }}>
+                      Your connection is encrypted with vault-grade security protocols.
+                    </Text>
+                  </View>
+                </View>
+              )}
             </View>
 
           </View>

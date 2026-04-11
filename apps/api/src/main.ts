@@ -91,7 +91,9 @@ async function bootstrap() {
     .filter(Boolean);
 
   app.enableCors({
-    origin: allowedOrigins.length > 0 ? allowedOrigins : false,
+    origin: process.env.NODE_ENV === 'production'
+      ? (allowedOrigins.length > 0 ? allowedOrigins : false)
+      : true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'x-session-token', 'x-admin-token'],
     credentials: false,

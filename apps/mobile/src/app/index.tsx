@@ -10,5 +10,5 @@ export default function IndexScreen() {
     return <LoadingScreen label="Unlocking your vault..." />;
   }
 
-  return <Redirect href={status === 'signedIn' ? '/(tabs)/bazaar' : '/sign-in'} />;
+  return <Redirect href={status === 'signedIn' ? '/(tabs)/shop' : '/sign-in'} />;
 }
