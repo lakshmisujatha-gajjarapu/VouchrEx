@@ -45,7 +45,7 @@ export function FloatingTabBar() {
         right: 14,
         bottom: Math.max(insets.bottom, 14),
         height: 64,
-        borderRadius: 9999,
+        borderRadius: theme.radius.pill,
         overflow: 'hidden',
         shadowColor: theme.colors.shadow,
         shadowOffset: { width: 0, height: 8 },
@@ -64,14 +64,10 @@ export function FloatingTabBar() {
         style={{
           position: 'absolute',
           top: 0, right: 0, bottom: 0, left: 0,
-          backgroundColor: colorScheme === 'dark'
-            ? 'rgba(13,11,30,0.65)'
-            : 'rgba(255,255,255,0.72)',
-          borderRadius: 9999,
+          backgroundColor: theme.colors.glassSurface,
+          borderRadius: theme.radius.pill,
           borderWidth: 1,
-          borderColor: colorScheme === 'dark'
-            ? theme.colors.surfaceHighest
-            : 'rgba(204,195,214,0.40)',
+          borderColor: theme.colors.glassBorder,
         }}
       />
       {/* Tabs */}
@@ -96,7 +92,7 @@ export function FloatingTabBar() {
                   justifyContent: 'center',
                   paddingVertical: 8,
                   paddingHorizontal: 16,
-                  borderRadius: 9999,
+                  borderRadius: theme.radius.pill,
                   backgroundColor: theme.colors.brandSoft,
                   gap: 2,
                 }}>

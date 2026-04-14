@@ -44,12 +44,11 @@ export function PrimaryButton({
       ? { bg: theme.colors.brandSoft, border: theme.colors.brandBright, text: theme.colors.brand }
       : tone === 'danger'
         ? { bg: theme.colors.danger, border: theme.colors.danger, text: theme.colors.white }
-        : { bg: flatBrandBg, border: 'transparent', text: flatBrandText }; // brand | action flat
+        : { bg: flatBrandBg, border: theme.colors.transparent, text: flatBrandText }; // brand | action flat
 
   // Gradient configs (sign-in / gradient variant only)
-  // spec: sign_in_dark → from-secondary-container(#7c3aed) to-secondary(#A78BFA), direction br
-  const gradientColors: Record<string, readonly [string, string, string, string]> = {
-    brand:  ['#7C3AED', '#8B5CF6', '#9D77F5', '#A78BFA'],
+  const gradientColors: Record<string, readonly [string, string, ...string[]]> = {
+    brand:  theme.gradients.brand,
     action: [theme.colors.actionBright, theme.colors.actionBright, theme.colors.action, theme.colors.action],
   };
 
@@ -59,7 +58,7 @@ export function PrimaryButton({
   const textColor = disabled ? disabledCfg.text : cfg.text;
 
   const shadowColor = disabled
-    ? 'transparent'
+    ? theme.colors.transparent
     : tone === 'brand'
       ? theme.colors.brand
       : tone === 'action'
@@ -87,7 +86,7 @@ export function PrimaryButton({
       })}>
       {useGradient ? (
         <LinearGradient
-          colors={gradientColors[tone] ?? ['#7C3AED', '#8B5CF6', '#9D77F5', '#A78BFA']}
+          colors={gradientColors[tone] ?? theme.gradients.brand}
           end={{ x: 1, y: 1 }}
           start={{ x: 0, y: 0 }}
           style={{
@@ -100,7 +99,7 @@ export function PrimaryButton({
           }}>
           {/* Top sheen — glass highlight */}
           <LinearGradient
-            colors={['rgba(255,255,255,0.18)', 'rgba(255,255,255,0)']}
+            colors={[theme.colors.glassBorder, theme.colors.transparent]}
             end={{ x: 0.5, y: 1 }}
             pointerEvents="none"
             start={{ x: 0.5, y: 0 }}
@@ -112,7 +111,7 @@ export function PrimaryButton({
           {loading
             ? <ActivityIndicator color={theme.colors.white} />
             : (
-                <Text style={{ color: theme.colors.white, fontSize: 16, fontWeight: '700', fontFamily: 'WorkSans_600SemiBold', letterSpacing: 0.2 }}>
+                <Text style={{ color: theme.colors.white, fontSize: 16, fontWeight: '700', fontFamily: theme.fontFamily.labelSemi, letterSpacing: 0.2 }}>
                   {label}
                 </Text>
               )}
@@ -128,14 +127,14 @@ export function PrimaryButton({
             alignItems: 'center',
             justifyContent: 'center',
             backgroundColor: cfg.bg,
-            borderColor: 'border' in cfg ? cfg.border : 'transparent',
+            borderColor: 'border' in cfg ? cfg.border : theme.colors.transparent,
           }}>
           {loading
             ? <ActivityIndicator color={textColor} />
             : (
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[2] }}>
                   {icon ? <Ionicons name={icon} size={20} color={textColor} /> : null}
-                  <Text style={{ color: textColor, fontSize: 16, fontWeight: '700', fontFamily: 'WorkSans_600SemiBold', letterSpacing: 0.2 }}>
+                  <Text style={{ color: textColor, fontSize: 16, fontWeight: '700', fontFamily: theme.fontFamily.labelSemi, letterSpacing: 0.2 }}>
                     {label}
                   </Text>
                 </View>

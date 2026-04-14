@@ -10,10 +10,11 @@ import { CreateOrderDto } from './dto/create-order.dto';
 import { ResolveDisputeDto } from './dto/resolve-dispute.dto';
 import { SubmitSellerDisputeResponseDto } from './dto/submit-seller-dispute-response.dto';
 import { VerifyPaymentDto } from './dto/verify-payment.dto';
+import { ORDERS_ROUTES } from './orders.routes';
 import { OrdersService } from './orders.service';
 
 @ApiTags('orders')
-@Controller('orders')
+@Controller(ORDERS_ROUTES.BASE)
 export class OrdersController {
   constructor(
     private readonly authService: AuthService,
@@ -37,7 +38,7 @@ export class OrdersController {
     required: true,
     description: 'Session token returned from OTP verification.'
   })
-  @Get(':id')
+  @Get(ORDERS_ROUTES.BY_ID)
   async findOne(@Param('id') id: string, @Headers(sessionHeaderName) sessionToken?: string) {
     const user = await this.authService.requireSessionUser(sessionToken);
     return this.ordersService.findOneForUser(id, user.id);
@@ -62,7 +63,7 @@ export class OrdersController {
     required: true,
     description: 'Session token returned from OTP verification.'
   })
-  @Post(':id/checkout')
+  @Post(ORDERS_ROUTES.CHECKOUT)
   async prepareCheckout(
     @Param('id') id: string,
     @Headers(sessionHeaderName) sessionToken?: string
@@ -76,7 +77,7 @@ export class OrdersController {
     required: true,
     description: 'Session token returned from OTP verification.'
   })
-  @Post(':id/payments/verify')
+  @Post(ORDERS_ROUTES.PAYMENTS_VERIFY)
   async verifyPayment(
     @Param('id') id: string,
     @Body() verifyPaymentDto: VerifyPaymentDto,
@@ -91,7 +92,7 @@ export class OrdersController {
     required: true,
     description: 'Session token returned from OTP verification.'
   })
-  @Post(':id/payments/sync')
+  @Post(ORDERS_ROUTES.PAYMENTS_SYNC)
   async syncPaymentStatus(
     @Param('id') id: string,
     @Headers(sessionHeaderName) sessionToken?: string
@@ -105,7 +106,7 @@ export class OrdersController {
     required: true,
     description: 'Session token returned from OTP verification.'
   })
-  @Post(':id/reveal')
+  @Post(ORDERS_ROUTES.REVEAL)
   async revealCode(@Param('id') id: string, @Headers(sessionHeaderName) sessionToken?: string) {
     const buyer = await this.authService.requireSessionUser(sessionToken);
     return this.ordersService.revealCode(id, buyer.id);
@@ -116,7 +117,7 @@ export class OrdersController {
     required: true,
     description: 'Session token returned from OTP verification.'
   })
-  @Post(':id/confirm')
+  @Post(ORDERS_ROUTES.CONFIRM)
   async confirm(@Param('id') id: string, @Headers(sessionHeaderName) sessionToken?: string) {
     const buyer = await this.authService.requireSessionUser(sessionToken);
     return this.ordersService.confirm(id, buyer.id);
@@ -127,7 +128,7 @@ export class OrdersController {
     required: true,
     description: 'Session token returned from OTP verification.'
   })
-  @Post(':id/disputes')
+  @Post(ORDERS_ROUTES.DISPUTES)
   async createDispute(
     @Param('id') id: string,
     @Body() createDisputeDto: CreateDisputeDto,
@@ -142,7 +143,7 @@ export class OrdersController {
     required: true,
     description: 'Session token of the seller who owns the disputed order.'
   })
-  @Post('disputes/:id/seller-response')
+  @Post(ORDERS_ROUTES.DISPUTE_SELLER_RESP)
   async submitSellerDisputeResponse(
     @Param('id') id: string,
     @Body() dto: SubmitSellerDisputeResponseDto,
@@ -157,7 +158,7 @@ export class OrdersController {
     required: true,
     description: 'Manual Phase 1 admin token for dispute resolution.'
   })
-  @Post('disputes/:id/resolve')
+  @Post(ORDERS_ROUTES.DISPUTE_RESOLVE)
   async resolveDispute(
     @Param('id') id: string,
     @Body() resolveDisputeDto: ResolveDisputeDto,

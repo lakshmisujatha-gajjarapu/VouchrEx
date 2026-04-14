@@ -18,7 +18,7 @@ export function TrustBadge({ tier }: { readonly tier: TrustTier }) {
       style={{ backgroundColor: bg }}>
       <Text
         className="font-label text-[10px] font-extrabold uppercase tracking-[0.4px]"
-        style={{ color: '#FFFFFF' }}>
+        style={{ color: theme.colors.white }}>
         {tier}
       </Text>
     </View>

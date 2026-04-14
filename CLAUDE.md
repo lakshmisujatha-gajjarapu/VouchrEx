@@ -138,6 +138,21 @@ Copy `.env.example` → `.env` at repo root. Required non-defaulted variables:
 
 API tests use Node.js built-in test runner. Test files are `apps/api/test/**/*.test.cjs`. There are no mobile tests in Phase 1.
 
+## Mobile Coding Standards
+
+Full standards are in `docs/mobile-coding-standards.md`. Key rules enforced on every file:
+
+- **No hardcoded colors** — always `theme.colors.*`. Add missing colors to `tokens.ts` first.
+- **No hardcoded spacing** — always `theme.spacing[N]`.
+- **No hardcoded border radius** — always `theme.radius.*`.
+- **No hardcoded font families** — always `theme.fontFamily.*`.
+- **No hardcoded gradients** — always `theme.gradients.*`.
+- **No dark-mode branching on colors** — `colorScheme === 'dark' ? ... : ...` is banned for style values; theme tokens already handle it. Only exception: BlurView `tint` prop.
+- **No module-level design constants** — color/gradient constants belong in `tokens.ts`, not at the top of screen files.
+- **No floating promises** — use `void` or `await`.
+- **All component props are `readonly`**.
+- **Shared status/label helpers** go in `src/lib/status.ts`, not inlined per-screen.
+
 ## Phase 1 Scope
 
 Not yet implemented (schema/stubs exist): full KYC, fraud scoring, Razorpay native SDK in mobile, webhook delivery, worker async jobs.

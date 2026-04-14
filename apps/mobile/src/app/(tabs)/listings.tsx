@@ -23,18 +23,16 @@ import { useAsyncResource } from '@/hooks/use-async-resource';
 import { useRefetchOnFocus } from '@/hooks/use-refetch-on-focus';
 import { api, type Listing } from '@/lib/api';
 import { formatCurrency, formatDate, formatStatus } from '@/lib/format';
+import { getCardEyebrow, getCardTone, getStatusPillTone, getExpiryUrgency } from '@/lib/status';
 import { useTheme } from '@/theme/ThemeContext';
 
 // ─── constants ────────────────────────────────────────────────────────────────
 
 const editableStatuses = new Set(['ACTIVE', 'DRAFT', 'VERIFYING']);
-const warningExpiryWindowMs = 1000 * 60 * 60 * 24 * 10; // 10 days
-const dangerExpiryWindowMs = 1000 * 60 * 60 * 24 * 2;   //  2 days
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
 type ListingTab = 'live' | 'history';
-type ExpiryUrgency = 'normal' | 'warning' | 'danger' | 'expired';
 
 /**
  * Classify listing into the correct tab.
@@ -57,49 +55,6 @@ function getListingTab(listing: Listing): ListingTab {
   if (new Date(listing.expiryDate).getTime() <= Date.now()) return 'history';
 
   return 'live';
-}
-
-function getExpiryUrgency(expiryDate: string): ExpiryUrgency {
-  const msLeft = new Date(expiryDate).getTime() - Date.now();
-  if (msLeft <= 0) return 'expired';
-  if (msLeft <= dangerExpiryWindowMs) return 'danger';
-  if (msLeft <= warningExpiryWindowMs) return 'warning';
-  return 'normal';
-}
-
-/** Eyebrow label: shows the most actionable status for the seller at a glance. */
-function getCardEyebrow(listing: Listing): string {
-  if (listing.status === 'RESERVED' && listing.order) {
-    return formatStatus(listing.order.status);
-  }
-  const urgency = getExpiryUrgency(listing.expiryDate);
-  if (listing.status === 'ACTIVE') {
-    if (urgency === 'danger') return 'Final 48h';
-    if (urgency === 'warning') return 'Near expiry';
-  }
-  return formatStatus(listing.status);
-}
-
-function getCardTone(listing: Listing): React.ComponentProps<typeof TicketCard>['tone'] {
-  if (listing.status === 'SOLD') return 'success';
-  if (listing.status === 'DISPUTED') return 'danger';
-  if (listing.status === 'RESERVED') return 'brand';
-  if (['EXPIRED', 'REFUNDED', 'REJECTED'].includes(listing.status)) return 'neutral';
-  const urgency = getExpiryUrgency(listing.expiryDate);
-  if (urgency === 'danger') return 'danger';
-  if (urgency === 'warning') return 'warning';
-  return 'neutral';
-}
-
-function getStatusPillTone(listing: Listing): React.ComponentProps<typeof StatusPill>['tone'] {
-  if (listing.status === 'SOLD') return 'success';
-  if (listing.status === 'DISPUTED') return 'danger';
-  if (listing.status === 'RESERVED') return 'brand';
-  if (['EXPIRED', 'REJECTED', 'REFUNDED'].includes(listing.status)) return 'neutral';
-  const urgency = getExpiryUrgency(listing.expiryDate);
-  if (urgency === 'expired' || urgency === 'danger') return 'danger';
-  if (urgency === 'warning') return 'warning';
-  return 'neutral';
 }
 
 function isEditable(listing: Listing): boolean {
@@ -148,7 +103,7 @@ function ListingDetailSheet({
       {/* Tap outside to close */}
       <Pressable
         accessibilityLabel="Close"
-        style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.45)' }]}
+        style={[StyleSheet.absoluteFill, { backgroundColor: theme.colors.scrim }]}
         onPress={onClose}
       />
 
@@ -485,7 +440,7 @@ const styles = StyleSheet.create({
     gap: 5,
     minHeight: 32,
     paddingHorizontal: 10,
-    borderRadius: 99,
+    borderRadius: 999,
     borderWidth: 1,
   },
   sheetOverlay: {

@@ -9,13 +9,15 @@ import {
   Pressable,
   ScrollView,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { DateField } from '@/components/date-field';
+import { FieldLabel } from '@/components/field-label';
 import { FilterChip } from '@/components/filter-chip';
+import { StatusBanner } from '@/components/status-banner';
+import { SubmergedInput } from '@/components/submerged-input';
 import { useAuth } from '@/hooks/use-auth';
 import { useAsyncResource } from '@/hooks/use-async-resource';
 import { api, type PayoutAccount } from '@/lib/api';
@@ -40,106 +42,6 @@ function normalizeBrandName(value: string) {
   return value.trim().replace(/\s+/g, ' ').toLowerCase();
 }
 
-function SubmergedInput({
-  value,
-  onChangeText,
-  placeholder,
-  keyboardType = 'default',
-  autoCapitalize = 'sentences',
-  autoCorrect = true,
-  rightIcon,
-  prefix,
-  fontMono = false,
-}: {
-  readonly value: string;
-  readonly onChangeText: (v: string) => void;
-  readonly placeholder?: string;
-  readonly keyboardType?: 'default' | 'numeric' | 'email-address' | 'phone-pad';
-  readonly autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
-  readonly autoCorrect?: boolean;
-  readonly rightIcon?: React.ReactNode;
-  readonly prefix?: string;
-  readonly fontMono?: boolean;
-}) {
-  const theme = useTheme();
-  const [focused, setFocused] = useState(false);
-
-  // spec: bg-surface-container-high (#231f4a dark), focused → bg-surface-container-highest + ring-primary/20
-  const inputBg = focused ? theme.colors.surfaceHighest : theme.colors.surfaceHigh;
-
-  return (
-    <View style={{
-      flexDirection: 'row',
-      alignItems: 'center',
-      height: 56,
-      borderRadius: 14,
-      backgroundColor: inputBg,
-      borderWidth: focused ? 1.5 : 0,
-      borderColor: focused ? `${theme.colors.brand}33` : 'transparent',
-      shadowColor: theme.colors.brand,
-      shadowOffset: { width: 0, height: 0 },
-      shadowOpacity: focused ? 0.12 : 0,
-      shadowRadius: 8,
-    }}>
-      {prefix ? (
-        <Text style={{
-          paddingLeft: 16,
-          fontSize: 16,
-          fontWeight: '600',
-          fontFamily: theme.fontFamily.labelSemi,
-          color: theme.colors.inkSecondary,
-        }}>
-          {prefix}
-        </Text>
-      ) : null}
-      <TextInput
-        autoCapitalize={autoCapitalize}
-        autoCorrect={autoCorrect}
-        spellCheck={autoCorrect}
-        textContentType="none"
-        cursorColor={theme.colors.brand}
-        keyboardType={keyboardType}
-        onBlur={() => { setFocused(false); }}
-        onChangeText={onChangeText}
-        onFocus={() => { setFocused(true); }}
-        placeholder={placeholder}
-        placeholderTextColor={theme.colors.inkMuted}
-        style={{
-          flex: 1,
-          height: '100%',
-          paddingHorizontal: prefix ? 8 : 16,
-          fontSize: fontMono ? 17 : 15,
-          fontFamily: fontMono ? theme.fontFamily.mono : theme.fontFamily.body,
-          color: theme.colors.ink,
-        }}
-        value={value}
-      />
-      {rightIcon ? (
-        <View style={{ paddingRight: 16 }}>
-          {rightIcon}
-        </View>
-      ) : null}
-    </View>
-  );
-}
-
-function FieldLabel({ children }: { readonly children: string }) {
-  const theme = useTheme();
-  return (
-    <Text style={{
-      fontSize: 13,
-      fontWeight: '600',
-      fontFamily: theme.fontFamily.labelSemi,
-      color: theme.colors.inkSecondary,
-      textTransform: 'uppercase',
-      letterSpacing: 0.8,
-      marginBottom: 8,
-    }}>
-      {children}
-    </Text>
-  );
-}
-
 export default function SellScreen() {
   const { sessionToken, user } = useAuth();
   const theme = useTheme();
@@ -155,7 +57,7 @@ export default function SellScreen() {
 
   useEffect(() => {
     if (!sessionToken) return;
-    api.getPayoutAccount(sessionToken)
+    void api.getPayoutAccount(sessionToken)
       .then(setPayoutAccount)
       .catch(() => { setPayoutAccount({ registered: false }); })
       .finally(() => { setPayoutLoading(false); });
@@ -269,10 +171,10 @@ export default function SellScreen() {
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'space-between',
-            paddingHorizontal: 20,
-            paddingVertical: 16,
+            paddingHorizontal: theme.spacing[5],
+            paddingVertical: theme.spacing[4],
           }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[4] }}>
               <Pressable
                 onPress={() => { router.back(); }}
                 style={{ width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' }}>
@@ -316,7 +218,7 @@ export default function SellScreen() {
           ) : !payoutAccount?.registered ? (
             /* ── Payout gate: UPI registration ── */
             <ScrollView
-              contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20, paddingBottom: 60, justifyContent: 'center' }}
+              contentContainerStyle={{ flexGrow: 1, paddingHorizontal: theme.spacing[5], paddingBottom: 60, justifyContent: 'center' }}
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}>
               <View style={{ alignItems: 'center', marginBottom: 32 }}>
@@ -324,7 +226,7 @@ export default function SellScreen() {
                   width: 72, height: 72, borderRadius: 36,
                   backgroundColor: theme.colors.brandSoft,
                   alignItems: 'center', justifyContent: 'center',
-                  marginBottom: 20,
+                  marginBottom: theme.spacing[5],
                 }}>
                   <Ionicons name="wallet-outline" size={34} color={theme.colors.brand} />
                 </View>
@@ -344,7 +246,7 @@ export default function SellScreen() {
                 </Text>
               </View>
 
-              <View style={{ gap: 12 }}>
+              <View style={{ gap: theme.spacing[3] }}>
                 <FieldLabel>Your UPI ID</FieldLabel>
                 <SubmergedInput
                   autoCapitalize="none"
@@ -376,7 +278,7 @@ export default function SellScreen() {
                   onPress={() => { void handleRegisterUpi(); }}
                   style={({ pressed }) => ({
                     opacity: (!upiInput.trim() || upiSubmitting) ? 0.5 : pressed ? 0.88 : 1,
-                    borderRadius: 16, overflow: 'hidden', marginTop: 8,
+                    borderRadius: 16, overflow: 'hidden', marginTop: theme.spacing[2],
                     shadowColor: theme.colors.brand,
                     shadowOffset: { width: 0, height: 8 },
                     shadowOpacity: upiInput.trim() ? 0.25 : 0,
@@ -386,7 +288,7 @@ export default function SellScreen() {
                     height: 56, borderRadius: 16,
                     backgroundColor: theme.colors.brand,
                     flexDirection: 'row', alignItems: 'center',
-                    justifyContent: 'center', gap: 8,
+                    justifyContent: 'center', gap: theme.spacing[2],
                   }}>
                     {upiSubmitting
                       ? <ActivityIndicator color={theme.colors.surface} />
@@ -409,7 +311,7 @@ export default function SellScreen() {
               <View style={{
                 marginTop: 28, flexDirection: 'row', gap: 10,
                 backgroundColor: theme.colors.surfaceRaised,
-                borderRadius: 12, padding: 14, alignItems: 'flex-start',
+                borderRadius: theme.radius.sm, padding: 14, alignItems: 'flex-start',
               }}>
                 <Ionicons name="shield-checkmark-outline" size={16} color={theme.colors.brand} style={{ marginTop: 1 }} />
                 <Text style={{
@@ -426,32 +328,22 @@ export default function SellScreen() {
             contentContainerStyle={{ paddingBottom: 120 }}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}>
-            <View style={{ paddingHorizontal: 20, gap: 24 }}>
+            <View style={{ paddingHorizontal: theme.spacing[5], gap: theme.spacing[6] }}>
 
               {/* ── KYC status banner ── */}
               {payoutAccount.kycStatus === 'PENDING' && (
-                <View style={{
-                  flexDirection: 'row', gap: 10, alignItems: 'flex-start',
-                  backgroundColor: theme.colors.warningSoft,
-                  borderRadius: 12, padding: 14,
-                }}>
-                  <Ionicons name="time-outline" size={18} color={theme.colors.warning} style={{ marginTop: 1 }} />
-                  <Text style={{ flex: 1, fontSize: 13, fontFamily: theme.fontFamily.body, color: theme.colors.warning, lineHeight: 19 }}>
-                    Your payout account is under review. You can list vouchers, but your first payout will be held until our team verifies your account (usually within 24h).
-                  </Text>
-                </View>
+                <StatusBanner
+                  tone="warning"
+                  icon="time-outline"
+                  message="Your payout account is under review. You can list vouchers, but your first payout will be held until our team verifies your account (usually within 24h)."
+                />
               )}
               {payoutAccount.kycStatus === 'REJECTED' && (
-                <View style={{
-                  flexDirection: 'row', gap: 10, alignItems: 'flex-start',
-                  backgroundColor: theme.colors.dangerSoft,
-                  borderRadius: 12, padding: 14,
-                }}>
-                  <Ionicons name="alert-circle-outline" size={18} color={theme.colors.danger} style={{ marginTop: 1 }} />
-                  <Text style={{ flex: 1, fontSize: 13, fontFamily: theme.fontFamily.body, color: theme.colors.danger, lineHeight: 19 }}>
-                    Payout verification failed. Please contact support to resolve this before your earnings can be released.
-                  </Text>
-                </View>
+                <StatusBanner
+                  tone="danger"
+                  icon="alert-circle-outline"
+                  message="Payout verification failed. Please contact support to resolve this before your earnings can be released."
+                />
               )}
 
               {/* ── Hero ── */}
@@ -554,9 +446,9 @@ export default function SellScreen() {
               </View>
 
               {/* ── Face Value + Price (2 col) ── */}
-              <View style={{ flexDirection: 'row', gap: 12 }}>
+              <View style={{ flexDirection: 'row', gap: theme.spacing[3] }}>
                 <View style={{ flex: 1 }}>
-                  <View style={{ minHeight: 18, justifyContent: 'center', marginBottom: 8 }}>
+                  <View style={{ minHeight: 18, justifyContent: 'center', marginBottom: theme.spacing[2] }}>
                     <Text style={{
                       fontSize: 13, fontWeight: '600',
                       fontFamily: theme.fontFamily.labelSemi,
@@ -575,7 +467,7 @@ export default function SellScreen() {
                   />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <View style={{ minHeight: 18, justifyContent: 'center', marginBottom: 8 }}>
+                  <View style={{ minHeight: 18, justifyContent: 'center', marginBottom: theme.spacing[2] }}>
                     <Text style={{
                       fontSize: 13, fontWeight: '600',
                       fontFamily: theme.fontFamily.labelSemi,
@@ -620,22 +512,22 @@ export default function SellScreen() {
               <View style={{
                 backgroundColor: theme.colors.surface,
                 borderRadius: 14,
-                padding: 20,
+                padding: theme.spacing[5],
                 borderLeftWidth: 4,
                 borderLeftColor: theme.colors.brand,
-                gap: 12,
+                gap: theme.spacing[3],
               }}>
                 <Text style={{ fontFamily: theme.fontFamily.headline, fontSize: 16, fontWeight: '700', color: theme.colors.ink }}>
                   Vault Security Principles
                 </Text>
-                <View style={{ gap: 12 }}>
-                  <View style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-start' }}>
+                <View style={{ gap: theme.spacing[3] }}>
+                  <View style={{ flexDirection: 'row', gap: theme.spacing[3], alignItems: 'flex-start' }}>
                     <Ionicons name="shield-checkmark-outline" size={18} color={theme.colors.brand} style={{ marginTop: 1 }} />
                     <Text style={{ flex: 1, fontSize: 14, fontFamily: theme.fontFamily.body, color: theme.colors.inkSecondary }}>
                       Be honest about expiry dates. Listings are verified.
                     </Text>
                   </View>
-                  <View style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-start' }}>
+                  <View style={{ flexDirection: 'row', gap: theme.spacing[3], alignItems: 'flex-start' }}>
                     <Ionicons name="wallet-outline" size={18} color={theme.colors.brand} style={{ marginTop: 1 }} />
                     <Text style={{ flex: 1, fontSize: 14, fontFamily: theme.fontFamily.body, color: theme.colors.inkSecondary }}>
                       Payouts are credited within 24 hours of buyer redemption.
@@ -679,7 +571,7 @@ export default function SellScreen() {
                   flexDirection: 'row',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: 8,
+                  gap: theme.spacing[2],
                 }}>
                   {submitting
                     ? <ActivityIndicator color={theme.colors.surface} />

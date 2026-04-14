@@ -77,7 +77,7 @@ export function DateField({
           borderRadius: 14,
           backgroundColor: inputBg,
           borderWidth: focused ? 1.5 : 0,
-          borderColor: focused ? `${theme.colors.brand}33` : 'transparent',
+          borderColor: focused ? theme.colors.focusRing : theme.colors.transparent,
           shadowColor: theme.colors.brand,
           shadowOffset: { width: 0, height: 0 },
           shadowOpacity: focused ? 0.12 : 0,
@@ -127,7 +127,7 @@ export function DateField({
           visible={showPicker}>
           <Pressable
             onPress={handleClose}
-            style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.40)' }}
+            style={{ flex: 1, backgroundColor: theme.colors.shadowStrong }}
           />
           <View style={{
             backgroundColor: theme.colors.surface,
@@ -147,7 +147,7 @@ export function DateField({
             }}>
               <Pressable
                 onPress={handleClose}
-                style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1, padding: 4 })}>
+                style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1, padding: theme.spacing[1] })}>
                 <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 15, color: theme.colors.inkMuted }}>
                   Cancel
                 </Text>
@@ -157,7 +157,7 @@ export function DateField({
               </Text>
               <Pressable
                 onPress={handleClose}
-                style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1, padding: 4 })}>
+                style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1, padding: theme.spacing[1] })}>
                 <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 15, color: theme.colors.brand }}>
                   Done
                 </Text>

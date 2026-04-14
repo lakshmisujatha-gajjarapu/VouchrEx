@@ -73,10 +73,10 @@ export default function ListingDetailScreen() {
     return (
       <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
         <SafeAreaView style={{ flex: 1 }} edges={['top', 'left', 'right']}>
-          <Pressable onPress={() => { router.back(); }} style={{ padding: 20 }}>
+          <Pressable onPress={() => { router.back(); }} style={{ padding: theme.spacing[5] }}>
             <Ionicons name="close" size={24} color={theme.colors.ink} />
           </Pressable>
-          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: theme.spacing[5] }}>
             <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 15, color: theme.colors.danger, textAlign: 'center' }}>
               {listingResource.error ?? 'Listing not found.'}
             </Text>
@@ -99,10 +99,10 @@ export default function ListingDetailScreen() {
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
-          paddingHorizontal: 20,
+          paddingHorizontal: theme.spacing[5],
           paddingVertical: 14,
         }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[4] }}>
             <Pressable
               onPress={() => { router.back(); }}
               style={{ width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' }}>
@@ -134,20 +134,20 @@ export default function ListingDetailScreen() {
           <View style={{ paddingHorizontal: 20 }}>
 
             {/* ── Hero ── */}
-            <View style={{ marginTop: 16, flexDirection: 'row', alignItems: 'flex-end', gap: 16, marginBottom: 40 }}>
+            <View style={{ marginTop: theme.spacing[4], flexDirection: 'row', alignItems: 'flex-end', gap: theme.spacing[4], marginBottom: 40 }}>
               {/* Brand avatar — white bg per spec (brand logo area) */}
               <View style={{
                 width: 80, height: 80, borderRadius: 20,
-                backgroundColor: '#FFFFFF',
+                backgroundColor: theme.colors.white,
                 borderWidth: 1,
                 borderColor: `${theme.colors.border}20`,
                 alignItems: 'center', justifyContent: 'center',
-                shadowColor: '#000',
+                shadowColor: theme.colors.shadowStrong,
                 shadowOffset: { width: 0, height: 4 },
                 shadowOpacity: 0.10,
                 shadowRadius: 8,
               }}>
-                <Text style={{ fontFamily: theme.fontFamily.headlineExtra, fontSize: 32, color: '#6E3ACA' }}>
+                <Text style={{ fontFamily: theme.fontFamily.headlineExtra, fontSize: 32, color: theme.colors.brand }}>
                   {listing.brand.name.charAt(0).toUpperCase()}
                 </Text>
               </View>
@@ -162,7 +162,7 @@ export default function ListingDetailScreen() {
                 }}>
                   {listing.brand.name}
                 </Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[2], marginTop: theme.spacing[1] }}>
                   <Text style={{ fontFamily: theme.fontFamily.mono, fontSize: 22, fontWeight: '600', color: theme.colors.brand }}>
                     {formatCurrency(listing.faceValue)}
                   </Text>
@@ -175,15 +175,15 @@ export default function ListingDetailScreen() {
 
             {/* ── Main Ticket Card ── bg-surface-container-lowest per spec */}
             <View style={{
-              borderRadius: 24,
+              borderRadius: theme.radius.lg,
               overflow: 'hidden',
-              backgroundColor: colorScheme === 'dark' ? '#13102B' : theme.colors.surface,
-              shadowColor: '#000',
+              backgroundColor: theme.colors.surface,
+              shadowColor: theme.colors.shadowStrong,
               shadowOffset: { width: 0, height: 20 },
               shadowOpacity: 0.3,
               shadowRadius: 50,
               elevation: 4,
-              marginBottom: 32,
+              marginBottom: theme.spacing[8],
             }}>
               {/* Accent stripe */}
               <View style={{ flexDirection: 'row' }}>
@@ -191,34 +191,34 @@ export default function ListingDetailScreen() {
                 <View style={{ flex: 1, padding: 24 }}>
 
                   {/* Status badges */}
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 24 }}>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing[2], marginBottom: theme.spacing[6] }}>
                     {/* TRUSTED SELLER — tertiary-container tone (dark: #783600 bg / #ffb68b text) */}
                     <View style={{
                       flexDirection: 'row', alignItems: 'center', gap: 6,
-                      paddingHorizontal: 12, paddingVertical: 6, borderRadius: 9999,
-                      backgroundColor: colorScheme === 'dark' ? '#783600' : '#FFDBC8',
+                      paddingHorizontal: theme.spacing[3], paddingVertical: 6, borderRadius: theme.radius.pill,
+                      backgroundColor: theme.colors.warningSoft,
                     }}>
-                      <Ionicons name="shield-checkmark" size={13} color={colorScheme === 'dark' ? '#ffb68b' : '#552400'} />
-                      <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 10, fontWeight: '700', color: colorScheme === 'dark' ? '#ffb68b' : '#552400', textTransform: 'uppercase', letterSpacing: 0.8 }}>
+                      <Ionicons name="shield-checkmark" size={13} color={theme.colors.warning} />
+                      <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 10, fontWeight: '700', color: theme.colors.warning, textTransform: 'uppercase', letterSpacing: 0.8 }}>
                         TRUSTED SELLER
                       </Text>
                     </View>
                     {/* VERIFIED VOUCHER — primary-container tone (dark: #3a268a bg / #68dba9 text) */}
                     <View style={{
                       flexDirection: 'row', alignItems: 'center', gap: 6,
-                      paddingHorizontal: 12, paddingVertical: 6, borderRadius: 9999,
-                      backgroundColor: colorScheme === 'dark' ? '#3a268a' : theme.colors.brandSoft,
+                      paddingHorizontal: theme.spacing[3], paddingVertical: 6, borderRadius: theme.radius.pill,
+                      backgroundColor: theme.colors.brandSoft,
                     }}>
-                      <Ionicons name="checkmark-circle" size={13} color={colorScheme === 'dark' ? '#68dba9' : theme.colors.brand} />
-                      <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 10, fontWeight: '700', color: colorScheme === 'dark' ? '#68dba9' : theme.colors.brand, textTransform: 'uppercase', letterSpacing: 0.8 }}>
+                      <Ionicons name="checkmark-circle" size={13} color={theme.colors.success} />
+                      <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 10, fontWeight: '700', color: theme.colors.success, textTransform: 'uppercase', letterSpacing: 0.8 }}>
                         VERIFIED VOUCHER
                       </Text>
                     </View>
                   </View>
 
                   {/* 2-col bento grid */}
-                  <View style={{ flexDirection: 'row', gap: 12, marginBottom: 24 }}>
-                    <View style={{ flex: 1, padding: 16, borderRadius: 16, backgroundColor: colorScheme === 'dark' ? '#1a1738' : theme.colors.surfaceRaised }}>
+                  <View style={{ flexDirection: 'row', gap: theme.spacing[3], marginBottom: theme.spacing[6] }}>
+                    <View style={{ flex: 1, padding: theme.spacing[4], borderRadius: theme.radius.sm, backgroundColor: theme.colors.surfaceRaised }}>
                       <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 10, fontWeight: '700', color: theme.colors.inkMuted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>
                         Price
                       </Text>
@@ -229,7 +229,7 @@ export default function ListingDetailScreen() {
                         {String(savings)}% SAVINGS
                       </Text>
                     </View>
-                    <View style={{ flex: 1, padding: 16, borderRadius: 16, backgroundColor: colorScheme === 'dark' ? '#1a1738' : theme.colors.surfaceRaised }}>
+                    <View style={{ flex: 1, padding: theme.spacing[4], borderRadius: theme.radius.sm, backgroundColor: theme.colors.surfaceRaised }}>
                       <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 10, fontWeight: '700', color: theme.colors.inkMuted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>
                         Expires
                       </Text>
@@ -243,16 +243,16 @@ export default function ListingDetailScreen() {
                   </View>
 
                   {/* Description */}
-                  <View style={{ gap: 16 }}>
+                  <View style={{ gap: theme.spacing[4] }}>
                     <View>
-                      <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 11, fontWeight: '700', color: theme.colors.inkMuted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>
+                      <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 11, fontWeight: '700', color: theme.colors.inkMuted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: theme.spacing[2] }}>
                         Voucher Description
                       </Text>
                       <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 15, color: theme.colors.ink, lineHeight: 22 }}>
                         Valid for {listing.brand.category} purchases. Cannot be partially redeemed. The code will be released upon payment confirmation.
                       </Text>
                     </View>
-                    <View style={{ paddingTop: 16, borderTopWidth: 1, borderTopColor: `${theme.colors.border}30`, flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
+                    <View style={{ paddingTop: theme.spacing[4], borderTopWidth: 1, borderTopColor: theme.colors.borderHair, flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
                       <Ionicons name="information-circle-outline" size={20} color={theme.colors.brand} />
                       <Text style={{ flex: 1, fontFamily: theme.fontFamily.body, fontSize: 13, color: theme.colors.inkSecondary, lineHeight: 18 }}>
                         Once purchased, this voucher will be added to your Orders tab. Digital codes are non-refundable.
@@ -268,13 +268,13 @@ export default function ListingDetailScreen() {
               flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'space-between',
-              paddingHorizontal: 8,
-              marginBottom: 32,
+              paddingHorizontal: theme.spacing[2],
+              marginBottom: theme.spacing[8],
             }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[3] }}>
                 <View style={{
                   width: 40, height: 40, borderRadius: 20,
-                  backgroundColor: colorScheme === 'dark' ? '#28244c' : theme.colors.surfaceHigh,
+                  backgroundColor: theme.colors.surfaceHigh,
                   alignItems: 'center', justifyContent: 'center',
                 }}>
                   <Ionicons name="person-outline" size={18} color={theme.colors.brand} />
@@ -299,9 +299,9 @@ export default function ListingDetailScreen() {
           bottom: 0,
           left: 0,
           right: 0,
-          paddingHorizontal: 20,
-          paddingTop: 16,
-          paddingBottom: Math.max(insets.bottom, 24),
+          paddingHorizontal: theme.spacing[5],
+          paddingTop: theme.spacing[4],
+          paddingBottom: Math.max(insets.bottom, theme.spacing[6]),
           overflow: 'hidden',
         }}>
           {/* Blur background */}
@@ -312,11 +312,11 @@ export default function ListingDetailScreen() {
           />
           <View style={{
             position: 'absolute', top: 0, right: 0, bottom: 0, left: 0,
-            backgroundColor: colorScheme === 'dark' ? 'rgba(13,11,30,0.75)' : 'rgba(250,248,255,0.85)',
+            backgroundColor: theme.colors.glassSurface,
             borderTopWidth: 1,
-            borderTopColor: colorScheme === 'dark' ? theme.colors.surfaceHighest : `${theme.colors.border}30`,
+            borderTopColor: theme.colors.borderHair,
           }} />
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[4] }}>
             <View style={{ flex: 1 }}>
               <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 10, fontWeight: '700', color: theme.colors.inkMuted, textTransform: 'uppercase', letterSpacing: 1 }}>
                 Final Price
@@ -337,10 +337,10 @@ export default function ListingDetailScreen() {
                 flex: 1,
                 opacity: isOwnListing ? 0.5 : pressed ? 0.88 : 1,
                 transform: [{ scale: pressed && !isOwnListing && !submitting ? 0.97 : 1 }],
-                borderRadius: 16,
+                borderRadius: theme.radius.sm,
                 overflow: 'hidden',
                 // spec: shadow-[0_12px_30px_-6px_rgba(167,139,250,0.3)]
-                shadowColor: '#A78BFA',
+                shadowColor: theme.colors.brand,
                 shadowOffset: { width: 0, height: 12 },
                 shadowOpacity: isOwnListing ? 0 : 0.3,
                 shadowRadius: 30,
@@ -348,7 +348,7 @@ export default function ListingDetailScreen() {
               })}>
               <View style={{
                 height: 64,
-                borderRadius: 16,
+                borderRadius: theme.radius.sm,
                 backgroundColor: isOwnListing ? theme.colors.surfaceHigh : theme.colors.brand,
                 flexDirection: 'row',
                 alignItems: 'center',
@@ -360,14 +360,14 @@ export default function ListingDetailScreen() {
                   : (
                       <>
                         <Text style={{
-                          color: isOwnListing ? theme.colors.inkMuted : '#ffffff',
+                          color: isOwnListing ? theme.colors.inkMuted : theme.colors.white,
                           fontSize: 16,
                           fontWeight: '700',
                           fontFamily: theme.fontFamily.headline,
                         }}>
                           {isOwnListing ? 'Your listing' : `Buy for ${formatCurrency(listing.sellingPrice)}`}
                         </Text>
-                        {!isOwnListing ? <Ionicons name="arrow-forward" size={18} color="#ffffff" /> : null}
+                        {!isOwnListing ? <Ionicons name="arrow-forward" size={18} color={theme.colors.white} /> : null}
                       </>
                     )}
               </View>

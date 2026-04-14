@@ -14,6 +14,18 @@ const spacing = { 1: 4, 2: 8, 3: 12, 4: 16, 5: 20, 6: 24, 7: 28, 8: 32 } as cons
 const radius = { sm: 12, md: 18, lg: 24, xl: 30, pill: 999 } as const;
 const fontSize = { display: 32, title: 22, heading: 18, body: 15, label: 13, caption: 12, mono: 16 } as const;
 
+const gradients = {
+  // Sign-in / onboarding background sweep
+  signIn:  ['#FAF8FF', '#F4F3FB', '#EBDDFF'] as const,
+  // Brand violet button (4-stop for richer depth)
+  brand:   ['#7C3AED', '#8B5CF6', '#9D77F5', '#A78BFA'] as const,
+} as const;
+
+const gradientsDark = {
+  signIn:  ['#0D0B1E', '#1A173D', '#2E1F6B'] as const,
+  brand:   ['#7C3AED', '#8B5CF6', '#9D77F5', '#A78BFA'] as const,
+} as const;
+
 export const lightTheme = {
   colors: {
     // Backgrounds
@@ -74,8 +86,27 @@ export const lightTheme = {
     // Shadows (ambient, low-opacity tinted)
     shadow: 'rgba(26,27,33,0.04)',
     shadowStrong: 'rgba(26,27,33,0.10)',
+
+    // Decorative glows (ambient blobs on sign-in / hero sections)
+    brandGlow: 'rgba(110,58,202,0.15)',     // brand violet at 15%
+    actionGlow: 'rgba(5,150,105,0.08)',     // action emerald at 8%
+
+    // Focus ring — form field focused border (brand at 20% opacity)
+    focusRing: '#6E3ACA33',
+
+    // Glass text — readable white on frosted/glass surfaces
+    glassText: 'rgba(255,255,255,0.84)',
+
+    // Hairline divider — subtle separator between list items
+    borderHair: '#CCC3D630',
+
+    // Scrim — modal/overlay backdrop tint
+    scrim: 'rgba(0,0,0,0.45)',
+
     white: '#FFFFFF',
+    transparent: 'transparent',
   },
+  gradients,
   spacing,
   radius,
   fontSize,
@@ -142,8 +173,27 @@ export const darkTheme = {
     // Shadows
     shadow: 'rgba(0,0,0,0.30)',
     shadowStrong: 'rgba(0,0,0,0.50)',
+
+    // Decorative glows
+    brandGlow: 'rgba(167,139,250,0.15)',    // brand violet at 15% (dark)
+    actionGlow: 'rgba(52,211,153,0.08)',    // action emerald at 8% (dark)
+
+    // Focus ring
+    focusRing: '#A78BFA33',
+
+    // Glass text
+    glassText: 'rgba(255,255,255,0.84)',
+
+    // Hairline divider (dark uses surfaceHighest tone)
+    borderHair: '#272445',
+
+    // Scrim
+    scrim: 'rgba(0,0,0,0.45)',
+
     white: '#FFFFFF',
+    transparent: 'transparent',
   },
+  gradients: gradientsDark,
   spacing,
   radius,
   fontSize,

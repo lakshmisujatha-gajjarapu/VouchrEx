@@ -41,9 +41,9 @@ function RowItem({
       style={({ pressed }) => ({
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 20,
+        paddingHorizontal: theme.spacing[5],
         paddingVertical: 15,
-        backgroundColor: pressed ? theme.colors.surfaceHigh : 'transparent',
+        backgroundColor: pressed ? theme.colors.surfaceHigh : theme.colors.transparent,
       })}>
       <View style={{
         width: 34, height: 34, borderRadius: 10,
@@ -71,7 +71,7 @@ function RowItem({
 function SectionHeader({ title }: { readonly title: string }) {
   const theme = useTheme();
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingTop: 28, paddingBottom: 6 }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: theme.spacing[5], paddingTop: theme.spacing[7], paddingBottom: 6 }}>
       <View style={{ width: 3, height: 16, borderRadius: 2, backgroundColor: theme.colors.brand, marginRight: 10 }} />
       <Text style={{
         fontFamily: theme.fontFamily.labelSemi,
@@ -90,7 +90,7 @@ function SectionCard({ children }: { readonly children: React.ReactNode }) {
   const theme = useTheme();
   return (
     <View style={{
-      marginHorizontal: 16,
+      marginHorizontal: theme.spacing[4],
       backgroundColor: theme.colors.surface,
       borderRadius: 16,
       overflow: 'hidden',
@@ -135,7 +135,7 @@ export default function ProfileScreen() {
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 48 }}>
 
           {/* ── Nav bar ── */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: theme.spacing[4], paddingTop: theme.spacing[2], paddingBottom: theme.spacing[1] }}>
             <Pressable
               accessibilityRole="button"
               onPress={() => { router.back(); }}
@@ -149,9 +149,9 @@ export default function ProfileScreen() {
           </View>
 
           {/* ── Hero ── */}
-          <View style={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 24 }}>
+          <View style={{ paddingHorizontal: theme.spacing[5], paddingTop: theme.spacing[2], paddingBottom: theme.spacing[6] }}>
             {/* Avatar row */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, marginBottom: 16 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[4], marginBottom: theme.spacing[4] }}>
               <View style={{
                 width: 72, height: 72, borderRadius: 36,
                 backgroundColor: theme.colors.brandSoft,
@@ -192,9 +192,9 @@ export default function ProfileScreen() {
               borderRadius: 14,
               borderWidth: 1,
               borderColor: `${tierColor}40`,
-              paddingHorizontal: 16,
+              paddingHorizontal: theme.spacing[4],
               paddingVertical: 14,
-              gap: 12,
+              gap: theme.spacing[3],
             }}>
               <View style={{
                 width: 38, height: 38, borderRadius: 19,
@@ -240,7 +240,7 @@ export default function ProfileScreen() {
           </SectionCard>
 
           {/* ── Log out ── */}
-          <View style={{ paddingHorizontal: 16, paddingTop: 28 }}>
+          <View style={{ paddingHorizontal: theme.spacing[4], paddingTop: theme.spacing[7] }}>
             <PrimaryButton
               icon="log-out-outline"
               label="Log Out"
@@ -259,7 +259,7 @@ export default function ProfileScreen() {
             fontFamily: theme.fontFamily.label,
             fontSize: 12,
             color: theme.colors.inkMuted,
-            marginTop: 24,
+            marginTop: theme.spacing[6],
           }}>
             VouchrEx v0.1.0
           </Text>

@@ -3,13 +3,14 @@ import { ApiHeader, ApiTags } from '@nestjs/swagger';
 
 import { sessionHeaderName } from '../auth/auth.constants';
 import { AuthService } from '../auth/auth.service';
+import { LISTINGS_ROUTES } from './listings.routes';
 import { CreateListingDto } from './dto/create-listing.dto';
 import { QueryListingsDto } from './dto/query-listings.dto';
 import { UpdateListingDto } from './dto/update-listing.dto';
 import { ListingsService } from './listings.service';
 
 @ApiTags('listings')
-@Controller('listings')
+@Controller(LISTINGS_ROUTES.BASE)
 export class ListingsController {
   constructor(
     private readonly authService: AuthService,
@@ -26,13 +27,13 @@ export class ListingsController {
     required: true,
     description: 'Session token returned from OTP verification.'
   })
-  @Get('seller/inventory')
+  @Get(LISTINGS_ROUTES.SELLER_INVENTORY)
   async findMine(@Headers(sessionHeaderName) sessionToken?: string) {
     const seller = await this.authService.requireSessionUser(sessionToken);
     return this.listingsService.findMine(seller.id);
   }
 
-  @Get(':id')
+  @Get(LISTINGS_ROUTES.BY_ID)
   findOne(@Param('id') id: string) {
     return this.listingsService.findOne(id);
   }
@@ -56,7 +57,7 @@ export class ListingsController {
     required: true,
     description: 'Session token returned from OTP verification.'
   })
-  @Patch(':id')
+  @Patch(LISTINGS_ROUTES.BY_ID)
   async update(
     @Param('id') id: string,
     @Body() updateListingDto: UpdateListingDto,
@@ -71,7 +72,7 @@ export class ListingsController {
     required: true,
     description: 'Session token returned from OTP verification.'
   })
-  @Delete(':id')
+  @Delete(LISTINGS_ROUTES.BY_ID)
   async remove(
     @Param('id') id: string,
     @Headers(sessionHeaderName) sessionToken?: string

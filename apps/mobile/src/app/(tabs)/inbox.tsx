@@ -44,11 +44,11 @@ function NotificationRow({
           ? theme.colors.surfaceHigh
           : isUnread
             ? `${theme.colors.brand}0D`
-            : 'transparent',
+            : theme.colors.transparent,
       })}>
       <View style={{
         width: 8, height: 8, borderRadius: 4,
-        backgroundColor: isUnread ? theme.colors.brand : 'transparent',
+        backgroundColor: isUnread ? theme.colors.brand : theme.colors.transparent,
         marginTop: 6, marginRight: 12,
       }} />
       <View style={{ flex: 1 }}>
@@ -132,7 +132,7 @@ export default function InboxScreen() {
         }}>
           {/* Actions row */}
           <View style={{
-            flexDirection: 'row', justifyContent: 'flex-end', gap: 16,
+            flexDirection: 'row', justifyContent: 'flex-end', gap: theme.spacing[4],
             paddingHorizontal: 16, paddingVertical: 10,
             borderBottomWidth: 1, borderBottomColor: theme.colors.border,
           }}>

@@ -218,7 +218,7 @@ export default function EditListingScreen() {
     return (
       <View className="flex-1" style={{ backgroundColor: theme.colors.background }}>
         <SafeAreaView className="flex-1" edges={['top', 'left', 'right']}>
-          <View style={{ flex: 1, paddingHorizontal: 20, paddingTop: 12, gap: 12 }}>
+          <View style={{ flex: 1, paddingHorizontal: 20, paddingTop: theme.spacing[3], gap: theme.spacing[3] }}>
             <Text className="font-label text-caption font-extrabold uppercase tracking-[0.6px]" style={{ color: theme.colors.brand }}>
               Listings
             </Text>
@@ -249,7 +249,7 @@ export default function EditListingScreen() {
             contentContainerStyle={{ flexGrow: 1 }}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}>
-            <View style={{ flex: 1, paddingHorizontal: 20, paddingTop: 8, paddingBottom: 16, gap: 12 }}>
+            <View style={{ flex: 1, paddingHorizontal: 20, paddingTop: 8, paddingBottom: theme.spacing[4], gap: theme.spacing[3] }}>
               <View>
                 <Text className="font-label text-caption font-extrabold uppercase tracking-[0.6px]" style={{ color: theme.colors.brand }}>
                   Listings
@@ -273,7 +273,7 @@ export default function EditListingScreen() {
                   shadowOpacity: 1,
                   shadowRadius: 12,
                   elevation: 2,
-                  padding: 16,
+                  padding: theme.spacing[4],
                 }}>
                 <Text className="mb-2 font-label text-caption font-extrabold uppercase tracking-[0.5px]" style={{ color: theme.colors.brand }}>
                   Brand {brandName.trim() ? `· ${brandName.trim()}` : ''}

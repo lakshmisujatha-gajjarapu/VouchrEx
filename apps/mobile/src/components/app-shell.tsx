@@ -36,7 +36,7 @@ export function AppShell({
   const initial = (user?.name ?? user?.phone ?? '?')[0].toUpperCase();
 
   const content = (
-    <View style={[{ paddingHorizontal: 20, paddingBottom: footer ? 8 : 100, gap: 12, paddingTop: 4 }, contentContainerStyle]}>
+    <View style={[{ paddingHorizontal: theme.spacing[5], paddingBottom: footer ? theme.spacing[2] : 100, gap: theme.spacing[3], paddingTop: theme.spacing[1] }, contentContainerStyle]}>
       {children}
     </View>
   );
@@ -50,8 +50,8 @@ export function AppShell({
           flexDirection: 'row',
           alignItems: 'flex-start',
           justifyContent: 'space-between',
-          paddingHorizontal: 20,
-          paddingTop: 16,
+          paddingHorizontal: theme.spacing[5],
+          paddingTop: theme.spacing[4],
           paddingBottom: 10,
         }}>
           <View style={{ flex: 1, gap: 2, paddingRight: 12 }}>
@@ -129,7 +129,7 @@ export function AppShell({
             borderTopWidth: 1,
             borderTopColor: theme.colors.border,
           }}>
-          <View style={{ paddingHorizontal: 20, paddingVertical: 12 }}>
+          <View style={{ paddingHorizontal: theme.spacing[5], paddingVertical: theme.spacing[3] }}>
             {footer}
           </View>
         </SafeAreaView>

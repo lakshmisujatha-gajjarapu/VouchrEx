@@ -101,7 +101,7 @@ export function TicketCard({
 
   const baseStyle = {
     backgroundColor: theme.colors.surface,
-    borderColor: resolvedTone === 'premium' ? theme.colors.gold : 'transparent',
+    borderColor: resolvedTone === 'premium' ? theme.colors.gold : theme.colors.transparent,
     shadowColor: theme.colors.shadowStrong,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 1,

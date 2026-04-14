@@ -58,8 +58,8 @@ export function TextField({
           borderColor: hasError
             ? theme.colors.danger
             : isFocused
-              ? theme.colors.brand
-              : 'transparent',
+              ? theme.colors.focusRing
+              : theme.colors.transparent,
           shadowColor: hasError ? theme.colors.danger : theme.colors.brand,
           shadowOffset: { width: 0, height: 0 },
           shadowOpacity: isFocused ? 0.15 : 0,
@@ -85,7 +85,7 @@ export function TextField({
               fontSize: 15,
               fontFamily: theme.fontFamily.body,
               color: theme.colors.ink,
-              backgroundColor: 'transparent',
+              backgroundColor: theme.colors.transparent,
             },
             multiline ? { textAlignVertical: 'top' } : null,
           ]}

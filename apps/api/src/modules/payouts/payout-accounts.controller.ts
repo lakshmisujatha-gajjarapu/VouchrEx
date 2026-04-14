@@ -8,9 +8,10 @@ import {
   UpsertPayoutAccountDto
 } from './dto/upsert-payout-account.dto';
 import { PayoutAccountsService } from './payout-accounts.service';
+import { PAYOUT_ACCOUNTS_ROUTES } from './payout-accounts.routes';
 
 @ApiTags('payout-accounts')
-@Controller('payout-accounts')
+@Controller(PAYOUT_ACCOUNTS_ROUTES.BASE)
 export class PayoutAccountsController {
   constructor(
     private readonly payoutAccountsService: PayoutAccountsService,
@@ -45,7 +46,7 @@ export class PayoutAccountsController {
    */
   @ApiHeader({ name: sessionHeaderName, required: true })
   @ApiOperation({ summary: 'Get my registered payout account' })
-  @Get('me')
+  @Get(PAYOUT_ACCOUNTS_ROUTES.ME)
   async getMyAccount(@Headers(sessionHeaderName) sessionToken?: string) {
     const user = await this.authService.requireSessionUser(sessionToken);
     const account = await this.payoutAccountsService.findByUserId(user.id);

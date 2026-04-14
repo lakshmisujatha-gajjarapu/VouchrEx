@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { FilterChip } from '@/components/filter-chip';
+import { HorizontalChipRow } from '@/components/horizontal-chip-row';
+import { ListingCard } from '@/components/listing-card';
 import React, { useCallback, useDeferredValue, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -15,10 +16,8 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { TrustBadge } from '@/components/trust-badge';
 import { useAsyncResource } from '@/hooks/use-async-resource';
 import { api } from '@/lib/api';
-import { formatCurrency, formatDate } from '@/lib/format';
 import { useTheme } from '@/theme/ThemeContext';
 
 const SORT_OPTIONS = ['latest', 'best-discount', 'expiring', 'price-low'] as const;
@@ -96,8 +95,8 @@ export default function ShopScreen() {
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
 
           {/* ── Hero + search ── */}
-          <View style={{ paddingHorizontal: 20, paddingTop: 8, gap: 16 }}>
-            <View style={{ gap: 4, marginTop: 8 }}>
+          <View style={{ paddingHorizontal: theme.spacing[5], paddingTop: theme.spacing[2], gap: theme.spacing[4] }}>
+            <View style={{ gap: theme.spacing[1], marginTop: theme.spacing[2] }}>
               <Text style={{
                 fontFamily: theme.fontFamily.headlineExtra,
                 fontSize: 56,
@@ -122,10 +121,10 @@ export default function ShopScreen() {
             <View style={{
               flexDirection: 'row',
               alignItems: 'center',
-              borderRadius: 14,
+              borderRadius: theme.radius.sm,
               borderWidth: 1,
-              paddingHorizontal: 12,
-              gap: 8,
+              paddingHorizontal: theme.spacing[3],
+              gap: theme.spacing[2],
               minHeight: 48,
               backgroundColor: theme.colors.surfaceTray,
               borderColor: searchFocused ? theme.colors.brand : theme.colors.border,
@@ -159,7 +158,7 @@ export default function ShopScreen() {
                     gap: 5,
                     minHeight: 32,
                     paddingHorizontal: 10,
-                    borderRadius: 99,
+                    borderRadius: theme.radius.pill,
                     borderWidth: 1,
                     backgroundColor: popoverVisible ? theme.colors.brandSoft : theme.colors.surfaceRaised,
                     borderColor: popoverVisible ? theme.colors.pillBrandBorder : theme.colors.border,
@@ -181,23 +180,16 @@ export default function ShopScreen() {
 
           {/* ── Category chips ── */}
           {categories.length > 1 ? (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 16 }} contentContainerStyle={{ paddingHorizontal: 20, gap: 8, flexDirection: 'row' }}>
-              {categories.map((cat) => {
-                const active = cat === 'All' ? !category : category === cat;
-                return (
-                  <FilterChip
-                    key={cat}
-                    label={cat}
-                    selected={active}
-                    onPress={() => { setCategory(cat === 'All' ? undefined : cat); }}
-                  />
-                );
-              })}
-            </ScrollView>
+            <HorizontalChipRow
+              options={categories}
+              selected={category ?? 'All'}
+              onSelect={(cat) => { setCategory(cat === 'All' ? undefined : cat); }}
+              style={{ marginTop: 16 }}
+            />
           ) : null}
 
           {/* ── Listings ── */}
-          <View style={{ paddingHorizontal: 20, gap: 20, marginTop: 20 }}>
+          <View style={{ paddingHorizontal: theme.spacing[5], gap: theme.spacing[5], marginTop: theme.spacing[5] }}>
             {listingsResource.loading && !listingsResource.data ? (
               <ActivityIndicator color={theme.colors.brand} />
             ) : null}
@@ -209,67 +201,11 @@ export default function ShopScreen() {
             ) : null}
 
             {listingsResource.data?.map((listing) => (
-              <Pressable
+              <ListingCard
                 key={listing.id}
+                listing={listing}
                 onPress={() => { router.push(`/listings/${listing.id}`); }}
-                style={({ pressed }) => ({
-                  backgroundColor: theme.colors.surface,
-                  borderRadius: 24,
-                  overflow: 'hidden',
-                  shadowColor: theme.colors.shadowStrong,
-                  shadowOffset: { width: 0, height: 0 },
-                  shadowOpacity: 1,
-                  shadowRadius: 40,
-                  elevation: 2,
-                  opacity: pressed ? 0.92 : 1,
-                })}>
-                <View style={{ position: 'absolute', left: 0, top: 24, bottom: 24, width: 6, backgroundColor: theme.colors.brand, borderTopRightRadius: 6, borderBottomRightRadius: 6 }} />
-                <View style={{ padding: 20 }}>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
-                    <View style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: theme.colors.surfaceRaised, alignItems: 'center', justifyContent: 'center' }}>
-                      <Text style={{ fontFamily: theme.fontFamily.headlineExtra, fontSize: 18, color: theme.colors.brand }}>
-                        {listing.brand.name.charAt(0).toUpperCase()}
-                      </Text>
-                    </View>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: theme.colors.brandSoft, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 9999 }}>
-                      <Ionicons name="checkmark-circle" size={12} color={theme.colors.brand} />
-                      <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 10, fontWeight: '700', color: theme.colors.brand, textTransform: 'uppercase', letterSpacing: 0.6 }}>
-                        Verified
-                      </Text>
-                    </View>
-                  </View>
-                  <Text style={{ fontFamily: theme.fontFamily.headline, fontSize: 20, fontWeight: '700', color: theme.colors.ink, marginBottom: 4 }}>
-                    {listing.brand.name}
-                  </Text>
-                  <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8, marginBottom: 16 }}>
-                    <Text style={{ fontFamily: theme.fontFamily.mono, fontSize: 24, fontWeight: '700', color: theme.colors.ink }}>
-                      {formatCurrency(listing.sellingPrice)}
-                    </Text>
-                    <Text style={{ fontFamily: theme.fontFamily.mono, fontSize: 13, color: theme.colors.inkMuted, textDecorationLine: 'line-through' }}>
-                      {formatCurrency(listing.faceValue)}
-                    </Text>
-                    <View style={{ backgroundColor: theme.colors.successSoft, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 9999 }}>
-                      <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 11, fontWeight: '700', color: theme.colors.success }}>
-                        {String(Math.round(listing.discountPercent))}% off
-                      </Text>
-                    </View>
-                  </View>
-                  <View style={{ borderTopWidth: 1, borderTopColor: theme.colors.border, borderStyle: 'dashed', marginBottom: 12 }} />
-                  <View style={{ gap: 6 }}>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                      <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 12, color: theme.colors.inkMuted }}>Expiry</Text>
-                      <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 12, fontWeight: '600', color: theme.colors.ink }}>{formatDate(listing.expiryDate)}</Text>
-                    </View>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 12, color: theme.colors.inkMuted }}>Seller</Text>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                        <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 12, fontWeight: '600', color: theme.colors.ink }}>{listing.seller.name}</Text>
-                        {listing.seller.trustTier ? <TrustBadge tier={listing.seller.trustTier} /> : null}
-                      </View>
-                    </View>
-                  </View>
-                </View>
-              </Pressable>
+              />
             ))}
 
             {!listingsResource.loading && listingsResource.data?.length === 0 ? (
@@ -297,7 +233,7 @@ export default function ShopScreen() {
               right: popoverPos.right,
               width: 220,
               backgroundColor: theme.colors.surface,
-              borderRadius: 20,
+              borderRadius: theme.radius.md,
               borderWidth: 1,
               borderColor: theme.colors.border,
               shadowColor: '#000',
@@ -314,7 +250,7 @@ export default function ShopScreen() {
             }}
           >
             {/* Title */}
-            <View style={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: 16 }}>
+            <View style={{ paddingHorizontal: theme.spacing[5], paddingTop: theme.spacing[5], paddingBottom: 16 }}>
               <Text style={{
                 fontFamily: theme.fontFamily.headline,
                 fontSize: 18,
@@ -334,13 +270,13 @@ export default function ShopScreen() {
                   key={option}
                   onPress={() => { setSort(option); closePopover(); }}
                   style={({ pressed }) => ({
-                    backgroundColor: pressed ? theme.colors.surfaceHigh : 'transparent',
+                    backgroundColor: pressed ? theme.colors.surfaceHigh : theme.colors.transparent,
                   })}>
                   <View style={{
                     flexDirection: 'row',
                     alignItems: 'center',
                     gap: 14,
-                    paddingHorizontal: 20,
+                    paddingHorizontal: theme.spacing[5],
                     paddingVertical: 14,
                     borderTopWidth: idx > 0 ? 1 : 0,
                     borderTopColor: theme.colors.border,

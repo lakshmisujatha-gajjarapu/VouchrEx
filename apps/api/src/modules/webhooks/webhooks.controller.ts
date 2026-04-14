@@ -5,16 +5,17 @@ import type { RawBodyRequest } from '@nestjs/common';
 import type { Request } from 'express';
 
 import { WebhooksService } from './webhooks.service';
+import { WEBHOOKS_ROUTES } from './webhooks.routes';
 
 @SkipThrottle()
 @ApiTags('webhooks')
-@Controller('webhooks')
+@Controller(WEBHOOKS_ROUTES.BASE)
 export class WebhooksController {
   private readonly logger = new Logger(WebhooksController.name);
 
   constructor(private readonly webhooksService: WebhooksService) {}
 
-  @Post('razorpay')
+  @Post(WEBHOOKS_ROUTES.RAZORPAY)
   async handleRazorpay(
     @Req() req: RawBodyRequest<Request>,
     @Headers('x-razorpay-signature') signature?: string,

@@ -14,9 +14,10 @@ import { PaymentsService } from '../payments/payments.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AdminAccessService } from './admin-access.service';
 import { adminHeaderName } from './admin.constants';
+import { ADMIN_ROUTES } from './admin.routes';
 
 @ApiTags('admin')
-@Controller('admin')
+@Controller(ADMIN_ROUTES.BASE)
 export class AdminController {
   constructor(
     private readonly adminAccessService: AdminAccessService,
@@ -26,7 +27,7 @@ export class AdminController {
 
   /** Platform-wide operational metrics. */
   @ApiHeader({ name: adminHeaderName, required: true })
-  @Get('metrics')
+  @Get(ADMIN_ROUTES.METRICS)
   async getMetrics(@Headers(adminHeaderName) adminToken?: string) {
     await this.adminAccessService.requireAdminAccess(adminToken);
 
@@ -71,7 +72,7 @@ export class AdminController {
 
   /** List open and under-review disputes for admin triage. */
   @ApiHeader({ name: adminHeaderName, required: true })
-  @Get('disputes')
+  @Get(ADMIN_ROUTES.DISPUTES)
   async getDisputes(
     @Headers(adminHeaderName) adminToken?: string,
     @Query('status') status?: string
@@ -108,7 +109,7 @@ export class AdminController {
 
   /** List orders with optional status filter. */
   @ApiHeader({ name: adminHeaderName, required: true })
-  @Get('orders')
+  @Get(ADMIN_ROUTES.ORDERS)
   async getOrders(
     @Headers(adminHeaderName) adminToken?: string,
     @Query('status') status?: string
@@ -130,7 +131,7 @@ export class AdminController {
 
   /** List users with optional status filter. */
   @ApiHeader({ name: adminHeaderName, required: true })
-  @Get('users')
+  @Get(ADMIN_ROUTES.USERS)
   async getUsers(
     @Headers(adminHeaderName) adminToken?: string,
     @Query('status') status?: string
@@ -160,7 +161,7 @@ export class AdminController {
 
   /** Manually approve KYC for a seller (accounts are auto-verified on registration; use this to re-approve after a rejection). */
   @ApiHeader({ name: adminHeaderName, required: true })
-  @Post('users/:id/approve-kyc')
+  @Post(ADMIN_ROUTES.USER_APPROVE_KYC)
   async approveKyc(
     @Param('id') id: string,
     @Headers(adminHeaderName) adminToken?: string
@@ -187,7 +188,7 @@ export class AdminController {
 
   /** Manually reject KYC for a seller — payouts will be blocked until re-approved. */
   @ApiHeader({ name: adminHeaderName, required: true })
-  @Post('users/:id/reject-kyc')
+  @Post(ADMIN_ROUTES.USER_REJECT_KYC)
   async rejectKyc(
     @Param('id') id: string,
     @Headers(adminHeaderName) adminToken?: string
@@ -214,7 +215,7 @@ export class AdminController {
 
   /** Suspend a user account. Immediately invalidates all their sessions. */
   @ApiHeader({ name: adminHeaderName, required: true })
-  @Post('users/:id/suspend')
+  @Post(ADMIN_ROUTES.USER_SUSPEND)
   async suspendUser(
     @Param('id') id: string,
     @Headers(adminHeaderName) adminToken?: string
@@ -241,7 +242,7 @@ export class AdminController {
 
   /** Reactivate a suspended user account. */
   @ApiHeader({ name: adminHeaderName, required: true })
-  @Post('users/:id/reactivate')
+  @Post(ADMIN_ROUTES.USER_REACTIVATE)
   async reactivateUser(
     @Param('id') id: string,
     @Headers(adminHeaderName) adminToken?: string
@@ -271,7 +272,7 @@ export class AdminController {
    * These need admin attention.
    */
   @ApiHeader({ name: adminHeaderName, required: true })
-  @Get('payouts/pending')
+  @Get(ADMIN_ROUTES.PAYOUTS_PENDING)
   async getPendingPayouts(@Headers(adminHeaderName) adminToken?: string) {
     await this.adminAccessService.requireAdminAccess(adminToken);
 
@@ -304,7 +305,7 @@ export class AdminController {
    * seller's registered fund account.
    */
   @ApiHeader({ name: adminHeaderName, required: true })
-  @Post('orders/:orderId/retry-payout')
+  @Post(ADMIN_ROUTES.ORDER_RETRY_PAYOUT)
   async retryPayout(
     @Param('orderId') orderId: string,
     @Headers(adminHeaderName) adminToken?: string
@@ -371,7 +372,7 @@ export class AdminController {
    * funds were transferred outside Razorpay (e.g., IMPS from bank directly).
    */
   @ApiHeader({ name: adminHeaderName, required: true })
-  @Post('orders/:orderId/complete-payout')
+  @Post(ADMIN_ROUTES.ORDER_COMPLETE_PAYOUT)
   async completePayout(
     @Param('orderId') orderId: string,
     @Headers(adminHeaderName) adminToken?: string
@@ -410,14 +411,14 @@ export class AdminController {
   // ─── Admin Auth ───────────────────────────────────────────────────────────────
 
   /** Login with email + password. Returns a session token (8h TTL). */
-  @Post('auth/login')
+  @Post(ADMIN_ROUTES.AUTH_LOGIN)
   async adminLogin(@Body() body: { email: string; password: string }) {
     return this.adminAccessService.login(body.email, body.password);
   }
 
   /** Logout — revokes the current session token. */
   @ApiHeader({ name: adminHeaderName, required: true })
-  @Post('auth/logout')
+  @Post(ADMIN_ROUTES.AUTH_LOGOUT)
   async adminLogout(@Headers(adminHeaderName) adminToken?: string) {
     await this.adminAccessService.logout(adminToken);
     return { success: true };
@@ -425,7 +426,7 @@ export class AdminController {
 
   /** Get the currently authenticated admin's profile. */
   @ApiHeader({ name: adminHeaderName, required: true })
-  @Get('me')
+  @Get(ADMIN_ROUTES.ME)
   async getMe(@Headers(adminHeaderName) adminToken?: string) {
     const identity = await this.adminAccessService.requireAdminAccess(adminToken);
     if (identity.kind === 'bootstrap') {
@@ -438,7 +439,7 @@ export class AdminController {
 
   /** List all admin users. */
   @ApiHeader({ name: adminHeaderName, required: true })
-  @Get('team')
+  @Get(ADMIN_ROUTES.TEAM)
   async getTeam(@Headers(adminHeaderName) adminToken?: string) {
     await this.adminAccessService.requireSuperAdmin(adminToken);
     return this.prisma.adminUser.findMany({
@@ -449,7 +450,7 @@ export class AdminController {
 
   /** Create a new admin user. */
   @ApiHeader({ name: adminHeaderName, required: true })
-  @Post('team')
+  @Post(ADMIN_ROUTES.TEAM)
   async createTeamMember(
     @Body() body: { email: string; name: string; password: string; role?: AdminRole },
     @Headers(adminHeaderName) adminToken?: string
@@ -465,7 +466,7 @@ export class AdminController {
 
   /** Deactivate an admin user (blocks login, revokes all sessions). */
   @ApiHeader({ name: adminHeaderName, required: true })
-  @Post('team/:id/deactivate')
+  @Post(ADMIN_ROUTES.TEAM_MEMBER_DEACTIVATE)
   async deactivateTeamMember(
     @Param('id') id: string,
     @Headers(adminHeaderName) adminToken?: string
@@ -481,7 +482,7 @@ export class AdminController {
 
   /** Reactivate a deactivated admin user. */
   @ApiHeader({ name: adminHeaderName, required: true })
-  @Post('team/:id/activate')
+  @Post(ADMIN_ROUTES.TEAM_MEMBER_ACTIVATE)
   async activateTeamMember(
     @Param('id') id: string,
     @Headers(adminHeaderName) adminToken?: string
@@ -493,7 +494,7 @@ export class AdminController {
 
   /** Set a new password for an admin user. Revokes all their existing sessions. */
   @ApiHeader({ name: adminHeaderName, required: true })
-  @Post('team/:id/set-password')
+  @Post(ADMIN_ROUTES.TEAM_MEMBER_SET_PASSWORD)
   async setTeamMemberPassword(
     @Param('id') id: string,
     @Body() body: { password: string },

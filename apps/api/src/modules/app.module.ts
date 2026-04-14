@@ -5,6 +5,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 
+import { AdminModule } from './admin/admin.module';
 import { AuthModule } from './auth/auth.module';
 import { BrandsModule } from './brands/brands.module';
 import { HealthModule } from './health/health.module';
@@ -14,6 +15,7 @@ import { OrdersModule } from './orders/orders.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { PayoutsModule } from './payouts/payouts.module';
 import { RealtimeModule } from './realtime/realtime.module';
+import { UsersModule } from './users/users.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
 
 @Module({
@@ -37,12 +39,14 @@ import { WebhooksModule } from './webhooks/webhooks.module';
     PrismaModule,
     HealthModule,
     AuthModule,
+    AdminModule,
     BrandsModule,
     ListingsModule,
     OrdersModule,
     NotificationsModule,
     PayoutsModule,
     RealtimeModule,
+    UsersModule,
     WebhooksModule
   ],
   providers: [

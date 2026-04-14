@@ -1,0 +1,12 @@
+export const ORDERS_ROUTES = {
+  BASE:                'orders',
+  BY_ID:               ':id',
+  CHECKOUT:            ':id/checkout',
+  PAYMENTS_VERIFY:     ':id/payments/verify',
+  PAYMENTS_SYNC:       ':id/payments/sync',
+  REVEAL:              ':id/reveal',
+  CONFIRM:             ':id/confirm',
+  DISPUTES:            ':id/disputes',
+  DISPUTE_SELLER_RESP: 'disputes/:id/seller-response',
+  DISPUTE_RESOLVE:     'disputes/:id/resolve',
+} as const;

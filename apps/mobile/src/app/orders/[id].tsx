@@ -27,47 +27,8 @@ import { useAsyncResource } from '@/hooks/use-async-resource';
 import { useOrderSocket } from '@/hooks/use-order-socket';
 import { api, type Checkout, type RevealResult } from '@/lib/api';
 import { formatCountdown, formatCurrency, formatDate, formatStatus } from '@/lib/format';
+import { cardToneForStatus, escrowBadgeLabel, escrowBadgeColors, buildFlowSteps } from '@/lib/status';
 import { useTheme } from '@/theme/ThemeContext';
-
-function cardToneForStatus(status: string): 'neutral' | 'brand' | 'success' | 'danger' {
-  if (status === 'DISPUTED' || status === 'CANCELLED' || status === 'PAYMENT_FAILED') return 'danger';
-  if (status === 'CONFIRMED' || status === 'AUTO_CONFIRMED') return 'success';
-  if (status === 'ESCROW_ACTIVE' || status === 'CODE_REVEALED') return 'brand';
-  return 'neutral';
-}
-
-function escrowBadgeLabel(status: string): string {
-  if (status === 'PAYMENT_PENDING') return 'AWAITING PAYMENT';
-  if (status === 'ESCROW_ACTIVE') return 'ACTIVE ESCROW';
-  if (status === 'CODE_REVEALED') return 'CODE REVEALED';
-  if (status === 'CONFIRMED' || status === 'AUTO_CONFIRMED') return 'ORDER SETTLED';
-  if (status === 'DISPUTED') return 'DISPUTED';
-  if (status === 'PAYMENT_FAILED') return 'PAYMENT FAILED';
-  if (status === 'CANCELLED') return 'CANCELLED';
-  return 'IN PROGRESS';
-}
-
-function escrowBadgeColors(status: string, theme: ReturnType<typeof useTheme>): { bg: string; border: string; text: string } {
-  if (status === 'DISPUTED' || status === 'CANCELLED' || status === 'PAYMENT_FAILED') {
-    return { bg: theme.colors.dangerSoft, border: theme.colors.pillDangerBorder, text: theme.colors.danger };
-  }
-  if (status === 'CONFIRMED' || status === 'AUTO_CONFIRMED') {
-    return { bg: theme.colors.successSoft, border: theme.colors.pillSuccessBorder, text: theme.colors.success };
-  }
-  if (status === 'ESCROW_ACTIVE' || status === 'CODE_REVEALED') {
-    return { bg: theme.colors.brandSoft, border: theme.colors.pillBrandBorder, text: theme.colors.brand };
-  }
-  return { bg: theme.colors.warningSoft, border: theme.colors.pillWarnBorder, text: theme.colors.warning };
-}
-
-function buildFlowSteps(status: string): readonly { label: string; tone: 'neutral' | 'brand' | 'success' | 'danger' | 'warning' }[] {
-  if (status === 'PAYMENT_PENDING') return [{ label: 'Payment', tone: 'warning' }, { label: 'Secured', tone: 'neutral' }, { label: 'Reveal', tone: 'neutral' }, { label: 'Confirm', tone: 'neutral' }];
-  if (status === 'ESCROW_ACTIVE') return [{ label: 'Payment', tone: 'success' }, { label: 'Secured', tone: 'brand' }, { label: 'Reveal', tone: 'neutral' }, { label: 'Confirm', tone: 'neutral' }];
-  if (status === 'CODE_REVEALED') return [{ label: 'Payment', tone: 'success' }, { label: 'Secured', tone: 'success' }, { label: 'Reveal', tone: 'brand' }, { label: 'Confirm', tone: 'warning' }];
-  if (status === 'DISPUTED') return [{ label: 'Payment', tone: 'success' }, { label: 'Secured', tone: 'success' }, { label: 'Reveal', tone: 'success' }, { label: 'Dispute', tone: 'danger' }];
-  if (status === 'CONFIRMED' || status === 'AUTO_CONFIRMED') return [{ label: 'Payment', tone: 'success' }, { label: 'Secured', tone: 'success' }, { label: 'Reveal', tone: 'success' }, { label: 'Confirm', tone: 'success' }];
-  return [{ label: 'Payment', tone: 'neutral' }, { label: 'Secured', tone: 'neutral' }, { label: 'Reveal', tone: 'neutral' }, { label: 'Confirm', tone: 'neutral' }];
-}
 
 function firstRouteParam(value?: string | string[]) {
   return Array.isArray(value) ? value[0] : value;
@@ -264,10 +225,10 @@ export default function OrderDetailScreen() {
     return (
       <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
         <SafeAreaView style={{ flex: 1 }} edges={['top', 'left', 'right']}>
-          <Pressable onPress={() => { router.back(); }} style={{ padding: 20 }}>
+          <Pressable onPress={() => { router.back(); }} style={{ padding: theme.spacing[5] }}>
             <Ionicons name="close" size={24} color={theme.colors.ink} />
           </Pressable>
-          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: theme.spacing[5] }}>
             <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 15, color: theme.colors.danger, textAlign: 'center' }}>
               {orderResource.error ?? 'Order not found.'}
             </Text>
@@ -295,10 +256,10 @@ export default function OrderDetailScreen() {
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
-          paddingHorizontal: 20,
+          paddingHorizontal: theme.spacing[5],
           paddingVertical: 14,
         }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[4] }}>
             <Pressable
               onPress={() => { router.back(); }}
               style={{ width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' }}>
@@ -320,15 +281,15 @@ export default function OrderDetailScreen() {
           <View style={{ paddingHorizontal: 20, gap: 0 }}>
 
             {/* ── Central status badge ── */}
-            <View style={{ alignItems: 'center', marginBottom: 24 }}>
+            <View style={{ alignItems: 'center', marginBottom: theme.spacing[6] }}>
               <View style={{
                 flexDirection: 'row',
                 alignItems: 'center',
                 gap: 6,
                 backgroundColor: badgeColors.bg,
-                paddingHorizontal: 16,
+                paddingHorizontal: theme.spacing[4],
                 paddingVertical: 6,
-                borderRadius: 9999,
+                borderRadius: theme.radius.pill,
                 borderWidth: 1,
                 borderColor: badgeColors.border,
               }}>
@@ -347,12 +308,12 @@ export default function OrderDetailScreen() {
             </View>
 
             {/* ── Editorial headline ── */}
-            <View style={{ alignItems: 'center', marginBottom: 32 }}>
+            <View style={{ alignItems: 'center', marginBottom: theme.spacing[8] }}>
               <Text style={{
                 fontFamily: theme.fontFamily.label,
                 fontSize: 13,
                 color: theme.colors.inkMuted,
-                marginBottom: 8,
+                marginBottom: theme.spacing[2],
               }}>
                 Order #{order.id.slice(0, 8).toUpperCase()}
               </Text>
@@ -375,25 +336,25 @@ export default function OrderDetailScreen() {
             {/* ── Ticket Card ── */}
             <View style={{
               backgroundColor: theme.colors.surface,
-              borderRadius: 24,
+              borderRadius: theme.radius.lg,
               overflow: 'hidden',
               shadowColor: theme.colors.shadowStrong,
               shadowOffset: { width: 0, height: 20 },
               shadowOpacity: 1,
               shadowRadius: 50,
               elevation: 4,
-              marginBottom: 24,
+              marginBottom: theme.spacing[6],
             }}>
               {/* Left accent stripe */}
               <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 6, backgroundColor: accentColor }} />
 
               {/* Top section */}
-              <View style={{ padding: 24, paddingLeft: 28, flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-                <View style={{ flexDirection: 'row', gap: 16, alignItems: 'flex-start', flex: 1 }}>
+              <View style={{ padding: theme.spacing[6], paddingLeft: theme.spacing[7], flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+                <View style={{ flexDirection: 'row', gap: theme.spacing[4], alignItems: 'flex-start', flex: 1 }}>
                   {/* Brand avatar — bg-surface-container-high per spec */}
                   <View style={{
                     width: 56, height: 56, borderRadius: 16,
-                    backgroundColor: colorScheme === 'dark' ? '#28244a' : theme.colors.surfaceHigh,
+                    backgroundColor: theme.colors.surfaceHigh,
                     alignItems: 'center', justifyContent: 'center',
                   }}>
                     <Text style={{ fontFamily: theme.fontFamily.headlineExtra, fontSize: 22, color: theme.colors.brand }}>
@@ -435,7 +396,7 @@ export default function OrderDetailScreen() {
               </View>
 
               {/* Bottom section — bg-surface-container-low/50 per spec */}
-              <View style={{ padding: 24, paddingLeft: 28, gap: 16, backgroundColor: colorScheme === 'dark' ? 'rgba(26,22,53,0.5)' : 'transparent' }}>
+              <View style={{ padding: theme.spacing[6], paddingLeft: theme.spacing[7], gap: theme.spacing[4], backgroundColor: theme.colors.glassSurface }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                   <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 13, color: theme.colors.inkMuted }}>Voucher Validity</Text>
                   <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 13, fontWeight: '600', color: theme.colors.ink }}>
@@ -456,11 +417,11 @@ export default function OrderDetailScreen() {
                   <View style={{
                     backgroundColor: theme.colors.surfaceHigh,
                     borderRadius: 16,
-                    padding: 20,
+                    padding: theme.spacing[5],
                     alignItems: 'center',
-                    gap: 12,
+                    gap: theme.spacing[3],
                   }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[2] }}>
                       <Ionicons name="eye-off-outline" size={18} color={theme.colors.inkMuted} />
                       <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 13, fontWeight: '500', color: theme.colors.inkMuted }}>
                         Voucher code is locked
@@ -485,7 +446,7 @@ export default function OrderDetailScreen() {
 
                 {/* Revealed code */}
                 {reveal ? (
-                  <View style={{ gap: 12 }}>
+                  <View style={{ gap: theme.spacing[3] }}>
                     <View style={{
                       borderRadius: 14,
                       overflow: 'hidden',
@@ -511,7 +472,7 @@ export default function OrderDetailScreen() {
                         flexDirection: 'row',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        gap: 8,
+                        gap: theme.spacing[2],
                         paddingVertical: 13,
                         borderRadius: 14,
                         borderWidth: 1.5,
@@ -543,7 +504,7 @@ export default function OrderDetailScreen() {
             </View>
 
             {/* ── Flow steps ── */}
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 24 }}>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing[2], marginBottom: theme.spacing[6] }}>
               {buildFlowSteps(order.status).map((step) => (
                 <StatusPill key={step.label} label={step.label} tone={step.tone} />
               ))}
@@ -557,9 +518,9 @@ export default function OrderDetailScreen() {
               <View style={{
                 backgroundColor: theme.colors.surfaceRaised,
                 borderRadius: 16,
-                padding: 20,
-                gap: 12,
-                marginBottom: 24,
+                padding: theme.spacing[5],
+                gap: theme.spacing[3],
+                marginBottom: theme.spacing[6],
               }}>
                 <Text style={{ fontFamily: theme.fontFamily.headline, fontSize: 16, fontWeight: '700', color: theme.colors.ink }}>
                   Seller Overview
@@ -583,8 +544,8 @@ export default function OrderDetailScreen() {
             {feedback ? (
               <View style={{
                 borderRadius: 14,
-                padding: 16,
-                marginBottom: 24,
+                padding: theme.spacing[4],
+                marginBottom: theme.spacing[6],
                 backgroundColor: feedback.includes('Could not') ? theme.colors.dangerSoft : theme.colors.successSoft,
               }}>
                 <Text style={{
@@ -600,12 +561,12 @@ export default function OrderDetailScreen() {
 
             {/* ── Security notice ── bg-surface-container-low per spec */}
             <View style={{
-              backgroundColor: colorScheme === 'dark' ? '#1e1a3d' : theme.colors.surfaceRaised,
+              backgroundColor: theme.colors.surfaceRaised,
               borderRadius: 16,
-              padding: 20,
+              padding: theme.spacing[5],
               flexDirection: 'row',
               gap: 14,
-              marginBottom: 24,
+              marginBottom: theme.spacing[6],
             }}>
               <Ionicons name="shield-checkmark" size={22} color={theme.colors.brand} />
               <View style={{ flex: 1 }}>
@@ -623,9 +584,9 @@ export default function OrderDetailScreen() {
               <View style={{
                 backgroundColor: theme.colors.dangerSoft,
                 borderRadius: 16,
-                padding: 20,
-                gap: 8,
-                marginBottom: 24,
+                padding: theme.spacing[5],
+                gap: theme.spacing[2],
+                marginBottom: theme.spacing[6],
               }}>
                 <Text style={{ fontFamily: theme.fontFamily.headline, fontSize: 14, fontWeight: '700', color: theme.colors.danger }}>
                   Dispute: {formatStatus(order.dispute.status)}
@@ -648,10 +609,10 @@ export default function OrderDetailScreen() {
           bottom: 0,
           left: 0,
           right: 0,
-          paddingHorizontal: 20,
-          paddingTop: 16,
-          paddingBottom: Math.max(insets.bottom, 24),
-          gap: 8,
+          paddingHorizontal: theme.spacing[5],
+          paddingTop: theme.spacing[4],
+          paddingBottom: Math.max(insets.bottom, theme.spacing[6]),
+          gap: theme.spacing[2],
           overflow: 'hidden',
         }}>
           <BlurView
@@ -661,9 +622,9 @@ export default function OrderDetailScreen() {
           />
           <View style={{
             position: 'absolute', top: 0, right: 0, bottom: 0, left: 0,
-            backgroundColor: colorScheme === 'dark' ? 'rgba(13,11,30,0.80)' : 'rgba(250,248,255,0.85)',
+            backgroundColor: theme.colors.glassSurface,
             borderTopWidth: 1,
-            borderTopColor: colorScheme === 'dark' ? theme.colors.surfaceHighest : `${theme.colors.border}30`,
+            borderTopColor: theme.colors.borderHair,
           }} />
           {/* Buyer payment flow */}
           {isBuyer && order.status === 'PAYMENT_PENDING' ? (
@@ -706,16 +667,16 @@ export default function OrderDetailScreen() {
           visible={disputeOpen}>
           <Pressable
             onPress={() => { setDisputeOpen(false); }}
-            style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }}
+            style={{ flex: 1, backgroundColor: theme.colors.shadowStrong }}
           />
           <View style={{
             backgroundColor: theme.colors.surface,
             borderTopLeftRadius: 28,
             borderTopRightRadius: 28,
-            paddingHorizontal: 24,
-            paddingTop: 12,
+            paddingHorizontal: theme.spacing[6],
+            paddingTop: theme.spacing[3],
             paddingBottom: 40,
-            gap: 20,
+            gap: theme.spacing[5],
           }}>
             {/* Handle */}
             <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: theme.colors.surfaceHighest, alignSelf: 'center' }} />
@@ -738,11 +699,11 @@ export default function OrderDetailScreen() {
             </View>
 
             {/* Reason chips */}
-            <View style={{ gap: 8 }}>
+            <View style={{ gap: theme.spacing[2] }}>
               <Text style={{ fontFamily: theme.fontFamily.label, fontSize: 12, color: theme.colors.inkMuted, textTransform: 'uppercase', letterSpacing: 0.8 }}>
                 What went wrong?
               </Text>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing[2] }}>
                 {([
                   { label: 'Code doesn\'t work', value: 'voucher-invalid' },
                   { label: 'Already used', value: 'voucher-already-used' },
@@ -757,7 +718,7 @@ export default function OrderDetailScreen() {
                       onPress={() => { setReason(opt.value); }}
                       style={{
                         paddingHorizontal: 14, paddingVertical: 8,
-                        borderRadius: 9999,
+                        borderRadius: theme.radius.pill,
                         backgroundColor: active ? `${theme.colors.danger}18` : theme.colors.surfaceHigh,
                         borderWidth: active ? 1.5 : 1,
                         borderColor: active ? theme.colors.danger : theme.colors.border,

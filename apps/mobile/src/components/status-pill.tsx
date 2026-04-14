@@ -15,9 +15,9 @@ export function StatusPill({
   const palette =
     tone === 'glass'
       ? {
-          backgroundColor: 'rgba(255,255,255,0.08)',
-          borderColor: 'rgba(255,255,255,0.18)',
-          color: 'rgba(255,255,255,0.84)',
+          backgroundColor: theme.colors.glassSurface,
+          borderColor: theme.colors.glassBorder,
+          color: theme.colors.glassText,
         }
       : tone === 'brand' || tone === 'trust'
         ? {

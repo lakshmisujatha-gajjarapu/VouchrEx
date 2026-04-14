@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import { AUTH, BRANDS, LISTINGS, NOTIFICATIONS, ORDERS, PAYOUTS } from './routes';
 
 const sessionHeaderName = 'x-session-token';
 
@@ -236,7 +237,7 @@ export const api = {
     readonly name?: string;
     readonly deviceId?: string;
   }) {
-    return apiRequest<OtpRequestResult>('/auth/otp/request', {
+    return apiRequest<OtpRequestResult>(AUTH.OTP_REQUEST, {
       method: 'POST',
       body: input
     });
@@ -248,24 +249,24 @@ export const api = {
     readonly email?: string;
     readonly deviceId?: string;
   }) {
-    return apiRequest<OtpVerifyResult>('/auth/otp/verify', {
+    return apiRequest<OtpVerifyResult>(AUTH.OTP_VERIFY, {
       method: 'POST',
       body: input
     });
   },
   refreshTokens(refreshToken: string) {
-    return apiRequest<Omit<OtpVerifyResult, 'user'>>('/auth/token/refresh', {
+    return apiRequest<Omit<OtpVerifyResult, 'user'>>(AUTH.TOKEN_REFRESH, {
       method: 'POST',
       body: { refreshToken }
     });
   },
   me(sessionToken: string) {
-    return apiRequest<SessionUser>('/auth/me', {
+    return apiRequest<SessionUser>(AUTH.ME, {
       sessionToken
     });
   },
   logout(sessionToken: string) {
-    return apiRequest<{ readonly success: true }>('/auth/logout', {
+    return apiRequest<{ readonly success: true }>(AUTH.LOGOUT, {
       method: 'POST',
       sessionToken
     });
@@ -274,7 +275,7 @@ export const api = {
     readonly q?: string;
     readonly limit?: number;
   }) {
-    return apiRequest<readonly Brand[]>('/brands', {
+    return apiRequest<readonly Brand[]>(BRANDS.LIST, {
       query: input
     });
   },
@@ -285,12 +286,12 @@ export const api = {
     readonly maxPrice?: number;
     readonly minDiscount?: number;
   }) {
-    return apiRequest<readonly Listing[]>('/listings', {
+    return apiRequest<readonly Listing[]>(LISTINGS.LIST, {
       query: input
     });
   },
   getListing(id: string) {
-    return apiRequest<Listing>(`/listings/${id}`);
+    return apiRequest<Listing>(LISTINGS.BY_ID(id));
   },
   createListing(
     sessionToken: string,
@@ -305,14 +306,14 @@ export const api = {
       readonly proofUrl?: string;
     }
   ) {
-    return apiRequest<Listing>('/listings', {
+    return apiRequest<Listing>(LISTINGS.CREATE, {
       method: 'POST',
       sessionToken,
       body: input
     });
   },
   listMyListings(sessionToken: string) {
-    return apiRequest<readonly Listing[]>('/listings/seller/inventory', {
+    return apiRequest<readonly Listing[]>(LISTINGS.SELLER_INVENTORY, {
       sessionToken
     });
   },
@@ -330,30 +331,30 @@ export const api = {
       readonly proofUrl?: string;
     }
   ) {
-    return apiRequest<Listing>(`/listings/${id}`, {
+    return apiRequest<Listing>(LISTINGS.BY_ID(id), {
       method: 'PATCH',
       sessionToken,
       body: input
     });
   },
   deleteListing(sessionToken: string, id: string) {
-    return apiRequest<{ readonly success: true }>(`/listings/${id}`, {
+    return apiRequest<{ readonly success: true }>(LISTINGS.BY_ID(id), {
       method: 'DELETE',
       sessionToken
     });
   },
   listOrders(sessionToken: string) {
-    return apiRequest<readonly Order[]>('/orders', {
+    return apiRequest<readonly Order[]>(ORDERS.LIST, {
       sessionToken
     });
   },
   getOrder(sessionToken: string, id: string) {
-    return apiRequest<Order>(`/orders/${id}`, {
+    return apiRequest<Order>(ORDERS.BY_ID(id), {
       sessionToken
     });
   },
   createOrder(sessionToken: string, listingId: string) {
-    return apiRequest<CreateOrderResult>('/orders', {
+    return apiRequest<CreateOrderResult>(ORDERS.CREATE, {
       method: 'POST',
       sessionToken,
       body: {
@@ -362,7 +363,7 @@ export const api = {
     });
   },
   prepareCheckout(sessionToken: string, orderId: string) {
-    return apiRequest<CreateOrderResult>(`/orders/${orderId}/checkout`, {
+    return apiRequest<CreateOrderResult>(ORDERS.CHECKOUT(orderId), {
       method: 'POST',
       sessionToken
     });
@@ -377,26 +378,26 @@ export const api = {
       readonly razorpaySignature?: string;
     }
   ) {
-    return apiRequest<Order>(`/orders/${orderId}/payments/verify`, {
+    return apiRequest<Order>(ORDERS.PAYMENTS_VERIFY(orderId), {
       method: 'POST',
       sessionToken,
       body: input
     });
   },
   syncPayment(sessionToken: string, orderId: string) {
-    return apiRequest<{ readonly synced: boolean; readonly status: string }>(`/orders/${orderId}/payments/sync`, {
+    return apiRequest<{ readonly synced: boolean; readonly status: string }>(ORDERS.PAYMENTS_SYNC(orderId), {
       method: 'POST',
       sessionToken
     });
   },
   revealCode(sessionToken: string, orderId: string) {
-    return apiRequest<RevealResult>(`/orders/${orderId}/reveal`, {
+    return apiRequest<RevealResult>(ORDERS.REVEAL(orderId), {
       method: 'POST',
       sessionToken
     });
   },
   confirmOrder(sessionToken: string, orderId: string) {
-    return apiRequest<Order>(`/orders/${orderId}/confirm`, {
+    return apiRequest<Order>(ORDERS.CONFIRM(orderId), {
       method: 'POST',
       sessionToken
     });
@@ -410,35 +411,35 @@ export const api = {
       readonly evidenceUrls?: readonly string[];
     }
   ) {
-    return apiRequest<Dispute>(`/orders/${orderId}/disputes`, {
+    return apiRequest<Dispute>(ORDERS.DISPUTES(orderId), {
       method: 'POST',
       sessionToken,
       body: input
     });
   },
   getPayoutAccount(sessionToken: string) {
-    return apiRequest<PayoutAccount>('/payout-accounts/me', { sessionToken });
+    return apiRequest<PayoutAccount>(PAYOUTS.ME, { sessionToken });
   },
   registerPayoutAccount(sessionToken: string, input: { readonly type: 'UPI'; readonly upiId: string }) {
-    return apiRequest<PayoutAccount>('/payout-accounts', {
+    return apiRequest<PayoutAccount>(PAYOUTS.REGISTER, {
       method: 'POST',
       sessionToken,
       body: input
     });
   },
   listNotifications(sessionToken: string) {
-    return apiRequest<readonly NotificationItem[]>('/notifications', {
+    return apiRequest<readonly NotificationItem[]>(NOTIFICATIONS.LIST, {
       sessionToken
     });
   },
   markAllNotificationsRead(sessionToken: string) {
-    return apiRequest<undefined>('/notifications/read-all', { method: 'POST', sessionToken });
+    return apiRequest<undefined>(NOTIFICATIONS.READ_ALL, { method: 'POST', sessionToken });
   },
   clearAllNotifications(sessionToken: string) {
-    return apiRequest<undefined>('/notifications', { method: 'DELETE', sessionToken });
+    return apiRequest<undefined>(NOTIFICATIONS.CLEAR_ALL, { method: 'DELETE', sessionToken });
   },
   markNotificationRead(sessionToken: string, notificationId: string) {
-    return apiRequest<NotificationItem>(`/notifications/${notificationId}/read`, {
+    return apiRequest<NotificationItem>(NOTIFICATIONS.BY_ID_READ(notificationId), {
       method: 'POST',
       sessionToken
     });

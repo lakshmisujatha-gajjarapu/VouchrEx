@@ -40,7 +40,7 @@ export function ScreenShell({
       <View className="gap-1">
         {showClose ? (
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <View style={{ flex: 1, gap: 4 }}>
+            <View style={{ flex: 1, gap: theme.spacing[1] }}>
               {eyebrow ? (
                 <Text
                   className="font-label text-caption font-extrabold uppercase tracking-[0.6px]"
@@ -103,7 +103,7 @@ export function ScreenShell({
       </SafeAreaView>
       {footer ? (
         <SafeAreaView edges={['bottom', 'left', 'right']} style={{ backgroundColor: theme.colors.surface, borderTopWidth: 1, borderTopColor: theme.colors.border }}>
-          <View style={{ paddingHorizontal: 20, paddingVertical: 12 }}>
+          <View style={{ paddingHorizontal: theme.spacing[5], paddingVertical: theme.spacing[3] }}>
             {footer}
           </View>
         </SafeAreaView>

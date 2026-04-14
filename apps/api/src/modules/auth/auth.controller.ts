@@ -3,31 +3,32 @@ import { ApiHeader, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 
 import { sessionHeaderName } from './auth.constants';
+import { AUTH_ROUTES } from './auth.routes';
 import { AuthService } from './auth.service';
 import { RequestOtpDto } from './dto/request-otp.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 
 @ApiTags('auth')
-@Controller('auth')
+@Controller(AUTH_ROUTES.BASE)
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   // Tight limit: 1 OTP request per 10s, 5 per minute to deter brute force / SMS flooding
   @Throttle({ short: { limit: 1, ttl: 10000 }, medium: { limit: 5, ttl: 60000 } })
-  @Post('otp/request')
+  @Post(AUTH_ROUTES.OTP_REQUEST)
   requestOtp(@Body() requestOtpDto: RequestOtpDto, @Ip() clientIp: string) {
     return this.authService.requestOtp(requestOtpDto, clientIp);
   }
 
   // 5 verify attempts per minute per IP (service-layer also limits per phone)
   @Throttle({ short: { limit: 1, ttl: 2000 }, medium: { limit: 5, ttl: 60000 } })
-  @Post('otp/verify')
+  @Post(AUTH_ROUTES.OTP_VERIFY)
   verifyOtp(@Body() verifyOtpDto: VerifyOtpDto) {
     return this.authService.verifyOtp(verifyOtpDto);
   }
 
-  @Post('token/refresh')
+  @Post(AUTH_ROUTES.TOKEN_REFRESH)
   refreshTokens(@Body() refreshTokenDto: RefreshTokenDto) {
     return this.authService.refreshTokens(refreshTokenDto);
   }
@@ -37,7 +38,7 @@ export class AuthController {
     required: true,
     description: 'Access token returned from OTP verification or token refresh.'
   })
-  @Get('me')
+  @Get(AUTH_ROUTES.ME)
   me(@Headers(sessionHeaderName) sessionToken?: string) {
     return this.authService.requireSessionUser(sessionToken);
   }
@@ -47,7 +48,7 @@ export class AuthController {
     required: true,
     description: 'Session token returned from OTP verification.'
   })
-  @Post('logout')
+  @Post(AUTH_ROUTES.LOGOUT)
   logout(@Headers(sessionHeaderName) sessionToken?: string) {
     return this.authService.logout(sessionToken);
   }

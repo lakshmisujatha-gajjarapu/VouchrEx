@@ -81,7 +81,7 @@ export default function TabsLayout() {
         tabBarActiveTintColor: theme.colors.brand,
         tabBarInactiveTintColor: theme.colors.inkMuted,
         tabBarHideOnKeyboard: true,
-        sceneStyle: { backgroundColor: 'transparent' },
+        sceneStyle: { backgroundColor: theme.colors.transparent },
         tabBarStyle,
         tabBarLabelStyle,
         tabBarButton: TabBarButton,

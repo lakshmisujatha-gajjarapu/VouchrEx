@@ -4,9 +4,10 @@ import { ApiHeader, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { AdminAccessService } from '../admin/admin-access.service';
 import { adminHeaderName } from '../admin/admin.constants';
 import { BrandsService } from './brands.service';
+import { BRANDS_ROUTES } from './brands.routes';
 
 @ApiTags('brands')
-@Controller('brands')
+@Controller(BRANDS_ROUTES.BASE)
 export class BrandsController {
   constructor(
     private readonly brandsService: BrandsService,
@@ -51,7 +52,7 @@ export class BrandsController {
     required: true,
     description: 'Manual Phase 1 admin token for catalog bootstrap.'
   })
-  @Post('seed')
+  @Post(BRANDS_ROUTES.SEED)
   async seedDefaults(@Headers(adminHeaderName) adminToken?: string) {
     await this.adminAccessService.requireAdminAccess(adminToken);
     return this.brandsService.seedDefaults();
