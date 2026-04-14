@@ -229,7 +229,8 @@ export class AuthService {
           name: true,
           email: true,
           status: true,
-          tier: true
+          tier: true,
+          totalSales: true
         }
       });
 
@@ -286,7 +287,8 @@ export class AuthService {
             name: true,
             email: true,
             status: true,
-            tier: true
+            tier: true,
+            totalSales: true
           }
         }
       }
@@ -375,7 +377,8 @@ export class AuthService {
             name: true,
             email: true,
             status: true,
-            tier: true
+            tier: true,
+            totalSales: true
           }
         }
       }

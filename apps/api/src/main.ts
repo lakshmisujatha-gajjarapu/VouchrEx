@@ -125,7 +125,7 @@ async function bootstrap() {
   });
 
   const port = Number(process.env.PORT ?? 3010);
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
 
   const logger = new Logger('bootstrap');
   logger.log(`VouchrEx API listening on http://localhost:${String(port)}`);

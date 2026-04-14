@@ -395,7 +395,6 @@ const styles = {
     fontSize: 18,
     fontFamily: 'Manrope_700Bold',
     color: '#F5F3FF',
-    paddingBottom: 8,
     paddingRight: 12,
   },
   prefixDivider: {
@@ -403,7 +402,6 @@ const styles = {
     height: 20,
     backgroundColor: 'rgba(255,255,255,0.18)',
     marginRight: 12,
-    marginBottom: 8,
   },
   underlineInput: {
     fontSize: 18,

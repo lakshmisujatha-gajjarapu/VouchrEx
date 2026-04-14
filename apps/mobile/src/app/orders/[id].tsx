@@ -1,4 +1,5 @@
 import { BlurView } from 'expo-blur';
+import * as Clipboard from 'expo-clipboard';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { openBrowserAsync } from 'expo-web-browser';
@@ -101,6 +102,7 @@ export default function OrderDetailScreen() {
   const [description, setDescription] = useState('');
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const orderResource = useAsyncResource(
     useCallback(() => {
@@ -496,6 +498,42 @@ export default function OrderDetailScreen() {
                         style={{ width: '100%', aspectRatio: 16 / 9, backgroundColor: theme.colors.surfaceRaised }}
                       />
                     </View>
+
+                    {/* Copy code button */}
+                    <Pressable
+                      onPress={() => {
+                        void Clipboard.setStringAsync(reveal.voucherCode).then(() => {
+                          setCopied(true);
+                          setTimeout(() => { setCopied(false); }, 2500);
+                        });
+                      }}
+                      style={({ pressed }) => ({
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 8,
+                        paddingVertical: 13,
+                        borderRadius: 14,
+                        borderWidth: 1.5,
+                        borderColor: copied ? theme.colors.pillSuccessBorder : theme.colors.pillBrandBorder,
+                        backgroundColor: copied ? theme.colors.successSoft : theme.colors.brandSoft,
+                        opacity: pressed ? 0.8 : 1,
+                      })}>
+                      <Ionicons
+                        name={copied ? 'checkmark-circle' : 'copy-outline'}
+                        size={18}
+                        color={copied ? theme.colors.success : theme.colors.brand}
+                      />
+                      <Text style={{
+                        fontFamily: theme.fontFamily.labelSemi,
+                        fontSize: 14,
+                        fontWeight: '600',
+                        color: copied ? theme.colors.success : theme.colors.brand,
+                      }}>
+                        {copied ? 'Copied!' : 'Copy Code'}
+                      </Text>
+                    </Pressable>
+
                     <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 12, color: theme.colors.inkMuted, textAlign: 'center' }}>
                       Watermarked reveal · Confirm or dispute within {String(reveal.verificationWindowHours)}h
                     </Text>

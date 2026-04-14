@@ -1,67 +1,110 @@
+import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback } from 'react';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Pressable,
+  Text,
+  View,
+} from 'react-native';
 
-import { FilterChip } from '@/components/filter-chip';
-import { PrimaryButton } from '@/components/primary-button';
-import { ScreenShell } from '@/components/screen-shell';
-import { SectionPanel } from '@/components/section-panel';
-import { StatusPill } from '@/components/status-pill';
-import { TicketCard } from '@/components/ticket-card';
+import { AppShell } from '@/components/app-shell';
 import { useAuth } from '@/hooks/use-auth';
 import { useAsyncResource } from '@/hooks/use-async-resource';
 import { useNotificationsSocket } from '@/hooks/use-notifications-socket';
 import { useRefetchOnFocus } from '@/hooks/use-refetch-on-focus';
 import { api } from '@/lib/api';
-import { formatDateTime, formatStatus } from '@/lib/format';
+import { formatDateTime } from '@/lib/format';
 import { useTheme } from '@/theme/ThemeContext';
-import { useThemePreference } from '@/theme/theme-preference';
-import type { ThemePreference } from '@/theme/tokens';
 
-const appearanceOptions: readonly ThemePreference[] = ['system', 'light', 'dark'] as const;
+// ─── Notification item ────────────────────────────────────────────────────────
 
-function formatPreferenceLabel(preference: ThemePreference) {
-  if (preference === 'system') {
-    return 'system';
-  }
-
-  return preference;
+function NotificationRow({
+  title,
+  message,
+  time,
+  isUnread,
+  onPress,
+}: {
+  readonly title: string;
+  readonly message: string;
+  readonly time: string;
+  readonly isUnread: boolean;
+  readonly onPress: () => void;
+}) {
+  const theme = useTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => ({
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        paddingHorizontal: 16,
+        paddingVertical: 14,
+        backgroundColor: pressed
+          ? theme.colors.surfaceHigh
+          : isUnread
+            ? `${theme.colors.brand}0D`
+            : 'transparent',
+      })}>
+      <View style={{
+        width: 8, height: 8, borderRadius: 4,
+        backgroundColor: isUnread ? theme.colors.brand : 'transparent',
+        marginTop: 6, marginRight: 12,
+      }} />
+      <View style={{ flex: 1 }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 3 }}>
+          <Text style={{
+            fontFamily: theme.fontFamily.labelSemi,
+            fontSize: 14, color: theme.colors.ink,
+            flex: 1, marginRight: 8,
+          }}>
+            {title}
+          </Text>
+          <Text style={{ fontFamily: theme.fontFamily.label, fontSize: 12, color: theme.colors.inkMuted }}>
+            {time}
+          </Text>
+        </View>
+        <Text style={{
+          fontFamily: theme.fontFamily.body,
+          fontSize: 13, color: theme.colors.inkSecondary, lineHeight: 18,
+        }}>
+          {message}
+        </Text>
+      </View>
+    </Pressable>
+  );
 }
 
+// ─── Main screen ──────────────────────────────────────────────────────────────
+
 export default function InboxScreen() {
-  const auth = useAuth();
-  const { sessionToken, user } = auth;
+  const { sessionToken } = useAuth();
   const theme = useTheme();
-  const themePreference = useThemePreference();
-  const { preference } = themePreference;
+
   const notificationsResource = useAsyncResource(
     useCallback(() => {
-      if (!sessionToken) {
-        throw new Error('Session missing.');
-      }
-
+      if (!sessionToken) throw new Error('Session missing.');
       return api.listNotifications(sessionToken);
     }, [sessionToken]),
     { enabled: Boolean(sessionToken) },
   );
 
   useRefetchOnFocus(useCallback(() => { void notificationsResource.reload(); }, [notificationsResource.reload]));
-
-  // Real-time: instantly reload inbox when a new notification arrives.
   useNotificationsSocket(useCallback(() => { void notificationsResource.reload(); }, [notificationsResource.reload]));
 
   async function handleMarkRead(id: string) {
     if (!sessionToken) return;
     const next = await api.markNotificationRead(sessionToken, id);
-    notificationsResource.setData((previous) =>
-      previous?.map((item) => (item.id === id ? next : item)) ?? [next],
+    notificationsResource.setData((prev) =>
+      prev?.map((item) => (item.id === id ? next : item)) ?? [next],
     );
   }
 
   async function handleMarkAllRead() {
     if (!sessionToken) return;
     await api.markAllNotificationsRead(sessionToken);
-    notificationsResource.setData((previous) =>
-      previous?.map((item) => ({ ...item, status: 'READ' as const })) ?? [],
+    notificationsResource.setData((prev) =>
+      prev?.map((item) => ({ ...item, status: 'READ' as const })) ?? [],
     );
   }
 
@@ -71,92 +114,65 @@ export default function InboxScreen() {
     notificationsResource.setData(() => []);
   }
 
+  const unreadCount = notificationsResource.data?.filter((n) => n.status !== 'READ').length ?? 0;
+
   return (
-    <ScreenShell eyebrow="Account" subtitle="Notifications, preferences, and sign-out." title="Inbox">
-      <TicketCard
-        eyebrow="Account"
-        meta={user?.status ?? 'Active'}
-        subtitle={user?.phone}
-        title={user?.name ?? 'Signed-in user'}
-        tone="brand">
-        <View className="mt-2 flex-row flex-wrap gap-2">
-          <StatusPill label={formatStatus(user?.status ?? 'ACTIVE')} tone="brand" />
-        </View>
-        <View className="mt-2">
-          <PrimaryButton
-            label="Sign out"
-            onPress={() => {
-              void auth.signOut();
-            }}
-            tone="secondary"
-          />
-        </View>
-      </TicketCard>
-
-      <SectionPanel
-        description="Switch instantly and keep the preference on this device."
-        title="Appearance">
-        <View className="mt-2 flex-row flex-wrap gap-2">
-          <StatusPill
-            label={preference === 'system' ? 'Following system' : `${formatPreferenceLabel(preference)} locked`}
-            tone="neutral"
-          />
-        </View>
-        <View className="flex-row flex-wrap gap-2">
-          {appearanceOptions.map((option) => (
-            <FilterChip
-              key={option}
-              label={formatPreferenceLabel(option)}
-              onPress={() => {
-                void themePreference.setPreference(option);
-              }}
-              selected={preference === option}
-            />
-          ))}
-        </View>
-      </SectionPanel>
-
+    <AppShell title="Inbox">
       {notificationsResource.loading && !notificationsResource.data ? (
-        <ActivityIndicator color={theme.colors.brand} />
-      ) : null}
-
-      {notificationsResource.data && notificationsResource.data.length > 0 ? (
-        <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 16 }}>
-          {notificationsResource.data.some((n) => n.status !== 'READ') ? (
-            <Pressable onPress={() => { void handleMarkAllRead(); }}>
-              <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 13, color: theme.colors.brand }}>
-                Mark all read
+        <View style={{ paddingVertical: 40, alignItems: 'center' }}>
+          <ActivityIndicator color={theme.colors.brand} />
+        </View>
+      ) : notificationsResource.data && notificationsResource.data.length > 0 ? (
+        <View style={{
+          backgroundColor: theme.colors.surface,
+          borderRadius: 16,
+          borderWidth: 1,
+          borderColor: theme.colors.border,
+          overflow: 'hidden',
+        }}>
+          {/* Actions row */}
+          <View style={{
+            flexDirection: 'row', justifyContent: 'flex-end', gap: 16,
+            paddingHorizontal: 16, paddingVertical: 10,
+            borderBottomWidth: 1, borderBottomColor: theme.colors.border,
+          }}>
+            {unreadCount > 0 ? (
+              <Pressable onPress={() => { void handleMarkAllRead(); }}>
+                <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 13, color: theme.colors.brand }}>
+                  Mark all read
+                </Text>
+              </Pressable>
+            ) : null}
+            <Pressable onPress={() => { void handleClearAll(); }}>
+              <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 13, color: theme.colors.danger }}>
+                Clear all
               </Text>
             </Pressable>
-          ) : null}
-          <Pressable onPress={() => { void handleClearAll(); }}>
-            <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 13, color: theme.colors.danger }}>
-              Clear all
-            </Text>
-          </Pressable>
+          </View>
+
+          {notificationsResource.data.map((notification, index) => (
+            <View key={notification.id}>
+              <NotificationRow
+                isUnread={notification.status !== 'READ'}
+                message={notification.message}
+                onPress={() => { void handleMarkRead(notification.id); }}
+                time={formatDateTime(notification.createdAt)}
+                title={notification.title}
+              />
+              {index < notificationsResource.data!.length - 1 ? (
+                <View style={{ height: 1, backgroundColor: theme.colors.border, marginLeft: 40 }} />
+              ) : null}
+            </View>
+          ))}
         </View>
-      ) : null}
-
-      {notificationsResource.data?.map((notification) => (
-        <Pressable key={notification.id} onPress={() => void handleMarkRead(notification.id)}>
-          <TicketCard
-            eyebrow={notification.eventType.replace('.', ' ')}
-            meta={formatDateTime(notification.createdAt)}
-            subtitle={notification.message}
-            title={notification.title}
-            tone={notification.status === 'READ' ? 'neutral' : 'brand'}>
-            <Text
-              className="font-label text-caption font-bold"
-              style={{ color: notification.status === 'READ' ? theme.colors.inkMuted : theme.colors.brand }}>
-              {notification.status === 'READ' ? 'Opened' : 'Tap to mark read'}
-            </Text>
-          </TicketCard>
-        </Pressable>
-      ))}
-
-      {!notificationsResource.loading && notificationsResource.data?.length === 0 ? (
-        <TicketCard subtitle="New order and payout updates will show here." title="No notifications yet" />
-      ) : null}
-    </ScreenShell>
+      ) : (
+        <View style={{ paddingVertical: 60, alignItems: 'center', gap: 10 }}>
+          <Ionicons name="notifications-off-outline" size={36} color={theme.colors.inkMuted} />
+          <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 15, color: theme.colors.inkMuted }}>
+            No notifications yet
+          </Text>
+        </View>
+      )}
+    </AppShell>
   );
 }

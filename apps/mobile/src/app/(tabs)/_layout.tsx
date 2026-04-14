@@ -3,6 +3,7 @@ import { type BottomTabBarButtonProps } from '@react-navigation/bottom-tabs';
 import { Redirect, Tabs } from 'expo-router';
 import React from 'react';
 import { Pressable, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { LoadingScreen } from '@/components/loading-screen';
 import { useAuth } from '@/hooks/use-auth';
@@ -38,11 +39,13 @@ function TabBarButton({ children, onPress, onLongPress, accessibilityState }: Bo
 export default function TabsLayout() {
   const { status } = useAuth();
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
+  const bottomOffset = Math.max(insets.bottom, 8);
   const tabBarStyle = {
     position: 'absolute' as const,
     left: 14,
     right: 14,
-    bottom: 14,
+    bottom: bottomOffset + 6,
     height: 62,
     paddingTop: 4,
     paddingBottom: 4,

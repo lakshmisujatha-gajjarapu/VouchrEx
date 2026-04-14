@@ -4,7 +4,7 @@ import { z } from 'zod';
 const UpdateListingSchema = z.object({
   brandId: z.string().optional().describe('Optional existing brand ID'),
   brandName: z.string().optional().describe('Optional free-text brand name'),
-  voucherType: z.string().optional().describe('Voucher category within the selected brand'),
+  voucherType: z.enum(['gift-card', 'promo-code']).optional().describe('Voucher type'),
   faceValue: z.coerce.number().int().min(1).optional().describe('Original voucher face value in INR'),
   sellingPrice: z.coerce.number().int().min(1).optional().describe('Resale price in INR'),
   expiryDate: z

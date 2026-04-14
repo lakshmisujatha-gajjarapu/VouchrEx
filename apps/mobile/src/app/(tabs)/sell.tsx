@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import * as Clipboard from 'expo-clipboard';
+import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -21,7 +22,7 @@ import { api, type PayoutAccount } from '@/lib/api';
 import { searchBrandfetchBrands } from '@/lib/brandfetch';
 import { useTheme } from '@/theme/ThemeContext';
 
-const VOUCHER_TYPES = ['gift-card', 'promo-code', 'cashback', 'subscription'] as const;
+const VOUCHER_TYPES = ['gift-card', 'promo-code'] as const;
 type VoucherType = (typeof VOUCHER_TYPES)[number];
 
 type Suggestion = {
@@ -140,9 +141,10 @@ function FieldLabel({ children }: { readonly children: string }) {
 }
 
 export default function SellScreen() {
-  const { sessionToken } = useAuth();
+  const { sessionToken, user } = useAuth();
   const theme = useTheme();
   const router = useRouter();
+  const initial = (user?.name ?? user?.phone ?? '?')[0].toUpperCase();
 
   // ── Payout account gate ──────────────────────────────────────────
   const [payoutAccount, setPayoutAccount]   = useState<PayoutAccount | null>(null);
@@ -184,6 +186,22 @@ export default function SellScreen() {
   const [code, setCode]                 = useState('');
   const [submitting, setSubmitting]     = useState(false);
   const [feedback, setFeedback]         = useState<string | null>(null);
+  const [codeCopied, setCodeCopied]     = useState(false);
+
+  // Reset form each time this screen comes into focus so stale values from a
+  // previous session don't persist (tab screens stay mounted in memory).
+  useFocusEffect(
+    useCallback(() => {
+      setBrandName('');
+      setVoucherType('gift-card');
+      setFaceValue('');
+      setSellingPrice('');
+      setExpiryDate(todayString());
+      setCode('');
+      setFeedback(null);
+    }, [])
+  );
+
   const deferredBrandName               = useDeferredValue(brandName.trim());
 
   const suggestionsResource = useAsyncResource(
@@ -270,13 +288,24 @@ export default function SellScreen() {
                 Sell a Voucher
               </Text>
             </View>
-            <View style={{
-              width: 40, height: 40, borderRadius: 20,
-              backgroundColor: theme.colors.surfaceHigh,
-              alignItems: 'center', justifyContent: 'center',
-            }}>
-              <Ionicons name="help-circle-outline" size={22} color={theme.colors.inkSecondary} />
-            </View>
+            <Pressable
+              accessibilityLabel="Profile"
+              onPress={() => { router.push('/profile'); }}
+              style={({ pressed }) => ({
+                width: 40, height: 40, borderRadius: 20,
+                backgroundColor: theme.colors.brandSoft,
+                alignItems: 'center', justifyContent: 'center',
+                borderWidth: 1.5,
+                borderColor: `${theme.colors.brand}40`,
+                opacity: pressed ? 0.7 : 1,
+              })}>
+              <Text style={{
+                fontFamily: theme.fontFamily.headlineExtra,
+                fontSize: 16, fontWeight: '800', color: theme.colors.brand,
+              }}>
+                {initial}
+              </Text>
+            </Pressable>
           </View>
 
           {/* ── Payout gate: loading ── */}
@@ -311,7 +340,7 @@ export default function SellScreen() {
                   color: theme.colors.inkSecondary, textAlign: 'center',
                   lineHeight: 22, maxWidth: 300,
                 }}>
-                  Add your UPI ID once. Every sale credits your account automatically — no waiting, no hassle.
+                  Add your UPI ID once. Every sale credits your account automatically — no hassle.
                 </Text>
               </View>
 
@@ -497,7 +526,26 @@ export default function SellScreen() {
                   fontMono
                   onChangeText={setCode}
                   placeholder="ABCD-1234-EFGH-5678"
-                  rightIcon={<Ionicons name="lock-closed-outline" size={20} color={theme.colors.inkMuted} />}
+                  rightIcon={
+                    code.trim() ? (
+                      <Pressable
+                        onPress={() => {
+                          void Clipboard.setStringAsync(code.trim()).then(() => {
+                            setCodeCopied(true);
+                            setTimeout(() => { setCodeCopied(false); }, 2000);
+                          });
+                        }}
+                        style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
+                        <Ionicons
+                          name={codeCopied ? 'checkmark-circle' : 'copy-outline'}
+                          size={20}
+                          color={codeCopied ? theme.colors.action : theme.colors.brand}
+                        />
+                      </Pressable>
+                    ) : (
+                      <Ionicons name="lock-closed-outline" size={20} color={theme.colors.inkMuted} />
+                    )
+                  }
                   value={code}
                 />
                 <Text style={{ fontSize: 12, fontFamily: theme.fontFamily.label, color: theme.colors.inkMuted, marginTop: 6, fontStyle: 'italic' }}>
@@ -508,7 +556,16 @@ export default function SellScreen() {
               {/* ── Face Value + Price (2 col) ── */}
               <View style={{ flexDirection: 'row', gap: 12 }}>
                 <View style={{ flex: 1 }}>
-                  <FieldLabel>Face Value</FieldLabel>
+                  <View style={{ minHeight: 18, justifyContent: 'center', marginBottom: 8 }}>
+                    <Text style={{
+                      fontSize: 13, fontWeight: '600',
+                      fontFamily: theme.fontFamily.labelSemi,
+                      color: theme.colors.inkSecondary,
+                      textTransform: 'uppercase', letterSpacing: 0.8,
+                    }}>
+                      Face Value
+                    </Text>
+                  </View>
                   <SubmergedInput
                     value={faceValue}
                     onChangeText={setFaceValue}
@@ -518,13 +575,37 @@ export default function SellScreen() {
                   />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <FieldLabel>{`Your Price${discount > 0 ? ` · ${String(discount)}% off` : ''}`}</FieldLabel>
+                  <View style={{ minHeight: 18, justifyContent: 'center', marginBottom: 8 }}>
+                    <Text style={{
+                      fontSize: 13, fontWeight: '600',
+                      fontFamily: theme.fontFamily.labelSemi,
+                      color: theme.colors.inkSecondary,
+                      textTransform: 'uppercase', letterSpacing: 0.8,
+                    }}>
+                      Your Price
+                    </Text>
+                  </View>
                   <SubmergedInput
                     value={sellingPrice}
                     onChangeText={setSellingPrice}
                     placeholder="850"
                     keyboardType="numeric"
                     prefix="₹"
+                    rightIcon={discount > 0 ? (
+                      <View style={{
+                        paddingHorizontal: 6, paddingVertical: 3,
+                        borderRadius: 6,
+                        backgroundColor: theme.colors.actionSoft,
+                      }}>
+                        <Text style={{
+                          fontSize: 11, fontWeight: '700',
+                          fontFamily: theme.fontFamily.labelSemi,
+                          color: theme.colors.action,
+                        }}>
+                          {String(discount)}%
+                        </Text>
+                      </View>
+                    ) : undefined}
                   />
                 </View>
               </View>

@@ -562,6 +562,7 @@ export class OrdersService {
 
     return {
       watermarkedCodeImageUrl,
+      voucherCode: code,
       verificationDeadline,
       revealCount: codeVault.viewCount + 1,
       verificationWindowHours

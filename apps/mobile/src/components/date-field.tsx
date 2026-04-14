@@ -18,6 +18,12 @@ function parseDate(value: string): Date | null {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
+function formatDisplayDate(isoDate: string): string {
+  const date = parseDate(isoDate);
+  if (!date) return '';
+  return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
 export function DateField({
   label,
   value,
@@ -30,6 +36,7 @@ export function DateField({
   readonly minimumDate?: Date;
 }) {
   const theme = useTheme();
+  const [focused, setFocused] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
   const selectedDate = parseDate(value) ?? minimumDate ?? new Date();
   const hasValue = Boolean(value);
@@ -37,53 +44,70 @@ export function DateField({
   function handleChange(_event: DateTimePickerEvent, date?: Date) {
     if (Platform.OS === 'android') {
       setShowPicker(false);
+      setFocused(false);
     }
     if (date) {
       onChange(toIsoDateString(date));
     }
   }
 
-  function handleIosDone() {
-    setShowPicker(false);
+  function handleOpen() {
+    setShowPicker(true);
+    setFocused(true);
   }
 
-  return (
-    <View className="gap-2">
-      <Text
-        className="font-label text-caption font-bold uppercase tracking-[0.6px]"
-        style={{ color: theme.colors.inkMuted }}>
-        {label}
-      </Text>
+  function handleClose() {
+    setShowPicker(false);
+    setFocused(false);
+  }
 
+  // Match SubmergedInput exactly
+  const inputBg = focused ? theme.colors.surfaceHighest : theme.colors.surfaceHigh;
+
+  return (
+    <>
       <Pressable
-        onPress={() => { setShowPicker(true); }}
-        className="flex-row items-center rounded-app-lg"
-        style={({ pressed }) => ({
-          backgroundColor: pressed ? theme.colors.brandSoft : theme.colors.surfaceTray,
-          borderColor: showPicker ? theme.colors.brandBright : theme.colors.borderStrong,
-          borderWidth: 1.5,
-          minHeight: 52,
-          paddingHorizontal: 14,
+        accessibilityLabel={label}
+        accessibilityRole="button"
+        onPress={handleOpen}
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          height: 56,
+          borderRadius: 14,
+          backgroundColor: inputBg,
+          borderWidth: focused ? 1.5 : 0,
+          borderColor: focused ? `${theme.colors.brand}33` : 'transparent',
+          shadowColor: theme.colors.brand,
+          shadowOffset: { width: 0, height: 0 },
+          shadowOpacity: focused ? 0.12 : 0,
+          shadowRadius: 8,
+          paddingHorizontal: 16,
           gap: 10,
-        })}>
+        }}>
         <Ionicons
-          color={theme.colors.brand}
-          name="calendar-outline"
-          size={20}
+          name="calendar-clear-outline"
+          size={18}
+          color={hasValue ? theme.colors.brand : theme.colors.inkMuted}
         />
         <Text
-          className="flex-1 font-label text-body"
-          style={{ color: hasValue ? theme.colors.ink : theme.colors.inkMuted }}>
-          {hasValue ? value : 'Select date'}
+          style={{
+            flex: 1,
+            fontFamily: theme.fontFamily.body,
+            fontSize: 15,
+            color: hasValue ? theme.colors.ink : theme.colors.inkMuted,
+            letterSpacing: 0,
+          }}>
+          {hasValue ? formatDisplayDate(value) : 'Select date'}
         </Text>
         <Ionicons
-          color={theme.colors.inkMuted}
-          name="chevron-down"
+          name={focused ? 'chevron-up' : 'chevron-down'}
           size={16}
+          color={theme.colors.inkMuted}
         />
       </Pressable>
 
-      {/* Android: picker renders inline as a modal dialog */}
+      {/* Android — system dialog */}
       {Platform.OS === 'android' && showPicker ? (
         <DateTimePicker
           display="default"
@@ -94,46 +118,52 @@ export function DateField({
         />
       ) : null}
 
-      {/* iOS: wrap in a modal with a Done button */}
+      {/* iOS — bottom sheet spinner */}
       {Platform.OS === 'ios' ? (
         <Modal
           animationType="slide"
+          onRequestClose={handleClose}
           transparent
-          visible={showPicker}
-          onRequestClose={() => { setShowPicker(false); }}>
+          visible={showPicker}>
           <Pressable
-            className="flex-1"
-            style={{ backgroundColor: 'rgba(0,0,0,0.35)' }}
-            onPress={() => { setShowPicker(false); }}
+            onPress={handleClose}
+            style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.40)' }}
           />
-          <View
-            style={{
-              backgroundColor: theme.colors.surface,
-              borderTopLeftRadius: 24,
-              borderTopRightRadius: 24,
-              paddingBottom: 34,
+          <View style={{
+            backgroundColor: theme.colors.surface,
+            borderTopLeftRadius: 24,
+            borderTopRightRadius: 24,
+            paddingBottom: 34,
+          }}>
+            {/* Sheet header */}
+            <View style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              paddingHorizontal: 20,
+              paddingVertical: 14,
+              borderBottomWidth: 1,
+              borderBottomColor: theme.colors.border,
             }}>
-            <View
-              className="flex-row items-center justify-between px-5 py-3"
-              style={{ borderBottomWidth: 1, borderBottomColor: theme.colors.border }}>
-              <Text
-                className="font-label text-body font-bold"
-                style={{ color: theme.colors.inkMuted }}
-                onPress={() => { setShowPicker(false); }}>
-                Cancel
-              </Text>
-              <Text
-                className="font-label text-[15px] font-bold"
-                style={{ color: theme.colors.brand }}>
+              <Pressable
+                onPress={handleClose}
+                style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1, padding: 4 })}>
+                <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 15, color: theme.colors.inkMuted }}>
+                  Cancel
+                </Text>
+              </Pressable>
+              <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 15, color: theme.colors.ink }}>
                 {label}
               </Text>
-              <Text
-                className="font-label text-body font-bold"
-                style={{ color: theme.colors.brand }}
-                onPress={handleIosDone}>
-                Done
-              </Text>
+              <Pressable
+                onPress={handleClose}
+                style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1, padding: 4 })}>
+                <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 15, color: theme.colors.brand }}>
+                  Done
+                </Text>
+              </Pressable>
             </View>
+
             <DateTimePicker
               display="spinner"
               minimumDate={minimumDate}
@@ -145,6 +175,6 @@ export function DateField({
           </View>
         </Modal>
       ) : null}
-    </View>
+    </>
   );
 }

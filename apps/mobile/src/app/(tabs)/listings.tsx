@@ -15,7 +15,7 @@ import {
 
 import { KeylineRow } from '@/components/keyline-row';
 import { PrimaryButton } from '@/components/primary-button';
-import { ScreenShell } from '@/components/screen-shell';
+import { AppShell } from '@/components/app-shell';
 import { StatusPill } from '@/components/status-pill';
 import { TicketCard } from '@/components/ticket-card';
 import { useAuth } from '@/hooks/use-auth';
@@ -333,7 +333,7 @@ export default function ListingsScreen() {
   }
 
   return (
-    <ScreenShell
+    <AppShell
       eyebrow="Listings"
       subtitle="Tap any card for details and actions."
       title="Inventory">
@@ -459,7 +459,7 @@ export default function ListingsScreen() {
           />
         ) : null}
       </Modal>
-    </ScreenShell>
+    </AppShell>
   );
 }
 

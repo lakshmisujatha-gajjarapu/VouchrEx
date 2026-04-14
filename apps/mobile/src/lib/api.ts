@@ -8,6 +8,8 @@ export type SessionUser = {
   readonly name: string;
   readonly email?: string | null;
   readonly status: string;
+  readonly tier: 'GOLD' | 'SILVER' | 'BRONZE';
+  readonly totalSales: number;
 };
 
 export type OtpRequestResult = {
@@ -123,6 +125,7 @@ export type CreateOrderResult = {
 
 export type RevealResult = {
   readonly watermarkedCodeImageUrl: string;
+  readonly voucherCode: string;
   readonly verificationDeadline: string;
   readonly revealCount: number;
   readonly verificationWindowHours: number;

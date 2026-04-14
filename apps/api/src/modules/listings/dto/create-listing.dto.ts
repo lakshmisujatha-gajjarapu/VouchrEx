@@ -7,7 +7,7 @@ const CreateListingSchema = z.object({
     .string()
     .optional()
     .describe('Free-text brand name. Existing brands are reused; new names are added'),
-  voucherType: z.string().describe('Voucher category within the selected brand'),
+  voucherType: z.enum(['gift-card', 'promo-code']).describe('Voucher type'),
   faceValue: z.coerce
     .number()
     .int()

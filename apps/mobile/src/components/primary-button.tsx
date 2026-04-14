@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
@@ -15,6 +16,7 @@ export function PrimaryButton({
   variant = 'flat',
   disabled = false,
   loading = false,
+  icon,
 }: {
   readonly label: string;
   readonly onPress: () => void;
@@ -22,6 +24,7 @@ export function PrimaryButton({
   readonly variant?: 'flat' | 'gradient';
   readonly disabled?: boolean;
   readonly loading?: boolean;
+  readonly icon?: keyof typeof Ionicons.glyphMap;
 }) {
   const theme = useTheme();
 
@@ -130,9 +133,12 @@ export function PrimaryButton({
           {loading
             ? <ActivityIndicator color={textColor} />
             : (
-                <Text style={{ color: textColor, fontSize: 16, fontWeight: '700', fontFamily: 'WorkSans_600SemiBold', letterSpacing: 0.2 }}>
-                  {label}
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  {icon ? <Ionicons name={icon} size={20} color={textColor} /> : null}
+                  <Text style={{ color: textColor, fontSize: 16, fontWeight: '700', fontFamily: 'WorkSans_600SemiBold', letterSpacing: 0.2 }}>
+                    {label}
+                  </Text>
+                </View>
               )}
         </View>
       )}

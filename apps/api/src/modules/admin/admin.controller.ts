@@ -158,7 +158,7 @@ export class AdminController {
     });
   }
 
-  /** Approve KYC for a seller — enables automatic payouts. */
+  /** Manually approve KYC for a seller (accounts are auto-verified on registration; use this to re-approve after a rejection). */
   @ApiHeader({ name: adminHeaderName, required: true })
   @Post('users/:id/approve-kyc')
   async approveKyc(
@@ -185,7 +185,7 @@ export class AdminController {
     return account;
   }
 
-  /** Reject KYC for a seller — payouts remain blocked until re-approved. */
+  /** Manually reject KYC for a seller — payouts will be blocked until re-approved. */
   @ApiHeader({ name: adminHeaderName, required: true })
   @Post('users/:id/reject-kyc')
   async rejectKyc(

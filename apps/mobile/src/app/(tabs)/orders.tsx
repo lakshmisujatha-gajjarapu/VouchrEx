@@ -2,8 +2,8 @@ import { useRouter } from 'expo-router';
 import React, { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 
+import { AppShell } from '@/components/app-shell';
 import { FilterChip } from '@/components/filter-chip';
-import { ScreenShell } from '@/components/screen-shell';
 import { StatusPill } from '@/components/status-pill';
 import { TicketCard } from '@/components/ticket-card';
 import { useAuth } from '@/hooks/use-auth';
@@ -83,7 +83,7 @@ export default function OrdersScreen() {
   }), [visibleOrders]);
 
   return (
-    <ScreenShell eyebrow="Track" subtitle="See what needs action." title="Orders">
+    <AppShell eyebrow="Track" subtitle="See what needs action." title="Orders">
       <View className="flex-row gap-2">
         <FilterChip label="Buying"   onPress={() => { setSegment('buying'); }}   selected={segment === 'buying'} />
         <FilterChip label="Selling"  onPress={() => { setSegment('selling'); }}  selected={segment === 'selling'} />
@@ -124,6 +124,6 @@ export default function OrdersScreen() {
       {!ordersResource.loading && visibleOrders.length === 0 ? (
         <TicketCard subtitle="Orders show up after a reservation." title="No orders yet" />
       ) : null}
-    </ScreenShell>
+    </AppShell>
   );
 }

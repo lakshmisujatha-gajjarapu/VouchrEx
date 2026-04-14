@@ -49,6 +49,7 @@ export class PayoutAccountsService {
           upiId,
           razorpayContactId: contactId,
           razorpayFundAccountId: fundAccountId,
+          kycStatus: 'VERIFIED',
           verifiedAt: new Date(),
           accountHolderName: null,
           bankAccountEncrypted: null
@@ -59,6 +60,7 @@ export class PayoutAccountsService {
           upiId,
           razorpayContactId: contactId,
           razorpayFundAccountId: fundAccountId,
+          kycStatus: 'VERIFIED',
           verifiedAt: new Date()
         }
       });
@@ -92,6 +94,7 @@ export class PayoutAccountsService {
         bankAccountEncrypted: encrypted,
         razorpayContactId: contactId,
         razorpayFundAccountId: fundAccountId,
+        kycStatus: 'VERIFIED',
         verifiedAt: new Date(),
         upiId: null
       },
@@ -102,6 +105,7 @@ export class PayoutAccountsService {
         bankAccountEncrypted: encrypted,
         razorpayContactId: contactId,
         razorpayFundAccountId: fundAccountId,
+        kycStatus: 'VERIFIED',
         verifiedAt: new Date()
       }
     });
