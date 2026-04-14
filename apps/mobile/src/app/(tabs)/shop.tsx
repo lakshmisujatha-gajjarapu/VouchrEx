@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { FilterChip } from '@/components/filter-chip';
 import React, { useCallback, useDeferredValue, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -117,45 +118,38 @@ export default function ShopScreen() {
               </Text>
             </View>
 
-            {/* ── Search bar + sort button ── */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-              <View style={{
-                flex: 1,
-                flexDirection: 'row',
-                alignItems: 'center',
-                height: 52,
-                borderRadius: 9999,
-                backgroundColor: searchFocused ? theme.colors.surface : theme.colors.surfaceHigh,
-                borderWidth: searchFocused ? 2 : 0,
-                borderColor: searchFocused ? theme.colors.brand : 'transparent',
-                shadowColor: theme.colors.brand,
-                shadowOffset: { width: 0, height: 0 },
-                shadowOpacity: searchFocused ? 0.12 : 0,
-                shadowRadius: 12,
-              }}>
-                <Ionicons
-                  color={searchFocused ? theme.colors.brand : theme.colors.inkMuted}
-                  name="search-outline"
-                  size={18}
-                  style={{ marginLeft: 16 }}
-                />
-                <TextInput
-                  cursorColor={theme.colors.brand}
-                  onBlur={() => { setSearchFocused(false); }}
-                  onChangeText={setQuery}
-                  onFocus={() => { setSearchFocused(true); }}
-                  placeholder="Search brand or category"
-                  placeholderTextColor={theme.colors.inkMuted}
-                  style={{
-                    flex: 1, height: '100%', paddingHorizontal: 10,
-                    fontSize: 15, fontFamily: theme.fontFamily.body,
-                    color: theme.colors.ink, letterSpacing: 0,
-                  }}
-                  value={query}
-                />
-              </View>
-
-              {/* Sort button */}
+            {/* ── Search bar (listings.tsx style) ── */}
+            <View style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              borderRadius: 14,
+              borderWidth: 1,
+              paddingHorizontal: 12,
+              gap: 8,
+              minHeight: 48,
+              backgroundColor: theme.colors.surfaceTray,
+              borderColor: searchFocused ? theme.colors.brand : theme.colors.border,
+            }}>
+              <Ionicons color={searchFocused ? theme.colors.brand : theme.colors.inkMuted} name="search-outline" size={18} />
+              <TextInput
+                cursorColor={theme.colors.brand}
+                onBlur={() => { setSearchFocused(false); }}
+                onChangeText={setQuery}
+                onFocus={() => { setSearchFocused(true); }}
+                placeholder="Search brand or category"
+                placeholderTextColor={theme.colors.inkMuted}
+                style={{
+                  flex: 1, fontFamily: theme.fontFamily.body,
+                  fontSize: 15, color: theme.colors.ink, letterSpacing: 0,
+                }}
+                value={query}
+              />
+              {query ? (
+                <Pressable onPress={() => { setQuery(''); }} accessibilityLabel="Clear search">
+                  <Ionicons color={theme.colors.inkMuted} name="close-circle" size={18} />
+                </Pressable>
+              ) : null}
+              <View style={{ width: 1, height: 18, backgroundColor: theme.colors.border }} />
               <View ref={sortBtnRef} collapsable={false}>
                 <Pressable
                   onPress={popoverVisible ? closePopover : openPopover}
@@ -163,25 +157,21 @@ export default function ShopScreen() {
                     flexDirection: 'row',
                     alignItems: 'center',
                     gap: 5,
-                    height: 52,
-                    paddingHorizontal: 14,
-                    borderRadius: 9999,
-                    backgroundColor: popoverVisible ? theme.colors.brandSoft : theme.colors.surfaceHigh,
+                    minHeight: 32,
+                    paddingHorizontal: 10,
+                    borderRadius: 99,
                     borderWidth: 1,
-                    borderColor: popoverVisible ? theme.colors.brand : 'transparent',
+                    backgroundColor: popoverVisible ? theme.colors.brandSoft : theme.colors.surfaceRaised,
+                    borderColor: popoverVisible ? theme.colors.pillBrandBorder : theme.colors.border,
                     opacity: pressed ? 0.8 : 1,
                   })}>
-                  <Ionicons
-                    name="swap-vertical-outline"
-                    size={15}
-                    color={popoverVisible ? theme.colors.brand : theme.colors.inkMuted}
-                  />
+                  <Ionicons name={popoverVisible ? 'swap-vertical' : 'swap-vertical-outline'} size={13} color={popoverVisible ? theme.colors.brand : theme.colors.inkMuted} />
                   <Text style={{
                     fontFamily: theme.fontFamily.labelSemi,
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: '600',
-                    color: popoverVisible ? theme.colors.brand : theme.colors.ink,
-                  }}>
+                    color: popoverVisible ? theme.colors.brand : theme.colors.inkMuted,
+                  }} numberOfLines={1}>
                     {sortLabel(sort)}
                   </Text>
                 </Pressable>
@@ -195,25 +185,12 @@ export default function ShopScreen() {
               {categories.map((cat) => {
                 const active = cat === 'All' ? !category : category === cat;
                 return (
-                  <Pressable
+                  <FilterChip
                     key={cat}
+                    label={cat}
+                    selected={active}
                     onPress={() => { setCategory(cat === 'All' ? undefined : cat); }}
-                    style={{
-                      paddingHorizontal: 20,
-                      paddingVertical: 10,
-                      borderRadius: 9999,
-                      backgroundColor: active ? theme.colors.surfaceHighest : theme.colors.surfaceHigh,
-                      borderWidth: active ? 1 : 0,
-                      borderColor: active ? theme.colors.border : 'transparent',
-                    }}>
-                    <Text style={{
-                      fontFamily: theme.fontFamily.label,
-                      fontSize: 13,
-                      color: active ? theme.colors.ink : theme.colors.inkMuted,
-                    }}>
-                      {cat}
-                    </Text>
-                  </Pressable>
+                  />
                 );
               })}
             </ScrollView>
