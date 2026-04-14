@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
   const token = cookieStore.get(AUTH_CONFIG.COOKIE_NAME)?.value;
   if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const body = await request.json();
+  const body = (await request.json()) as Record<string, unknown>;
   const res = await fetch(`${API_CONFIG.BASE_URL}/admin/team`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', [ADMIN_HEADER]: token },

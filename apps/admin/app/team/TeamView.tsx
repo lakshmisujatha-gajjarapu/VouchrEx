@@ -69,9 +69,10 @@ export default function TeamView({ team, currentAdminId }: TeamViewProps) {
 
   const handleSetPassword = () => {
     if (!newPw.trim()) { setError('Password is required.'); return; }
+    if (!pwMember) return;
     setError('');
     startTransition(async () => {
-      const res = await fetch(`/api/team/${pwMember!.id}/set-password`, {
+      const res = await fetch(`/api/team/${pwMember.id}/set-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password: newPw }),
@@ -246,7 +247,7 @@ export default function TeamView({ team, currentAdminId }: TeamViewProps) {
             <DialogDescription style={{ fontFamily: 'var(--font-body)' }}>
               {toggleMember?.active
                 ? `${toggleMember.name} will be signed out and cannot log in.`
-                : `${toggleMember?.name} will be able to log in again.`}
+                : `${toggleMember?.name ?? ''} will be able to log in again.`}
             </DialogDescription>
           </DialogHeader>
           {error && <p className="rounded-xl px-4 py-3 text-sm" style={{ backgroundColor: 'var(--color-destructive-soft)', color: 'var(--color-destructive)', fontFamily: 'var(--font-body)' }}>{error}</p>}

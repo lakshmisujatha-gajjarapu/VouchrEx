@@ -12,7 +12,7 @@ export async function POST(
   if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { memberId } = await params;
-  const body = await request.json();
+  const body = (await request.json()) as Record<string, unknown>;
   const res = await fetch(`${API_CONFIG.BASE_URL}/admin/team/${memberId}/set-password`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', [ADMIN_HEADER]: token },

@@ -47,7 +47,7 @@ export class AuthService {
         const secondsSinceLast = (now - lastChallenge.createdAt.getTime()) / 1000;
         if (secondsSinceLast < this.otpResendCooldownSeconds) {
           const waitSeconds = Math.ceil(this.otpResendCooldownSeconds - secondsSinceLast);
-          throw new BadRequestException(`Please wait ${waitSeconds}s before requesting a new code.`);
+          throw new BadRequestException(`Please wait ${String(waitSeconds)}s before requesting a new code.`);
         }
       }
 

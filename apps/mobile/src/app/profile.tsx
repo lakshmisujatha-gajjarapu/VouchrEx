@@ -102,17 +102,13 @@ function SectionCard({ children }: { readonly children: React.ReactNode }) {
   );
 }
 
-function Divider() {
-  const theme = useTheme();
-  return <View style={{ height: 1, backgroundColor: theme.colors.border, marginLeft: 68 }} />;
-}
-
 export default function ProfileScreen() {
   const auth = useAuth();
   const { user } = auth;
   const theme = useTheme();
   const router = useRouter();
-  const { preference, setPreference } = useThemePreference();
+  const themePrefs = useThemePreference();
+  const { preference } = themePrefs;
 
   const initial = (user?.name ?? user?.phone ?? '?')[0].toUpperCase();
   const tier = (user?.tier ?? 'BRONZE').toLowerCase() as 'gold' | 'silver' | 'bronze';
@@ -130,7 +126,7 @@ export default function ProfileScreen() {
   const appearanceOrder: ThemePreference[] = ['system', 'light', 'dark'];
   function cycleAppearance() {
     const idx = appearanceOrder.indexOf(preference);
-    void setPreference(appearanceOrder[(idx + 1) % appearanceOrder.length]);
+    void themePrefs.setPreference(appearanceOrder[(idx + 1) % appearanceOrder.length]);
   }
 
   return (

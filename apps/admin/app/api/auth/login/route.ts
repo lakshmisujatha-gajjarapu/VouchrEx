@@ -5,7 +5,7 @@ import { AUTH_CONFIG, API_CONFIG, ADMIN_HEADER } from '@/lib/constants';
 export async function POST(request: NextRequest) {
   const { email, password } = (await request.json()) as { email: string; password: string };
 
-  if (!email?.trim() || !password?.trim()) {
+  if (!email.trim() || !password.trim()) {
     return NextResponse.json({ error: 'Email and password are required.' }, { status: 400 });
   }
 
@@ -19,8 +19,9 @@ export async function POST(request: NextRequest) {
     });
 
     if (!res.ok) {
-      const body = (await res.json()) as { message?: string };
-      const msg = Array.isArray(body.message) ? body.message[0] : (body.message ?? 'Invalid credentials.');
+      const body = (await res.json()) as { message?: string | string[] };
+      const rawMsg = body.message;
+      const msg = Array.isArray(rawMsg) ? (rawMsg[0] ?? 'Invalid credentials.') : (rawMsg ?? 'Invalid credentials.');
       return NextResponse.json({ error: msg }, { status: 401 });
     }
 
@@ -45,7 +46,7 @@ export async function POST(request: NextRequest) {
 /** Bootstrap login: raw ADMIN_API_TOKEN still works for initial setup. */
 export async function PUT(request: NextRequest) {
   const { token } = (await request.json()) as { token: string };
-  if (!token?.trim()) {
+  if (!token.trim()) {
     return NextResponse.json({ error: 'Token is required.' }, { status: 400 });
   }
 

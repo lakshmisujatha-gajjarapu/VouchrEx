@@ -429,7 +429,7 @@ export default function SellScreen() {
             <View style={{ paddingHorizontal: 20, gap: 24 }}>
 
               {/* ── KYC status banner ── */}
-              {payoutAccount?.kycStatus === 'PENDING' && (
+              {payoutAccount.kycStatus === 'PENDING' && (
                 <View style={{
                   flexDirection: 'row', gap: 10, alignItems: 'flex-start',
                   backgroundColor: theme.colors.warningSoft,
@@ -441,7 +441,7 @@ export default function SellScreen() {
                   </Text>
                 </View>
               )}
-              {payoutAccount?.kycStatus === 'REJECTED' && (
+              {payoutAccount.kycStatus === 'REJECTED' && (
                 <View style={{
                   flexDirection: 'row', gap: 10, alignItems: 'flex-start',
                   backgroundColor: theme.colors.dangerSoft,

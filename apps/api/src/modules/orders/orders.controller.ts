@@ -158,12 +158,12 @@ export class OrdersController {
     description: 'Manual Phase 1 admin token for dispute resolution.'
   })
   @Post('disputes/:id/resolve')
-  resolveDispute(
+  async resolveDispute(
     @Param('id') id: string,
     @Body() resolveDisputeDto: ResolveDisputeDto,
     @Headers(adminHeaderName) adminToken?: string
   ) {
-    this.adminAccessService.requireAdminAccess(adminToken);
+    await this.adminAccessService.requireAdminAccess(adminToken);
     return this.ordersService.resolveDispute(id, resolveDisputeDto.resolution);
   }
 }

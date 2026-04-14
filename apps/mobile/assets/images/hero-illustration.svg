@@ -1,0 +1,135 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 240" width="440" height="240">
+  <defs>
+    <!-- Ticket gradient -->
+    <linearGradient id="ticketGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7C3AED"/>
+      <stop offset="100%" stop-color="#4C1D95"/>
+    </linearGradient>
+    <!-- Ticket shimmer -->
+    <radialGradient id="ticketShine" cx="30%" cy="20%" r="60%">
+      <stop offset="0%" stop-color="white" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="white" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Glow filter for arrows -->
+    <filter id="arrowGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <!-- Soft shadow for ticket -->
+    <filter id="ticketShadow" x="-10%" y="-10%" width="120%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="#7C3AED" flood-opacity="0.35"/>
+    </filter>
+    <!-- Coin gradient -->
+    <linearGradient id="coinGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34D399"/>
+      <stop offset="100%" stop-color="#059669"/>
+    </linearGradient>
+  </defs>
+
+  <!-- ── Left floating coin ── -->
+  <circle cx="54" cy="82" r="28" fill="url(#coinGrad)" opacity="0.92" filter="url(#ticketShadow)"/>
+  <text x="54" y="89" text-anchor="middle" font-family="Arial, sans-serif" font-weight="900" font-size="22" fill="white">₹</text>
+
+  <!-- ── Right floating coin ── -->
+  <circle cx="386" cy="158" r="22" fill="url(#coinGrad)" opacity="0.80"/>
+  <text x="386" y="165" text-anchor="middle" font-family="Arial, sans-serif" font-weight="900" font-size="18" fill="white">₹</text>
+
+  <!-- ── Small decorative dots ── -->
+  <circle cx="92" cy="38" r="4" fill="#A78BFA" opacity="0.5"/>
+  <circle cx="108" cy="52" r="2.5" fill="#A78BFA" opacity="0.35"/>
+  <circle cx="348" cy="196" r="4" fill="#34D399" opacity="0.45"/>
+  <circle cx="364" cy="208" r="2.5" fill="#34D399" opacity="0.3"/>
+  <circle cx="40" cy="160" r="3" fill="#C4B5FD" opacity="0.3"/>
+  <circle cx="400" cy="60" r="3" fill="#6EE7B7" opacity="0.3"/>
+
+  <!-- ── Main ticket ── -->
+  <g filter="url(#ticketShadow)">
+    <!-- Ticket body: horizontal coupon shape with notch cutouts -->
+    <path d="
+      M 136,72
+      L 304,72
+      Q 316,72 316,84
+      L 316,100
+      A 14,14 0 0,0 316,140
+      L 316,156
+      Q 316,168 304,168
+      L 136,168
+      Q 124,168 124,156
+      L 124,140
+      A 14,14 0 0,0 124,100
+      L 124,84
+      Q 124,72 136,72
+      Z
+    " fill="url(#ticketGrad)"/>
+    <!-- Shine overlay -->
+    <path d="
+      M 136,72
+      L 304,72
+      Q 316,72 316,84
+      L 316,100
+      A 14,14 0 0,0 316,140
+      L 316,156
+      Q 316,168 304,168
+      L 136,168
+      Q 124,168 124,156
+      L 124,140
+      A 14,14 0 0,0 124,100
+      L 124,84
+      Q 124,72 136,72
+      Z
+    " fill="url(#ticketShine)"/>
+  </g>
+
+  <!-- Perforated tear line -->
+  <line x1="220" y1="76" x2="220" y2="164"
+    stroke="rgba(196,181,253,0.35)" stroke-width="1.5"
+    stroke-dasharray="5,4"/>
+
+  <!-- ── Exchange arrows ── -->
+  <g filter="url(#arrowGlow)">
+    <!-- Arrow → top (left to right) -->
+    <path d="M 148,104 L 288,104"
+      stroke="#34D399" stroke-width="7" stroke-linecap="round"/>
+    <path d="M 272,91 L 288,104 L 272,117"
+      fill="none" stroke="#34D399" stroke-width="7"
+      stroke-linecap="round" stroke-linejoin="round"/>
+
+    <!-- Arrow ← bottom (right to left) -->
+    <path d="M 292,136 L 152,136"
+      stroke="#34D399" stroke-width="7" stroke-linecap="round"/>
+    <path d="M 168,123 L 152,136 L 168,149"
+      fill="none" stroke="#34D399" stroke-width="7"
+      stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <!-- ── % badge on ticket ── -->
+  <circle cx="220" cy="120" r="16" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.25)" stroke-width="1"/>
+  <text x="220" y="126" text-anchor="middle"
+    font-family="Arial, sans-serif" font-weight="900" font-size="16"
+    fill="white" opacity="0.9">%</text>
+
+  <!-- ── Floating mini ticket (top right, tilted) ── -->
+  <g transform="rotate(-18, 370, 68)">
+    <rect x="346" y="52" width="48" height="28" rx="6"
+      fill="#5B21B6" opacity="0.75"/>
+    <line x1="370" y1="55" x2="370" y2="77"
+      stroke="rgba(196,181,253,0.5)" stroke-width="1" stroke-dasharray="3,2.5"/>
+    <text x="370" y="70" text-anchor="middle"
+      font-family="Arial, sans-serif" font-weight="700" font-size="10"
+      fill="rgba(255,255,255,0.8)">VEX</text>
+  </g>
+
+  <!-- ── Floating mini ticket (bottom left, tilted) ── -->
+  <g transform="rotate(14, 72, 178)">
+    <rect x="48" y="164" width="48" height="28" rx="6"
+      fill="#065F46" opacity="0.65"/>
+    <line x1="72" y1="167" x2="72" y2="189"
+      stroke="rgba(110,231,183,0.5)" stroke-width="1" stroke-dasharray="3,2.5"/>
+    <text x="72" y="182" text-anchor="middle"
+      font-family="Arial, sans-serif" font-weight="700" font-size="10"
+      fill="rgba(255,255,255,0.8)">50%</text>
+  </g>
+</svg>

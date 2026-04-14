@@ -1,4 +1,4 @@
-import { BlurView } from 'expo-blur';
+import CountryFlag from 'react-native-country-flag';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { Redirect } from 'expo-router';
@@ -9,14 +9,13 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  ScrollView,
   Text,
   TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import voucherIcon from '../../assets/images/voucher-icon.png';
+import heroIcon from '../../assets/images/hero-icon.png';
 
 import { PrimaryButton } from '@/components/primary-button';
 import { useAuth } from '@/hooks/use-auth';
@@ -112,54 +111,27 @@ export default function SignInScreen() {
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}>
-        <ScrollView
-          contentContainerStyle={{ flexGrow: 1 }}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}>
-          <View style={{ flex: 1, paddingHorizontal: 20, paddingTop: 20, paddingBottom: 40 }}>
+          <View style={{ flex: 1, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 32 }}>
 
             {/* ── Brand mark ── */}
-            <View style={{ alignItems: 'center', marginTop: 36, marginBottom: 48 }}>
-              {/* Icon badge — glassmorphic */}
-              <BlurView
-                intensity={20}
-                tint="dark"
-                style={{
-                  width: 84,
-                  height: 84,
-                  borderRadius: 24,
-                  overflow: 'hidden',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginBottom: 20,
-                  borderWidth: 1,
-                  borderColor: 'rgba(255,255,255,0.18)',
-                }}>
-                <View
-                  style={{
-                    position: 'absolute',
-                    top: 0, right: 0, bottom: 0, left: 0,
-                    backgroundColor: 'rgba(167,139,250,0.18)',
-                  }}
-                />
-                <Image
-                  source={voucherIcon}
-                  style={{ width: 44, height: 44, tintColor: '#FFFFFF' }}
-                />
-              </BlurView>
+            <View style={{ alignItems: 'center', marginTop: 12, marginBottom: 16 }}>
+              {/* Hero illustration */}
+              <Image
+                source={heroIcon}
+                style={{ width: 130, height: 126, resizeMode: 'contain', marginBottom: 12 }}
+              />
 
               {/* Wordmark */}
-              <Text style={{ fontFamily: 'Manrope_800ExtraBold', fontSize: 36, letterSpacing: -0.8, lineHeight: 40 }}>
-                <Text style={{ color: '#FFFFFF' }}>Vouchr</Text>
-                <Text style={{ color: '#A78BFA' }}>Ex</Text>
+              <Text style={{ fontFamily: 'Manrope_800ExtraBold', fontSize: 32, letterSpacing: -0.8, lineHeight: 36, color: '#D0BCFF' }}>
+                VouchrEx
               </Text>
 
               {/* Tagline */}
               <Text
                 style={{
-                  marginTop: 10,
-                  fontSize: 14,
-                  lineHeight: 21,
+                  marginTop: 8,
+                  fontSize: 13,
+                  lineHeight: 19,
                   textAlign: 'center',
                   fontFamily: 'WorkSans_400Regular',
                   color: 'rgba(255,255,255,0.52)',
@@ -171,12 +143,7 @@ export default function SignInScreen() {
             </View>
 
             {/* ── Form ── */}
-            <View
-              style={{
-                borderTopWidth: 1,
-                borderTopColor: 'rgba(255,255,255,0.10)',
-                paddingTop: 32,
-              }}>
+            <View style={{ paddingTop: 8 }}>
 
               <Text
                 style={{
@@ -188,6 +155,11 @@ export default function SignInScreen() {
                 }}>
                 {otpRequest ? (isNewUser ? 'Create account' : 'Welcome back') : 'Login or sign up'}
               </Text>
+
+              {/* Purple underline bar — initial state only */}
+              {!otpRequest && (
+                <View style={{ height: 4, width: 48, backgroundColor: '#A78BFA', borderRadius: 2, marginBottom: 12 }} />
+              )}
 
               <Text
                 style={{
@@ -205,16 +177,16 @@ export default function SignInScreen() {
               {/* Phone input */}
               {!otpRequest ? (
                 <View style={{ marginBottom: 24 }}>
-                  <Text style={styles.fieldLabel}>MOBILE NUMBER</Text>
                   <View style={styles.underlineRow}>
-                    <Text style={styles.prefix}>+91</Text>
+                    <CountryFlag isoCode="IN" size={20} style={styles.flagIcon} />
+                    <Text style={{ fontFamily: 'WorkSans_600SemiBold', fontSize: 16, color: '#F5F3FF', marginRight: 10 }}>+91</Text>
                     <View style={styles.prefixDivider} />
                     <TextInput
                       keyboardType="phone-pad"
                       maxLength={10}
                       onChangeText={(v) => { setPhoneDigits(normalizeDigits(v)); setError(null); }}
-                      placeholder="0000000000"
-                      placeholderTextColor="rgba(255,255,255,0.22)"
+                      placeholder="Mobile number"
+                      placeholderTextColor="rgba(255,255,255,0.30)"
                       style={styles.underlineInput}
                       value={phoneDigits}
                     />
@@ -223,10 +195,10 @@ export default function SignInScreen() {
                 </View>
               ) : (
                 <View style={{ gap: 24, marginBottom: 24 }}>
-                  {/* Locked phone */}
+                  {/* Locked phone — show masked number */}
                   <View>
                     <Text style={styles.fieldLabel}>MOBILE</Text>
-                    <Text style={[styles.underlineInput, { paddingLeft: 0, paddingVertical: 10 }]}>
+                    <Text style={{ fontSize: 18, fontFamily: 'WorkSans_500Medium', color: '#F5F3FF', paddingVertical: 10 }}>
                       {activePhone}
                     </Text>
                     <View style={styles.underlineLine} />
@@ -340,31 +312,27 @@ export default function SignInScreen() {
                   </Text>
                 </Pressable>
               ) : (
-                /* Trust indicator panel — spec: mt-12 bg-surface-container-low border-l-8 border-secondary */
-                <View style={{
-                  marginTop: 40,
-                  padding: 20,
-                  backgroundColor: '#13102B',
-                  borderRadius: 24,
-                  borderLeftWidth: 6,
-                  borderLeftColor: '#7C3AED',
-                  flexDirection: 'row',
-                  gap: 14,
-                  alignItems: 'flex-start',
-                }}>
+                <View style={{ alignItems: 'center', marginTop: 24 }}>
                   <View style={{
-                    padding: 8,
-                    backgroundColor: 'rgba(124,58,237,0.10)',
-                    borderRadius: 10,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 8,
+                    paddingHorizontal: 16,
+                    paddingVertical: 10,
+                    borderRadius: 999,
+                    backgroundColor: 'rgba(27,22,58,0.6)',
+                    borderWidth: 1,
+                    borderColor: 'rgba(255,255,255,0.08)',
                   }}>
-                    <Ionicons name="shield-checkmark" size={22} color="#A78BFA" />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontFamily: 'Manrope_700Bold', fontSize: 15, color: '#F1F0F8', marginBottom: 4 }}>
+                    <Ionicons name="shield-checkmark" size={14} color="#A78BFA" />
+                    <Text style={{
+                      fontFamily: 'WorkSans_600SemiBold',
+                      fontSize: 10,
+                      color: 'rgba(255,255,255,0.5)',
+                      letterSpacing: 2,
+                      textTransform: 'uppercase',
+                    }}>
                       Secure Verification
-                    </Text>
-                    <Text style={{ fontFamily: 'WorkSans_400Regular', fontSize: 13, color: 'rgba(255,255,255,0.52)', lineHeight: 19 }}>
-                      Your connection is encrypted with vault-grade security protocols.
                     </Text>
                   </View>
                 </View>
@@ -372,7 +340,6 @@ export default function SignInScreen() {
             </View>
 
           </View>
-        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -391,11 +358,9 @@ const styles = {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
   },
-  prefix: {
-    fontSize: 18,
-    fontFamily: 'Manrope_700Bold',
-    color: '#F5F3FF',
-    paddingRight: 12,
+  flagIcon: {
+    marginRight: 8,
+    borderRadius: 3,
   },
   prefixDivider: {
     width: 1,

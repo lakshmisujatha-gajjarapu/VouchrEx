@@ -52,8 +52,8 @@ export class BrandsController {
     description: 'Manual Phase 1 admin token for catalog bootstrap.'
   })
   @Post('seed')
-  seedDefaults(@Headers(adminHeaderName) adminToken?: string) {
-    this.adminAccessService.requireAdminAccess(adminToken);
+  async seedDefaults(@Headers(adminHeaderName) adminToken?: string) {
+    await this.adminAccessService.requireAdminAccess(adminToken);
     return this.brandsService.seedDefaults();
   }
 }
