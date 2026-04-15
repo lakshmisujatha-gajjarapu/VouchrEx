@@ -1,5 +1,5 @@
 import { Platform } from 'react-native';
-import { AUTH, BRANDS, LISTINGS, NOTIFICATIONS, ORDERS, PAYOUTS } from './routes';
+import { AUTH, BRANDS, LISTINGS, NOTIFICATIONS, ORDERS, PAYOUTS, USERS } from './routes';
 
 const sessionHeaderName = 'x-session-token';
 
@@ -192,7 +192,7 @@ async function apiRequest<T>(path: string, options: RequestOptions = {}) {
   let response: Response;
   try {
     response = await fetch(
-      `${apiBaseUrl}${path}${query.size > 0 ? `?${query.toString()}` : ''}`,
+      `${apiBaseUrl}${path}${query.toString() ? `?${query.toString()}` : ''}`,
       {
         method: options.method ?? 'GET',
         headers: {
@@ -443,5 +443,12 @@ export const api = {
       method: 'POST',
       sessionToken
     });
-  }
+  },
+  updateMe(sessionToken: string, input: { readonly name?: string; readonly email?: string | null }) {
+    return apiRequest<SessionUser>(USERS.ME, {
+      method: 'PATCH',
+      sessionToken,
+      body: input,
+    });
+  },
 };

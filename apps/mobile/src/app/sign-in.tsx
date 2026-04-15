@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  ScrollView,
   Text,
   TextInput,
   View,
@@ -20,6 +21,9 @@ import heroIcon from '../../assets/images/hero-icon.png';
 
 import { PrimaryButton } from '@/components/primary-button';
 import { useAuth } from '@/hooks/use-auth';
+
+// Sign-in screen is always dark by design (StatusBar style="light")
+const GRADIENT = ['#0D0B1E', '#1A173D', '#2E1F6B'] as const;
 
 function normalizeDigits(value: string) {
   return value.replace(/\D/g, '').slice(0, 10);
@@ -76,7 +80,7 @@ export default function SignInScreen() {
       <StatusBar style="light" />
 
       <LinearGradient
-        colors={theme.gradients.signIn}
+        colors={GRADIENT}
         end={{ x: 0.6, y: 1 }}
         start={{ x: 0.2, y: 0 }}
         style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 }}
@@ -110,11 +114,14 @@ export default function SignInScreen() {
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}>
-          <View style={{ flex: 1, paddingHorizontal: theme.spacing[5], paddingTop: theme.spacing[4], paddingBottom: theme.spacing[8] }}>
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1 }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}>
+          <View style={{ flex: 1, paddingHorizontal: theme.spacing[5], paddingTop: theme.spacing[5], paddingBottom: theme.spacing[8] }}>
 
             {/* ── Brand mark ── */}
             <View style={{ alignItems: 'center', marginTop: theme.spacing[3], marginBottom: theme.spacing[4] }}>
-              {/* Hero illustration */}
               <Image
                 source={heroIcon}
                 style={{ width: 130, height: 126, resizeMode: 'contain', marginBottom: theme.spacing[3] }}
@@ -133,11 +140,12 @@ export default function SignInScreen() {
                   lineHeight: 19,
                   textAlign: 'center',
                   fontFamily: theme.fontFamily.body,
-                  color: theme.colors.inkMuted,
+                  color: theme.colors.glassText,
                   letterSpacing: 0.1,
+                  opacity: 0.52,
                 }}>
                 Buy &amp; sell vouchers.{' '}
-                <Text style={{ color: theme.colors.inkSecondary }}>Payment protected.</Text>
+                <Text style={{ opacity: 1 / 0.52 * 0.72 }}>Payment protected.</Text>
               </Text>
             </View>
 
@@ -148,25 +156,21 @@ export default function SignInScreen() {
                 style={{
                   fontFamily: theme.fontFamily.headlineExtra,
                   fontSize: theme.fontSize.title,
-                  color: theme.colors.ink,
+                  color: theme.colors.glassText,
                   letterSpacing: -0.4,
                   marginBottom: 6,
                 }}>
                 {otpRequest ? (isNewUser ? 'Create account' : 'Welcome back') : 'Login or sign up'}
               </Text>
 
-              {/* Purple underline bar — initial state only */}
-              {!otpRequest && (
-                <View style={{ height: 4, width: 48, backgroundColor: theme.colors.brand, borderRadius: 2, marginBottom: theme.spacing[3] }} />
-              )}
-
               <Text
                 style={{
                   fontSize: 14,
                   fontFamily: theme.fontFamily.body,
-                  color: theme.colors.inkMuted,
+                  color: theme.colors.glassText,
                   marginBottom: theme.spacing[7],
                   lineHeight: 20,
+                  opacity: 0.48,
                 }}>
                 {otpRequest
                   ? `Code sent to ${activePhone}${otpDeadline ? ` · expires ${otpDeadline}` : ''}`
@@ -178,59 +182,59 @@ export default function SignInScreen() {
                 <View style={{ marginBottom: theme.spacing[6] }}>
                   <View style={styles.underlineRow}>
                     <CountryFlag isoCode="IN" size={20} style={styles.flagIcon} />
-                    <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 16, color: theme.colors.ink, marginRight: 10 }}>+91</Text>
-                    <View style={[styles.prefixDivider, { backgroundColor: theme.colors.glassBorder }]} />
+                    <Text style={styles.prefix}>+91</Text>
+                    <View style={styles.prefixDivider} />
                     <TextInput
                       keyboardType="phone-pad"
                       maxLength={10}
                       onChangeText={(v) => { setPhoneDigits(normalizeDigits(v)); setError(null); }}
                       placeholder="Mobile number"
-                      placeholderTextColor={theme.colors.inkMuted}
-                      style={[styles.underlineInput, { fontFamily: theme.fontFamily.label, color: theme.colors.ink }]}
+                      placeholderTextColor="rgba(255,255,255,0.22)"
+                      style={[styles.underlineInput, { fontFamily: theme.fontFamily.label }]}
                       value={phoneDigits}
                     />
                   </View>
-                  <View style={[styles.underlineLine, { backgroundColor: theme.colors.glassBorder }]} />
+                  <View style={styles.underlineLine} />
                 </View>
               ) : (
                 <View style={{ gap: theme.spacing[6], marginBottom: theme.spacing[6] }}>
-                  {/* Locked phone — show masked number */}
+                  {/* Locked phone */}
                   <View>
-                    <Text style={[styles.fieldLabel, { fontFamily: theme.fontFamily.labelSemi, color: theme.colors.inkMuted }]}>MOBILE</Text>
-                    <Text style={{ fontSize: theme.fontSize.heading, fontFamily: theme.fontFamily.label, color: theme.colors.ink, paddingVertical: 10 }}>
+                    <Text style={styles.fieldLabel}>MOBILE</Text>
+                    <Text style={[styles.underlineInput, { paddingLeft: 0, paddingVertical: 10 }]}>
                       {activePhone}
                     </Text>
-                    <View style={[styles.underlineLine, { backgroundColor: theme.colors.glassBorder }]} />
+                    <View style={styles.underlineLine} />
                   </View>
 
                   {/* Name — new users only */}
                   {isNewUser ? (
                     <View>
-                      <Text style={[styles.fieldLabel, { fontFamily: theme.fontFamily.labelSemi, color: theme.colors.inkMuted }]}>YOUR NAME</Text>
+                      <Text style={styles.fieldLabel}>YOUR NAME</Text>
                       <TextInput
                         autoCapitalize="words"
                         autoFocus
                         onChangeText={(v) => { setProfileName(v); setError(null); }}
                         placeholder="Full name"
-                        placeholderTextColor={theme.colors.inkMuted}
-                        style={[styles.underlineInput, { fontFamily: theme.fontFamily.label, color: theme.colors.ink }]}
+                        placeholderTextColor="rgba(255,255,255,0.22)"
+                        style={[styles.underlineInput, { fontFamily: theme.fontFamily.label }]}
                         value={profileName}
                       />
-                      <View style={[styles.underlineLine, { backgroundColor: theme.colors.glassBorder }]} />
+                      <View style={styles.underlineLine} />
                     </View>
                   ) : null}
 
                   {/* OTP */}
                   <View>
-                    <Text style={[styles.fieldLabel, { fontFamily: theme.fontFamily.labelSemi, color: theme.colors.inkMuted }]}>OTP CODE</Text>
+                    <Text style={styles.fieldLabel}>OTP CODE</Text>
                     <TextInput
                       autoFocus={!isNewUser}
                       keyboardType="number-pad"
                       maxLength={6}
                       onChangeText={(v) => { setCode(v.replace(/\D/g, '').slice(0, 6)); setError(null); }}
                       placeholder="· · · · · ·"
-                      placeholderTextColor={theme.colors.inkMuted}
-                      style={[styles.underlineInput, { color: theme.colors.ink }, {
+                      placeholderTextColor="rgba(255,255,255,0.22)"
+                      style={[styles.underlineInput, {
                         letterSpacing: 12,
                         fontSize: 24,
                         fontFamily: theme.fontFamily.mono,
@@ -238,7 +242,7 @@ export default function SignInScreen() {
                       value={code}
                     />
                     {/* Active underline turns brand violet */}
-                    <View style={[styles.underlineLine, { backgroundColor: theme.colors.glassBorder }, code.length > 0 && { backgroundColor: theme.colors.brand }]} />
+                    <View style={[styles.underlineLine, code.length > 0 && { backgroundColor: theme.colors.brand }]} />
                   </View>
                 </View>
               )}
@@ -248,7 +252,7 @@ export default function SignInScreen() {
                 <View
                   style={{
                     alignSelf: 'flex-start',
-                    borderRadius: 10,
+                    borderRadius: theme.radius.sm,
                     borderWidth: 1,
                     paddingHorizontal: theme.spacing[3],
                     paddingVertical: 6,
@@ -274,11 +278,11 @@ export default function SignInScreen() {
                     borderWidth: 1,
                     padding: theme.spacing[3],
                     marginBottom: theme.spacing[2],
-                    borderColor: theme.colors.dangerSoft,
-                    backgroundColor: theme.colors.dangerSoft,
+                    borderColor: 'rgba(248,113,113,0.28)',
+                    backgroundColor: 'rgba(147,0,10,0.30)',
                   }}>
                   <Text style={{
-                    color: theme.colors.danger,
+                    color: '#FFB4AB',
                     fontSize: 14,
                     fontFamily: theme.fontFamily.label,
                     lineHeight: 20,
@@ -305,7 +309,8 @@ export default function SignInScreen() {
                   <Text style={{
                     fontSize: 14,
                     fontFamily: theme.fontFamily.labelSemi,
-                    color: theme.colors.inkMuted,
+                    color: theme.colors.glassText,
+                    opacity: 0.44,
                   }}>
                     Change number
                   </Text>
@@ -321,15 +326,16 @@ export default function SignInScreen() {
                     borderRadius: theme.radius.pill,
                     backgroundColor: theme.colors.glassSurface,
                     borderWidth: 1,
-                    borderColor: theme.colors.glassSurface,
+                    borderColor: theme.colors.glassBorder,
                   }}>
-                    <Ionicons name="shield-checkmark" size={14} color={theme.colors.brand} />
+                    <Ionicons name="shield-checkmark" size={14} color={theme.colors.brandBright} />
                     <Text style={{
                       fontFamily: theme.fontFamily.labelSemi,
                       fontSize: 10,
-                      color: theme.colors.inkMuted,
+                      color: theme.colors.glassText,
                       letterSpacing: 2,
                       textTransform: 'uppercase',
+                      opacity: 0.6,
                     }}>
                       Secure Verification
                     </Text>
@@ -339,6 +345,7 @@ export default function SignInScreen() {
             </View>
 
           </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -348,6 +355,8 @@ const styles = {
   fieldLabel: {
     fontSize: 12,
     letterSpacing: 0.8,
+    fontFamily: 'WorkSans_600SemiBold',
+    color: 'rgba(255,255,255,0.38)',
     marginBottom: 10,
     textTransform: 'uppercase' as const,
   },
@@ -359,19 +368,29 @@ const styles = {
     marginRight: 8,
     borderRadius: 3,
   },
+  prefix: {
+    fontSize: 18,
+    fontFamily: 'Manrope_700Bold',
+    color: '#F5F3FF',
+    paddingRight: 12,
+  },
   prefixDivider: {
     width: 1,
     height: 20,
+    backgroundColor: 'rgba(255,255,255,0.18)',
     marginRight: 12,
   },
   underlineInput: {
     fontSize: 18,
+    fontFamily: 'WorkSans_500Medium',
+    color: '#F5F3FF',
     paddingVertical: 8,
     paddingLeft: 2,
     flex: 1,
   } as const,
   underlineLine: {
     height: 1,
+    backgroundColor: 'rgba(255,255,255,0.18)',
     marginTop: 2,
   },
 } as const;

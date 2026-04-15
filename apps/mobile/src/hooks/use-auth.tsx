@@ -44,6 +44,7 @@ type AuthContextValue = {
   /** Returns a valid access token, silently refreshing if near expiry. Use before API calls. */
   ensureValidToken(): Promise<string | null>;
   refreshUser(): Promise<void>;
+  updateProfile(input: { readonly name?: string; readonly email?: string | null }): Promise<void>;
   signOut(): Promise<void>;
   clearOtpRequest(): void;
 };
@@ -214,6 +215,11 @@ export function AuthProvider({ children }: { readonly children: React.ReactNode 
         if (!sessionToken) return;
         const me = await api.me(sessionToken);
         setUser(me);
+      },
+      async updateProfile(input) {
+        if (!sessionToken) return;
+        const updated = await api.updateMe(sessionToken, input);
+        setUser(updated);
       },
       async signOut() {
         if (sessionToken) {

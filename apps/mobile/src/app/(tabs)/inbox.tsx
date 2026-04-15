@@ -159,7 +159,7 @@ export default function InboxScreen() {
                 time={formatDateTime(notification.createdAt)}
                 title={notification.title}
               />
-              {index < notificationsResource.data.length - 1 ? (
+              {index < (notificationsResource.data?.length ?? 0) - 1 ? (
                 <View style={{ height: 1, backgroundColor: theme.colors.border, marginLeft: 40 }} />
               ) : null}
             </View>

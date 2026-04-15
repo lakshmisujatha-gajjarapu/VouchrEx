@@ -18,6 +18,7 @@ import { FieldLabel } from '@/components/field-label';
 import { FilterChip } from '@/components/filter-chip';
 import { StatusBanner } from '@/components/status-banner';
 import { SubmergedInput } from '@/components/submerged-input';
+import { ProfileAvatar } from '@/components/profile-avatar';
 import { useAuth } from '@/hooks/use-auth';
 import { useAsyncResource } from '@/hooks/use-async-resource';
 import { api, type PayoutAccount } from '@/lib/api';
@@ -43,10 +44,9 @@ function normalizeBrandName(value: string) {
 }
 
 export default function SellScreen() {
-  const { sessionToken, user } = useAuth();
+  const { sessionToken } = useAuth();
   const theme = useTheme();
   const router = useRouter();
-  const initial = (user?.name ?? user?.phone ?? '?')[0].toUpperCase();
 
   // ── Payout account gate ──────────────────────────────────────────
   const [payoutAccount, setPayoutAccount]   = useState<PayoutAccount | null>(null);
@@ -190,24 +190,7 @@ export default function SellScreen() {
                 Sell a Voucher
               </Text>
             </View>
-            <Pressable
-              accessibilityLabel="Profile"
-              onPress={() => { router.push('/profile'); }}
-              style={({ pressed }) => ({
-                width: 40, height: 40, borderRadius: 20,
-                backgroundColor: theme.colors.brandSoft,
-                alignItems: 'center', justifyContent: 'center',
-                borderWidth: 1.5,
-                borderColor: `${theme.colors.brand}40`,
-                opacity: pressed ? 0.7 : 1,
-              })}>
-              <Text style={{
-                fontFamily: theme.fontFamily.headlineExtra,
-                fontSize: 16, fontWeight: '800', color: theme.colors.brand,
-              }}>
-                {initial}
-              </Text>
-            </Pressable>
+            <ProfileAvatar />
           </View>
 
           {/* ── Payout gate: loading ── */}

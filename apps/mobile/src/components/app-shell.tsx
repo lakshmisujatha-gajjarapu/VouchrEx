@@ -1,7 +1,5 @@
-import { useRouter } from 'expo-router';
 import React from 'react';
 import {
-  Pressable,
   ScrollView,
   Text,
   View,
@@ -10,7 +8,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { useAuth } from '@/hooks/use-auth';
+import { ProfileAvatar } from '@/components/profile-avatar';
 import { useTheme } from '@/theme/ThemeContext';
 
 export function AppShell({
@@ -31,9 +29,6 @@ export function AppShell({
   readonly footer?: React.ReactNode;
 }) {
   const theme = useTheme();
-  const router = useRouter();
-  const { user } = useAuth();
-  const initial = (user?.name ?? user?.phone ?? '?')[0].toUpperCase();
 
   const content = (
     <View style={[{ paddingHorizontal: theme.spacing[5], paddingBottom: footer ? theme.spacing[2] : 100, gap: theme.spacing[3], paddingTop: theme.spacing[1] }, contentContainerStyle]}>
@@ -89,31 +84,7 @@ export function AppShell({
           </View>
 
           {/* Profile avatar */}
-          <Pressable
-            accessibilityLabel="Profile"
-            accessibilityRole="button"
-            onPress={() => { router.push('/profile'); }}
-            style={({ pressed }) => ({
-              width: 40,
-              height: 40,
-              borderRadius: 20,
-              backgroundColor: theme.colors.brandSoft,
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderWidth: 1.5,
-              borderColor: `${theme.colors.brand}40`,
-              opacity: pressed ? 0.7 : 1,
-              marginTop: eyebrow ? 14 : 0,
-            })}>
-            <Text style={{
-              fontFamily: theme.fontFamily.headlineExtra,
-              fontSize: 16,
-              fontWeight: '800',
-              color: theme.colors.brand,
-            }}>
-              {initial}
-            </Text>
-          </Pressable>
+          <ProfileAvatar marginTop={eyebrow ? 14 : 0} />
         </View>
 
         {scroll
