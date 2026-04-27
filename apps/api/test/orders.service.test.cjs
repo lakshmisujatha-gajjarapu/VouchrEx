@@ -83,11 +83,15 @@ test('OrdersService reveals a watermarked code and starts the verification timer
   };
 
   const paymentsService = {};
+  const eventEmitter = {
+    emit: () => {}
+  };
   const service = new OrdersService(
     prisma,
     codeVaultService,
     notificationsService,
-    paymentsService
+    paymentsService,
+    eventEmitter
   );
 
   const result = await service.revealCode('order_1', 'buyer_1');

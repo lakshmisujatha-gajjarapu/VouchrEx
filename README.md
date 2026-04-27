@@ -80,7 +80,7 @@ Phase 1 backend and mobile app foundation for the Vouchrex voucher resale market
 - `CODE_ENCRYPTION_KEY` is required; the API no longer falls back to a shared default secret.
 - Local development uses a fixed OTP of `123456` through `OTP_PROVIDER=DEV`.
 - Local direct development uses this project's own Postgres on `localhost:5434` and Redis on `localhost:6380`.
-- Production should switch to `OTP_PROVIDER=EXOTEL` with `EXOTEL_ACCOUNT_SID`, `EXOTEL_APP_ID`, and `EXOTEL_APP_SECRET`.
+- Production should switch to `OTP_PROVIDER=MSG91_WIDGET` with appropriate MSG91 API credentials.
 - Production rejects `OTP_PROVIDER=DEV` and `PAYMENT_PROVIDER=MOCK`.
 - `PAYMENT_PROVIDER` must be explicit in production; local dev still defaults to `MOCK`.
 - `ADMIN_API_TOKEN` is the minimal manual control for Phase 1 dispute resolution and catalog bootstrap.

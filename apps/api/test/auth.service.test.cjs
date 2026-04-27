@@ -16,6 +16,9 @@ test('AuthService creates an OTP challenge using the provider response', async (
         return data;
       }
     },
+    user: {
+      findUnique: async () => null
+    },
     auditLog: {
       create: async ({ data }) => {
         auditLogs.push(data);

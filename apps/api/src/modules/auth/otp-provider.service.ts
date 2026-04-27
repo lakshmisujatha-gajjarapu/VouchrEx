@@ -5,34 +5,27 @@ import {
 } from '@nestjs/common';
 import { createHash } from 'node:crypto';
 
-type OtpProviderName = 'DEV' | 'EXOTEL';
+type OtpProviderName = 'DEV' | 'MSG91_WIDGET';
 
-type ExotelStartResponse = {
-  readonly response: {
-    readonly status: string;
-    readonly data: {
-      readonly verification_id: string;
-      readonly expiration_in_seconds?: number;
-    } | null;
-    readonly error_data?: {
-      readonly code?: number;
-      readonly description?: string;
-      readonly message?: string;
-    } | null;
-  };
+type Msg91WidgetSendResponse = {
+  readonly type: 'success' | 'error';
+  readonly message?: string;
+  readonly reqId?: string;
 };
 
-type ExotelVerifyResponse = {
-  readonly response: {
-    readonly status: string;
-    readonly data: {
-      readonly status?: string;
-    } | null;
-    readonly error_data?: {
-      readonly code?: number;
-      readonly description?: string;
-      readonly message?: string;
-    } | null;
+type Msg91WidgetVerifyResponse = {
+  readonly type: 'success' | 'error';
+  readonly message?: string;
+  readonly 'access-token'?: string;
+};
+
+type Msg91WidgetValidateResponse = {
+  readonly type: 'success' | 'error';
+  readonly message?: string;
+  readonly data?: {
+    readonly user?: {
+      readonly identifier?: string;
+    };
   };
 };
 
@@ -45,17 +38,21 @@ export class OtpProviderService {
     const configured = (process.env.OTP_PROVIDER ?? '').trim().toUpperCase();
     const isProduction = process.env.NODE_ENV === 'production';
 
-    if (configured === 'DEV' || configured === 'EXOTEL') {
+    if (configured === 'DEV' || configured === 'MSG91_WIDGET') {
       if (isProduction && configured === 'DEV') {
         throw new ServiceUnavailableException(
-          'OTP_PROVIDER=DEV is not allowed in production. Use EXOTEL.'
+          'OTP_PROVIDER=DEV is not allowed in production. Use MSG91_WIDGET.'
         );
       }
-
-      return configured;
+      return configured as OtpProviderName;
     }
 
-    return isProduction ? 'EXOTEL' : 'DEV';
+    if (isProduction) {
+      throw new ServiceUnavailableException(
+        'OTP_PROVIDER must be set to MSG91_WIDGET in production.'
+      );
+    }
+    return 'DEV';
   }
 
   async startVerification(phone: string) {
@@ -71,22 +68,13 @@ export class OtpProviderService {
       };
     }
 
-    const payload = await this.startExotelVerification(phone);
-    const exotelData = payload.response.data;
-    const verificationId = exotelData?.verification_id;
-
-    if (!verificationId) {
-      throw new ServiceUnavailableException('Exotel did not return a verification ID.');
-    }
-
-    const expiresAt = new Date(
-      Date.now() + (exotelData.expiration_in_seconds ?? this.fallbackTtlMinutes * 60) * 1000
-    );
-
+    // MSG91_WIDGET
+    const { reqId } = await this.sendMsg91WidgetOtp(phone);
+    const expiresAt = new Date(Date.now() + this.fallbackTtlMinutes * 60 * 1000);
     return {
       provider,
-      providerRequestId: verificationId,
-      codeHash: this.hashOtp(phone, verificationId),
+      providerRequestId: reqId,
+      codeHash: this.hashOtp(phone, reqId),
       expiresAt
     };
   }
@@ -104,118 +92,92 @@ export class OtpProviderService {
       return input.storedCodeHash === this.hashOtp(input.phone, input.code);
     }
 
-    if (provider === 'EXOTEL') {
+    if (provider === 'MSG91_WIDGET') {
       if (!input.providerRequestId) {
-        throw new ServiceUnavailableException('Missing Exotel verification ID for OTP challenge.');
+        throw new ServiceUnavailableException('Missing MSG91 widget reqId for OTP challenge.');
       }
-
-      return this.verifyExotelOtp(input.providerRequestId, input.code);
+      return this.verifyMsg91WidgetOtp(input.providerRequestId, input.code, input.phone);
     }
 
-    throw new ServiceUnavailableException(`Unsupported OTP provider ${input.provider}.`);
+    throw new ServiceUnavailableException(`Unsupported OTP provider: ${input.provider}.`);
   }
 
-  private async startExotelVerification(phone: string) {
-    const response = await fetch(
-      `https://exoverify.exotel.com/v2/accounts/${this.requireExotelAccountSid()}/verifications/sms`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Basic ${Buffer.from(
-            `${this.requireExotelAppId()}:${this.requireExotelAppSecret()}`
-          ).toString('base64')}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          application_id: this.requireExotelAppId(),
-          phone_number: phone
-        })
-      }
-    );
+  private async sendMsg91WidgetOtp(phone: string): Promise<{ reqId: string }> {
+    const authKey = process.env.MSG91_AUTH_KEY;
+    const widgetId = process.env.MSG91_WIDGET_ID;
 
-    const payload = (await response.json()) as ExotelStartResponse;
+    if (!authKey) throw new ServiceUnavailableException('MSG91_AUTH_KEY is not configured.');
+    if (!widgetId) throw new ServiceUnavailableException('MSG91_WIDGET_ID is not configured.');
 
-    if (!response.ok || payload.response.status !== 'success') {
-      throw new ServiceUnavailableException(
-        payload.response.error_data?.description ?? 'Failed to start Exotel OTP verification.'
-      );
+    const strippedPhone = phone.replace(/^\+/, '');
+    const response = await fetch('https://control.msg91.com/api/v5/widget/sendOtp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', authkey: authKey },
+      body: JSON.stringify({ widgetId, identifier: strippedPhone })
+    });
+
+    const data = (await response.json()) as Msg91WidgetSendResponse;
+
+    if (data.type !== 'success' || !data.reqId) {
+      throw new ServiceUnavailableException('OTP delivery failed');
     }
 
-    return payload;
+    return { reqId: data.reqId };
   }
 
-  private async verifyExotelOtp(verificationId: string, code: string) {
-    const response = await fetch(
-      `https://exoverify.exotel.com/v2/accounts/${this.requireExotelAccountSid()}/verifications/sms/${verificationId}`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Basic ${Buffer.from(
-            `${this.requireExotelAppId()}:${this.requireExotelAppSecret()}`
-          ).toString('base64')}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          OTP: code
-        })
+  private async verifyMsg91WidgetOtp(reqId: string, otp: string, phone: string): Promise<boolean> {
+    const authKey = process.env.MSG91_AUTH_KEY;
+    if (!authKey) throw new ServiceUnavailableException('MSG91_AUTH_KEY is not configured.');
+
+    const verifyRes = await fetch('https://control.msg91.com/api/v5/widget/verifyOtp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', authkey: authKey },
+      body: JSON.stringify({ reqId, otp })
+    });
+
+    const verifyData = (await verifyRes.json()) as Msg91WidgetVerifyResponse;
+
+    if (verifyData.type !== 'success') {
+      const msg = (verifyData.message ?? '').toLowerCase();
+      if (msg.includes('expir')) {
+        throw new BadRequestException('OTP has expired. Request a new code.');
       }
-    );
-
-    const payload = (await response.json()) as ExotelVerifyResponse;
-
-    if (response.ok && payload.response.status === 'success') {
-      return true;
-    }
-
-    const errorCode = payload.response.error_data?.code;
-    const description =
-      payload.response.error_data?.description ?? 'OTP verification failed with Exotel.';
-
-    if (errorCode === 1210) {
-      throw new BadRequestException('OTP has expired. Request a new code.');
-    }
-
-    if (errorCode === 1211) {
+      if (msg.includes('attempt') || msg.includes('limit')) {
+        throw new BadRequestException('OTP retry limit reached. Request a new code.');
+      }
       return false;
     }
 
-    if (errorCode === 1016) {
-      throw new BadRequestException('OTP retry limit reached. Request a new code.');
+    const accessToken = verifyData['access-token'];
+    if (!accessToken) throw new ServiceUnavailableException('MSG91 did not return an access token.');
+
+    return this.validateMsg91WidgetToken(accessToken, phone);
+  }
+
+  private async validateMsg91WidgetToken(accessToken: string, expectedPhone: string): Promise<boolean> {
+    const authKey = process.env.MSG91_AUTH_KEY;
+    if (!authKey) throw new ServiceUnavailableException('MSG91_AUTH_KEY is not configured.');
+
+    const validateRes = await fetch('https://control.msg91.com/api/v5/widget/validateAccessToken', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', authkey: authKey },
+      body: JSON.stringify({ 'access-token': accessToken })
+    });
+
+    const validateData = (await validateRes.json()) as Msg91WidgetValidateResponse;
+
+    if (validateData.type !== 'success' || !validateData.data?.user?.identifier) {
+      throw new ServiceUnavailableException('Failed to validate MSG91 OTP token.');
     }
 
-    throw new ServiceUnavailableException(description);
+    const identifier = validateData.data.user.identifier;
+    const normalizedIdentifier = identifier.startsWith('+') ? identifier : '+' + identifier;
+    return normalizedIdentifier === expectedPhone;
   }
 
   private hashOtp(phone: string, value: string) {
     return createHash('sha256')
       .update(`${phone}:${value}`)
       .digest('hex');
-  }
-
-  private requireExotelAccountSid() {
-    const accountSid = process.env.EXOTEL_ACCOUNT_SID;
-    if (!accountSid) {
-      throw new ServiceUnavailableException('EXOTEL_ACCOUNT_SID is not configured.');
-    }
-
-    return accountSid;
-  }
-
-  private requireExotelAppId() {
-    const appId = process.env.EXOTEL_APP_ID;
-    if (!appId) {
-      throw new ServiceUnavailableException('EXOTEL_APP_ID is not configured.');
-    }
-
-    return appId;
-  }
-
-  private requireExotelAppSecret() {
-    const appSecret = process.env.EXOTEL_APP_SECRET;
-    if (!appSecret) {
-      throw new ServiceUnavailableException('EXOTEL_APP_SECRET is not configured.');
-    }
-
-    return appSecret;
   }
 }

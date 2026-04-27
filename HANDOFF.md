@@ -21,9 +21,9 @@
 
 ## Next steps
 
-- Fill Exotel credentials and switch `OTP_PROVIDER=EXOTEL` for production SMS OTP.
+- Fill MSG91 API credentials and switch `OTP_PROVIDER=MSG91_WIDGET` for production WhatsApp OTP.
 - Set `CODE_ENCRYPTION_KEY` and `ADMIN_API_TOKEN` explicitly in every non-local environment.
-- Set `OTP_PROVIDER=EXOTEL` and `PAYMENT_PROVIDER=RAZORPAY` for every production-like environment.
+- Set `OTP_PROVIDER=MSG91_WIDGET` and `PAYMENT_PROVIDER=RAZORPAY` for every production-like environment.
 - Integrate native Razorpay checkout in the Expo app or add a safe server-side mobile checkout alternative.
 - Decide whether to add Razorpay webhooks or keep client-signature verification only for Phase 1.
 - Move timer and notification workloads into the worker.

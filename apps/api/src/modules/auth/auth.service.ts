@@ -144,10 +144,12 @@ export class AuthService {
       }
     });
 
+    const deliveryChannel = otpChallenge.provider === 'DEV' ? 'debug' : 'sms';
+
     return {
       phone,
       expiresAt: otpChallenge.expiresAt,
-      deliveryChannel: otpChallenge.provider === 'DEV' ? 'debug' : 'sms',
+      deliveryChannel,
       isNewUser: !existingUser,
       ...(dto.name ? { pendingProfileName: dto.name } : {}),
       ...(otpChallenge.provider === 'DEV' ? { debugCode: otpChallenge.debugCode } : {})

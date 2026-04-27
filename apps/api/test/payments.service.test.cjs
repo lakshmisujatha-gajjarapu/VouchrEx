@@ -6,9 +6,11 @@ require('ts-node/register/transpile-only');
 
 const { PaymentsService } = require('../src/modules/payments/payments.service.ts');
 
-test('PaymentsService prepares a mock checkout without network access', async () => {
-  const originalProvider = process.env.PAYMENT_PROVIDER;
-  process.env.PAYMENT_PROVIDER = 'MOCK';
+test('PaymentsService prepares a checkout and stores payment record', async () => {
+  const originalKeyId = process.env.RAZORPAY_KEY_ID;
+  const originalKeySecret = process.env.RAZORPAY_KEY_SECRET;
+  process.env.RAZORPAY_KEY_ID = 'test_key_id';
+  process.env.RAZORPAY_KEY_SECRET = 'test_key_secret';
 
   const upserts = [];
   const prisma = {
@@ -21,6 +23,16 @@ test('PaymentsService prepares a mock checkout without network access', async ()
     }
   };
 
+  // Mock fetch to avoid network calls during test
+  const originalFetch = global.fetch;
+  global.fetch = async () => ({
+    ok: true,
+    json: async () => ({
+      id: 'plink_1234567890',
+      short_url: 'https://rzp.io/l/test'
+    })
+  });
+
   const service = new PaymentsService(prisma);
   const checkout = await service.prepareCheckout({
     id: 'order_1',
@@ -30,12 +42,13 @@ test('PaymentsService prepares a mock checkout without network access', async ()
     platformFee: 10
   });
 
-  assert.equal(checkout.provider, 'MOCK');
-  assert.equal(checkout.orderId, 'mock_order_1');
-  assert.equal(checkout.amount, 43000);
+  assert.equal(checkout.paymentLinkId, 'plink_1234567890');
+  assert.equal(checkout.paymentLinkUrl, 'https://rzp.io/l/test');
   assert.equal(upserts.length, 1);
 
-  process.env.PAYMENT_PROVIDER = originalProvider;
+  global.fetch = originalFetch;
+  process.env.RAZORPAY_KEY_ID = originalKeyId;
+  process.env.RAZORPAY_KEY_SECRET = originalKeySecret;
 });
 
 test('PaymentsService verifies Razorpay signatures', () => {
