@@ -1,5 +1,7 @@
-const WIDGET_ID = process.env.EXPO_PUBLIC_MSG91_WIDGET_ID ?? '';
-const TOKEN_AUTH = process.env.EXPO_PUBLIC_MSG91_TOKEN_AUTH ?? '';
+// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+const WIDGET_ID: string = process.env.EXPO_PUBLIC_MSG91_WIDGET_ID ?? '';
+// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+const TOKEN_AUTH: string = process.env.EXPO_PUBLIC_MSG91_TOKEN_AUTH ?? '';
 
 type Msg91Response = {
   readonly type: 'success' | 'error';
