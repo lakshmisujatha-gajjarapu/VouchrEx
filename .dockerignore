@@ -8,9 +8,11 @@ node_modules
 !.env.example
 terraform/environments/secrets.*.tfvars
 
-# Workspaces not needed in the API image
+# Workspaces not needed in the API image (keep package.json for Yarn install)
 apps/mobile
+!apps/mobile/package.json
 apps/worker
+!apps/worker/package.json
 
 # Build artefacts — builder stage starts fresh
 apps/api/dist
