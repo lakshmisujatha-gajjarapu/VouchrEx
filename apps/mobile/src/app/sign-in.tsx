@@ -3,7 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { Redirect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Image,
   KeyboardAvoidingView,
@@ -21,6 +21,7 @@ import heroIcon from '../../assets/images/hero-icon.png';
 
 import { PrimaryButton } from '@/components/primary-button';
 import { useAuth } from '@/hooks/use-auth';
+import { initMsg91, msg91SendOtp, msg91VerifyOtp } from '@/lib/msg91';
 
 // Sign-in screen is always dark by design (StatusBar style="light")
 const GRADIENT = ['#0D0B1E', '#1A173D', '#2E1F6B'] as const;
@@ -35,9 +36,12 @@ export default function SignInScreen() {
   const [profileName, setProfileName] = useState('');
   const [phoneDigits, setPhoneDigits] = useState('');
   const [code, setCode] = useState('');
+  const [reqId, setReqId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const theme = useTheme();
+
+  useEffect(() => { initMsg91(); }, []);
 
   if (status === 'signedIn') {
     return <Redirect href="/(tabs)/shop" />;
@@ -55,19 +59,23 @@ export default function SignInScreen() {
     setLoading(true); setError(null);
     try {
       await auth.requestOtp({ phone: fullPhone });
+      const id = await msg91SendOtp(fullPhone);
+      setReqId(id);
     }
-    catch (e) { setError(e instanceof Error ? e.message : 'Could not request OTP.'); }
+    catch (e) { setError(e instanceof Error ? e.message : 'Could not send OTP.'); }
     finally { setLoading(false); }
   }
 
   async function handleVerifyOtp() {
     if (code.length !== 6) { setError('Enter the 6-digit OTP.'); return; }
     if (isNewUser && !profileName.trim()) { setError('Please enter your name to continue.'); return; }
+    if (!reqId) { setError('Session expired. Please request a new OTP.'); return; }
     setLoading(true); setError(null);
     try {
+      const jwt = await msg91VerifyOtp(reqId, code);
       await auth.verifyOtp({
         phone: activePhone,
-        code,
+        code: jwt,
         ...(isNewUser && profileName.trim() ? { name: profileName.trim() } : {}),
       });
     }
@@ -305,7 +313,7 @@ export default function SignInScreen() {
               {otpRequest ? (
                 <Pressable
                   style={{ alignSelf: 'center', paddingTop: theme.spacing[5] }}
-                  onPress={() => { auth.clearOtpRequest(); setCode(''); setError(null); }}>
+                  onPress={() => { auth.clearOtpRequest(); setCode(''); setReqId(null); setError(null); }}>
                   <Text style={{
                     fontSize: 14,
                     fontFamily: theme.fontFamily.labelSemi,

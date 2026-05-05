@@ -28,7 +28,7 @@ test('AuthService creates an OTP challenge using the provider response', async (
   };
 
   const otpProviderService = {
-    startVerification: async () => ({
+    startVerification: () => ({
       provider: 'DEV',
       codeHash: 'hashed-code',
       expiresAt: new Date('2026-03-16T10:00:00.000Z'),

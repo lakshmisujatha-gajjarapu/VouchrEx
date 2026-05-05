@@ -111,7 +111,7 @@ export class AuthService {
       }
     }
 
-    const otpChallenge = await this.otpProviderService.startVerification(phone);
+    const otpChallenge = this.otpProviderService.startVerification(phone);
 
     await this.prisma.otpChallenge.create({
       data: {
@@ -121,10 +121,7 @@ export class AuthService {
         codeHash: otpChallenge.codeHash,
         expiresAt: otpChallenge.expiresAt,
         deviceId,
-        clientIp: clientIp ?? null,
-        ...(otpChallenge.providerRequestId
-          ? { providerRequestId: otpChallenge.providerRequestId }
-          : {})
+        clientIp: clientIp ?? null
       }
     });
 

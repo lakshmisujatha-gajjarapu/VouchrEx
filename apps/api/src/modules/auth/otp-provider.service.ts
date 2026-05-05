@@ -1,36 +1,20 @@
 import {
-  BadRequestException,
   Injectable,
+  Logger,
   ServiceUnavailableException
 } from '@nestjs/common';
 import { createHash } from 'node:crypto';
 
 type OtpProviderName = 'DEV' | 'MSG91_WIDGET';
 
-type Msg91WidgetSendResponse = {
-  readonly type: 'success' | 'error';
-  readonly message?: string;
-  readonly reqId?: string;
-};
-
-type Msg91WidgetVerifyResponse = {
-  readonly type: 'success' | 'error';
-  readonly message?: string;
-  readonly 'access-token'?: string;
-};
-
 type Msg91WidgetValidateResponse = {
   readonly type: 'success' | 'error';
-  readonly message?: string;
-  readonly data?: {
-    readonly user?: {
-      readonly identifier?: string;
-    };
-  };
+  readonly message?: string; // phone number on success, error text on failure
 };
 
 @Injectable()
 export class OtpProviderService {
+  private readonly log = new Logger(OtpProviderService.name);
   private readonly devFixedCode = process.env.OTP_FIXED_CODE ?? '123456';
   private readonly fallbackTtlMinutes = Number(process.env.OTP_TTL_MINUTES ?? 5);
 
@@ -55,11 +39,11 @@ export class OtpProviderService {
     return 'DEV';
   }
 
-  async startVerification(phone: string) {
+  startVerification(phone: string) {
     const provider = this.resolveProvider();
+    const expiresAt = new Date(Date.now() + this.fallbackTtlMinutes * 60 * 1000);
 
     if (provider === 'DEV') {
-      const expiresAt = new Date(Date.now() + this.fallbackTtlMinutes * 60 * 1000);
       return {
         provider,
         codeHash: this.hashOtp(phone, this.devFixedCode),
@@ -68,13 +52,11 @@ export class OtpProviderService {
       };
     }
 
-    // MSG91_WIDGET
-    const { reqId } = await this.sendMsg91WidgetOtp(phone);
-    const expiresAt = new Date(Date.now() + this.fallbackTtlMinutes * 60 * 1000);
+    // MSG91_WIDGET: OTP is sent client-side by the mobile SDK.
+    // Backend only stores a placeholder challenge; real verification happens via verifyAccessToken.
     return {
       provider,
-      providerRequestId: reqId,
-      codeHash: this.hashOtp(phone, reqId),
+      codeHash: this.hashOtp(phone, 'widget-placeholder'),
       expiresAt
     };
   }
@@ -93,85 +75,33 @@ export class OtpProviderService {
     }
 
     if (provider === 'MSG91_WIDGET') {
-      if (!input.providerRequestId) {
-        throw new ServiceUnavailableException('Missing MSG91 widget reqId for OTP challenge.');
-      }
-      return this.verifyMsg91WidgetOtp(input.providerRequestId, input.code, input.phone);
+      // input.code is the JWT access token returned by the mobile SDK after OTP verification
+      this.log.debug(`MSG91_WIDGET verifyOtp — code length=${String(input.code.length)} prefix=${input.code.slice(0, 20)}…`);
+      return this.verifyMsg91AccessToken(input.code, input.phone);
     }
 
     throw new ServiceUnavailableException(`Unsupported OTP provider: ${input.provider}.`);
   }
 
-  private async sendMsg91WidgetOtp(phone: string): Promise<{ reqId: string }> {
-    const authKey = process.env.MSG91_AUTH_KEY;
-    const widgetId = process.env.MSG91_WIDGET_ID;
-
-    if (!authKey) throw new ServiceUnavailableException('MSG91_AUTH_KEY is not configured.');
-    if (!widgetId) throw new ServiceUnavailableException('MSG91_WIDGET_ID is not configured.');
-
-    const strippedPhone = phone.replace(/^\+/, '');
-    const response = await fetch('https://control.msg91.com/api/v5/widget/sendOtp', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', authkey: authKey },
-      body: JSON.stringify({ widgetId, identifier: strippedPhone })
-    });
-
-    const data = (await response.json()) as Msg91WidgetSendResponse;
-
-    if (data.type !== 'success' || !data.reqId) {
-      throw new ServiceUnavailableException('OTP delivery failed');
-    }
-
-    return { reqId: data.reqId };
-  }
-
-  private async verifyMsg91WidgetOtp(reqId: string, otp: string, phone: string): Promise<boolean> {
+  private async verifyMsg91AccessToken(accessToken: string, expectedPhone: string): Promise<boolean> {
     const authKey = process.env.MSG91_AUTH_KEY;
     if (!authKey) throw new ServiceUnavailableException('MSG91_AUTH_KEY is not configured.');
 
-    const verifyRes = await fetch('https://control.msg91.com/api/v5/widget/verifyOtp', {
+    const res = await fetch('https://control.msg91.com/api/v5/widget/verifyAccessToken', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', authkey: authKey },
-      body: JSON.stringify({ reqId, otp })
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ authkey: authKey, 'access-token': accessToken })
     });
 
-    const verifyData = (await verifyRes.json()) as Msg91WidgetVerifyResponse;
+    const data = (await res.json()) as Msg91WidgetValidateResponse;
 
-    if (verifyData.type !== 'success') {
-      const msg = (verifyData.message ?? '').toLowerCase();
-      if (msg.includes('expir')) {
-        throw new BadRequestException('OTP has expired. Request a new code.');
-      }
-      if (msg.includes('attempt') || msg.includes('limit')) {
-        throw new BadRequestException('OTP retry limit reached. Request a new code.');
-      }
-      return false;
-    }
-
-    const accessToken = verifyData['access-token'];
-    if (!accessToken) throw new ServiceUnavailableException('MSG91 did not return an access token.');
-
-    return this.validateMsg91WidgetToken(accessToken, phone);
-  }
-
-  private async validateMsg91WidgetToken(accessToken: string, expectedPhone: string): Promise<boolean> {
-    const authKey = process.env.MSG91_AUTH_KEY;
-    if (!authKey) throw new ServiceUnavailableException('MSG91_AUTH_KEY is not configured.');
-
-    const validateRes = await fetch('https://control.msg91.com/api/v5/widget/validateAccessToken', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', authkey: authKey },
-      body: JSON.stringify({ 'access-token': accessToken })
-    });
-
-    const validateData = (await validateRes.json()) as Msg91WidgetValidateResponse;
-
-    if (validateData.type !== 'success' || !validateData.data?.user?.identifier) {
+    if (data.type !== 'success' || !data.message) {
+      this.log.error(`MSG91 verifyAccessToken failed [status=${String(res.status)}]: ${data.message ?? 'no message'}`);
       throw new ServiceUnavailableException('Failed to validate MSG91 OTP token.');
     }
 
-    const identifier = validateData.data.user.identifier;
-    const normalizedIdentifier = identifier.startsWith('+') ? identifier : '+' + identifier;
+    // verifyAccessToken returns the phone number (without +) in the `message` field
+    const normalizedIdentifier = data.message.startsWith('+') ? data.message : '+' + data.message;
     return normalizedIdentifier === expectedPhone;
   }
 

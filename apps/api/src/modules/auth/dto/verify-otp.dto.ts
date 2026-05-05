@@ -10,8 +10,9 @@ const VerifyOtpSchema = z.object({
     .describe('Phone number in E.164 format'),
   code: z
     .string()
-    .regex(/^\d{6}$/, 'OTP must be exactly six digits')
-    .describe('Six-digit OTP sent to the phone number'),
+    .min(6)
+    .max(2048)
+    .describe('Six-digit OTP (DEV provider) or JWT access token (MSG91_WIDGET provider)'),
   name: z.string().min(2).max(80).optional().describe('Optional display name for the user profile'),
   email: z.string().email().optional().describe('Optional contact email for the user profile'),
   deviceId: z.string().max(128).optional().describe('Soft device fingerprint for session scoping')
