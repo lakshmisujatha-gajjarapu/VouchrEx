@@ -6,7 +6,9 @@ RUN corepack enable
 
 # Copy manifests first — cached unless deps change
 COPY package.json yarn.lock .yarnrc.yml tsconfig.base.json ./
+COPY .yarn/releases .yarn/releases
 COPY apps/api/package.json    apps/api/package.json
+COPY apps/admin/package.json  apps/admin/package.json
 COPY apps/mobile/package.json apps/mobile/package.json
 COPY apps/worker/package.json apps/worker/package.json
 
