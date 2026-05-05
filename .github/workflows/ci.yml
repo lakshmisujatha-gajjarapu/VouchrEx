@@ -24,7 +24,7 @@ jobs:
         run: yarn install --immutable
 
       - name: Generate Prisma client
-        run: yarn workspace @cb/api prisma generate
+        run: yarn workspace vouchrex-api prisma generate
 
       - name: Lint
         run: yarn lint
