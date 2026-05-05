@@ -1,0 +1,106 @@
+# Homelab deployment — pulls prebuilt image from Docker Hub.
+# Usage:
+#   cp .env.homelab.example .env.homelab
+#   # fill in secrets in .env.homelab
+#   docker compose -f compose.homelab.yml up -d
+#
+# First run also needs migrations:
+#   docker compose -f compose.homelab.yml run --rm migrate
+
+services:
+  migrate:
+    image: ${DOCKERHUB_USERNAME:-chandrashekar-nallamilli}/vouchrex-api:${IMAGE_TAG:-latest}
+    command: yarn exec prisma migrate deploy
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      CODE_ENCRYPTION_KEY: ${CODE_ENCRYPTION_KEY}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: on-failure
+    profiles:
+      - migrate
+
+  api:
+    image: ${DOCKERHUB_USERNAME:-chandrashekar-nallamilli}/vouchrex-api:${IMAGE_TAG:-latest}
+    ports:
+      - "${API_PORT:-3010}:3010"
+    env_file: .env.homelab
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3010/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  db:
+    image: postgres:16-alpine
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-vouchrex_user}
+      POSTGRES_DB: ${POSTGRES_DB:-vouchrex_db}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-vouchrex_user} -d ${POSTGRES_DB:-vouchrex_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redisdata:/data
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    volumes:
+      - miniodata:/data
+    command: server /data --console-address ":9001"
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  pgdata:
+  redisdata:
+  miniodata:
