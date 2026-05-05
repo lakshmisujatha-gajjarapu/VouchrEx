@@ -1,8 +1,6 @@
 name: Deploy
 
 on:
-  push:
-    branches: [main]          # push to main → staging automatically
   workflow_dispatch:
     inputs:
       environment:
@@ -10,49 +8,27 @@ on:
         required: true
         type: choice
         options: [staging, production]
+      image_tag:
+        description: Image tag to deploy (git SHA or branch-latest)
+        required: true
+        default: main-latest
 
 permissions:
   contents: read
 
 jobs:
   deploy:
-    name: Deploy → ${{ github.event.inputs.environment || 'staging' }}
+    name: Deploy → ${{ github.event.inputs.environment }}
     runs-on: ubuntu-latest
-    environment: ${{ github.event.inputs.environment || 'staging' }}
+    environment: ${{ github.event.inputs.environment }}
 
     env:
-      ENV_NAME:  ${{ github.event.inputs.environment || 'staging' }}
-      IMAGE_TAG: ${{ github.sha }}
+      ENV_NAME:  ${{ github.event.inputs.environment }}
+      IMAGE_TAG: ${{ github.event.inputs.image_tag }}
 
     steps:
       - uses: actions/checkout@v4
 
-      # ── Docker Hub login ──────────────────────────────────────────────────────
-      - uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      # ── Build + push to Docker Hub ────────────────────────────────────────────
-      # Two tags:
-      #   username/vouchrex-api:<git-sha>       — immutable, pinnable
-      #   username/vouchrex-api:staging-latest  — mutable, what the VPS pulls
-      - uses: docker/setup-buildx-action@v3
-
-      - uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: apps/api/Dockerfile
-          push: true
-          tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/vouchrex-api:${{ env.IMAGE_TAG }}
-            ${{ secrets.DOCKERHUB_USERNAME }}/vouchrex-api:${{ env.ENV_NAME }}-latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      # ── SSH setup ─────────────────────────────────────────────────────────────
-      # API_HOST is the static IP output from `terraform output api_public_ip`.
-      # SSH_PRIVATE_KEY is the private key matching the public key in Terraform.
       - name: Set up SSH
         run: |
           mkdir -p ~/.ssh
@@ -60,31 +36,21 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H "${{ secrets.API_HOST }}" >> ~/.ssh/known_hosts
 
-      # ── Run migrations ────────────────────────────────────────────────────────
-      # Pull the new image first so migrate runs against the latest schema,
-      # then restart the stack. Migrations run in a one-shot container that
-      # exits cleanly; the API container starts only after this succeeds.
-      - name: Run migrations via SSH
+      - name: Run migrations
         run: |
           ssh -i ~/.ssh/deploy_key ec2-user@"${{ secrets.API_HOST }}" \
             "cd /opt/vouchrex && \
-             docker compose pull && \
-             docker compose run --rm --no-deps api \
+             IMAGE_TAG=${{ env.IMAGE_TAG }} docker compose pull && \
+             IMAGE_TAG=${{ env.IMAGE_TAG }} docker compose run --rm --no-deps api \
                node node_modules/.bin/prisma migrate deploy"
 
-      # ── Deploy ────────────────────────────────────────────────────────────────
-      # Start the API after migrations have been applied.
-      # docker system prune removes dangling images to keep disk usage low.
-      - name: Deploy via SSH
+      - name: Deploy
         run: |
           ssh -i ~/.ssh/deploy_key ec2-user@"${{ secrets.API_HOST }}" \
             "cd /opt/vouchrex && \
-             docker compose up -d --remove-orphans && \
+             IMAGE_TAG=${{ env.IMAGE_TAG }} docker compose up -d --remove-orphans && \
              docker system prune -f"
 
-      # ── Health check ──────────────────────────────────────────────────────────
-      # Hits the VPS directly (bypasses Cloudflare) so DNS propagation doesn't
-      # affect CI. Use API_HOST + port 80 (nginx listens on 80).
       - name: Health check
         run: |
           for i in $(seq 1 15); do
