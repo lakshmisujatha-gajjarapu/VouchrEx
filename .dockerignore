@@ -17,6 +17,7 @@ apps/worker
 # Build artefacts — builder stage starts fresh
 apps/api/dist
 apps/api/node_modules
+**/*.tsbuildinfo
 
 # Tooling
 .expo

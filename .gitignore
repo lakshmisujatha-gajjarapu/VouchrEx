@@ -42,3 +42,5 @@ terraform/*.tfstate.backup
 terraform/environments/secrets.*.tfvars
 .worktrees/
 .env.homelab
+docs/
+compose.homelab.yml

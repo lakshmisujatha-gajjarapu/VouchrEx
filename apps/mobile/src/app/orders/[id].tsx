@@ -2,13 +2,11 @@ import { BlurView } from 'expo-blur';
 import * as Clipboard from 'expo-clipboard';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { openBrowserAsync } from 'expo-web-browser';
+import { openAuthSessionAsync } from 'expo-web-browser';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  AppState,
-  Linking,
   Modal,
   Pressable,
   ScrollView,
@@ -25,7 +23,7 @@ import { TextField } from '@/components/text-field';
 import { useAuth } from '@/hooks/use-auth';
 import { useAsyncResource } from '@/hooks/use-async-resource';
 import { useOrderSocket } from '@/hooks/use-order-socket';
-import { api, type Checkout, type RevealResult } from '@/lib/api';
+import { api, apiBaseUrl, type Checkout, type RevealResult } from '@/lib/api';
 import { formatCountdown, formatCurrency, formatDate, formatStatus } from '@/lib/format';
 import { cardToneForStatus, escrowBadgeLabel, escrowBadgeColors, buildFlowSteps } from '@/lib/status';
 import { useTheme } from '@/theme/ThemeContext';
@@ -35,20 +33,26 @@ function firstRouteParam(value?: string | string[]) {
 }
 
 function buildCheckoutFromRoute(params: {
-  readonly checkoutPaymentLinkUrl?: string | string[];
-  readonly checkoutPaymentLinkId?: string | string[];
+  readonly checkoutRazorpayOrderId?: string | string[];
+  readonly checkoutAmountPaise?: string | string[];
+  readonly checkoutCurrency?: string | string[];
+  readonly checkoutKeyId?: string | string[];
 }): Checkout | null {
-  const paymentLinkUrl = firstRouteParam(params.checkoutPaymentLinkUrl);
-  const paymentLinkId = firstRouteParam(params.checkoutPaymentLinkId);
-  if (!paymentLinkUrl || !paymentLinkId) return null;
-  return { provider: 'RAZORPAY', paymentLinkUrl, paymentLinkId };
+  const razorpayOrderId = firstRouteParam(params.checkoutRazorpayOrderId);
+  const amountPaiseStr = firstRouteParam(params.checkoutAmountPaise);
+  const currency = firstRouteParam(params.checkoutCurrency);
+  const keyId = firstRouteParam(params.checkoutKeyId);
+  if (!razorpayOrderId || !amountPaiseStr || !currency || !keyId) return null;
+  return { provider: 'RAZORPAY', razorpayOrderId, amountPaise: Number(amountPaiseStr), currency, keyId };
 }
 
 export default function OrderDetailScreen() {
   const params = useLocalSearchParams<{
     readonly id?: string | string[];
-    readonly checkoutPaymentLinkUrl?: string | string[];
-    readonly checkoutPaymentLinkId?: string | string[];
+    readonly checkoutRazorpayOrderId?: string | string[];
+    readonly checkoutAmountPaise?: string | string[];
+    readonly checkoutCurrency?: string | string[];
+    readonly checkoutKeyId?: string | string[];
   }>();
   const orderId = useMemo(() => firstRouteParam(params.id), [params.id]);
   const { sessionToken, user } = useAuth();
@@ -94,7 +98,8 @@ export default function OrderDetailScreen() {
 
   async function handlePrepareCheckout() {
     if (!sessionToken || !orderId) return;
-    setBusyAction('payment'); setFeedback(null);
+    setBusyAction('payment');
+    setFeedback(null);
     try {
       let co = checkout;
       if (!co) {
@@ -102,75 +107,50 @@ export default function OrderDetailScreen() {
         co = result.checkout;
         setCheckout(co);
       }
-      await openBrowserAsync(co.paymentLinkUrl);
-      // Browser dismissed — start fallback polling.
-      // Socket will resolve this faster if connected; polling is the safety net.
-      void pollUntilEscrowActive();
+
+      const checkoutPageUrl = `${apiBaseUrl}/payments/checkout-page?${new URLSearchParams({
+        rzpOrderId: co.razorpayOrderId,
+        amountPaise: String(co.amountPaise),
+        currency: co.currency,
+        keyId: co.keyId,
+        appOrderId: orderId,
+      }).toString()}`;
+
+      const result = await openAuthSessionAsync(checkoutPageUrl, 'vouchrex://payment-callback');
+
+      if (result.type !== 'success' || !result.url) {
+        setFeedback('Payment cancelled.');
+        setBusyAction(null);
+        return;
+      }
+
+      const callbackUrl = new URL(result.url);
+      const razorpayOrderId = callbackUrl.searchParams.get('razorpay_order_id');
+      const razorpayPaymentId = callbackUrl.searchParams.get('razorpay_payment_id');
+      const razorpaySignature = callbackUrl.searchParams.get('razorpay_signature');
+
+      if (!razorpayOrderId || !razorpayPaymentId || !razorpaySignature) {
+        setFeedback('Payment callback is incomplete. Pull down to check if your payment went through.');
+        setBusyAction(null);
+        return;
+      }
+
+      await api.verifyPayment(sessionToken, orderId, {
+        method: 'razorpay',
+        razorpayOrderId,
+        razorpayPaymentId,
+        razorpaySignature,
+      });
+
+      await reloadOrder();
+      setFeedback('Payment secured. You can now reveal the voucher.');
     } catch (error_) {
-      setFeedback(error_ instanceof Error ? error_.message : 'Could not prepare checkout.');
+      const message = error_ instanceof Error ? error_.message : '';
+      setFeedback(message || 'Payment failed. Please try again.');
+    } finally {
       setBusyAction(null);
     }
   }
-
-  // Polls DB + proactively pulls Razorpay status so we don't wait for a slow webhook.
-  // maxAttempts × intervalMs = 45 s, which covers Razorpay's typical webhook lag.
-  async function pollUntilEscrowActive() {
-    const maxAttempts = 15;
-    const intervalMs = 3_000;
-    for (let i = 0; i < maxAttempts; i++) {
-      await new Promise<void>((resolve) => setTimeout(resolve, intervalMs));
-      if (!sessionToken || !orderId) break;
-      try {
-        // Sync call: backend pulls Razorpay and activates escrow if paid.
-        await api.syncPayment(sessionToken, orderId);
-        const refreshed = await api.getOrder(sessionToken, orderId);
-        if (refreshed.status === 'ESCROW_ACTIVE') {
-          await reloadOrder();
-          setFeedback('Payment secured. You can now reveal the voucher.');
-          setBusyAction(null);
-          return;
-        }
-        if (refreshed.status !== 'PAYMENT_PENDING') {
-          // Moved to a terminal state (cancelled etc.) — stop polling.
-          await reloadOrder();
-          setBusyAction(null);
-          return;
-        }
-      } catch { /* ignore transient errors */ }
-    }
-    // Polling window exhausted. Let the user know but don't leave them stuck —
-    // they can pull-to-refresh or navigate back.
-    await reloadOrder();
-    setFeedback('Payment verification is taking longer than usual. Pull down to refresh.');
-    setBusyAction(null);
-  }
-
-  // Re-trigger polling when the app returns to the foreground after the user
-  // visited the Razorpay payment page (handles cases where the deep link
-  // callback was not delivered or the browser closed without redirecting).
-  useEffect(() => {
-    let isPolling = false;
-
-    const appStateSub = AppState.addEventListener('change', (nextState) => {
-      if (nextState === 'active' && busyAction === 'payment' && !isPolling) {
-        isPolling = true;
-        void pollUntilEscrowActive().finally(() => { isPolling = false; });
-      }
-    });
-
-    const linkSub = Linking.addEventListener('url', (event) => {
-      if (event.url.includes('payment-callback') && !isPolling) {
-        isPolling = true;
-        void pollUntilEscrowActive().finally(() => { isPolling = false; });
-      }
-    });
-
-    return () => {
-      appStateSub.remove();
-      linkSub.remove();
-    };
-  }, [sessionToken, orderId, busyAction]);
-
 
   async function handleReveal() {
     if (!sessionToken || !orderId) return;

@@ -9,10 +9,6 @@ import {
 } from '@prisma/client';
 import { createHmac, timingSafeEqual } from 'node:crypto';
 
-type RazorpayContactResponse = { readonly id: string };
-type RazorpayFundAccountResponse = { readonly id: string };
-type RazorpayPayoutResponse = { readonly id: string; readonly status: string };
-
 import { PrismaService } from '../prisma/prisma.service';
 
 type CheckoutOrder = {
@@ -23,9 +19,19 @@ type CheckoutOrder = {
   readonly platformFee: number;
 };
 
-type RazorpayPaymentLinkResponse = {
-  readonly id: string;
-  readonly short_url: string;
+export type CheckoutResult = {
+  readonly razorpayOrderId: string;
+  readonly amountPaise: number;
+  readonly currency: string;
+  readonly keyId: string;
+};
+
+type RazorpayContactResponse = { readonly id: string };
+type RazorpayFundAccountResponse = { readonly id: string };
+type RazorpayPayoutResponse = { readonly id: string; readonly status: string };
+type RazorpayOrderResponse = { readonly id: string; readonly amount: number; readonly currency: string };
+type RazorpayOrderPaymentsResponse = {
+  readonly items: ReadonlyArray<{ readonly id: string; readonly status: string }>;
 };
 
 const razorpayBaseUrl = 'https://api.razorpay.com/v1';
@@ -38,22 +44,18 @@ export class PaymentsService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async prepareCheckout(order: CheckoutOrder) {
+  async prepareCheckout(order: CheckoutOrder): Promise<CheckoutResult> {
     const totalAmount = order.amount + order.platformFee;
 
     const existingPayment = await this.prisma.payment.findUnique({
       where: { orderId: order.id }
     });
 
-    if (existingPayment?.razorpayPaymentLinkId) {
-      const link = await this.fetchPaymentLink(existingPayment.razorpayPaymentLinkId);
-      return {
-        paymentLinkUrl: link.short_url,
-        paymentLinkId: link.id
-      };
+    if (existingPayment?.razorpayOrderId) {
+      return this.buildCheckoutResult(existingPayment.razorpayOrderId, totalAmount);
     }
 
-    const link = await this.createRazorpayPaymentLink(order.id, totalAmount, order);
+    const rzpOrder = await this.createRazorpayOrder(order.id, totalAmount);
 
     await this.prisma.payment.upsert({
       where: { orderId: order.id },
@@ -63,7 +65,7 @@ export class PaymentsService {
         status: PaymentStatus.PENDING,
         escrowStatus: EscrowStatus.PENDING,
         currency: defaultCurrency,
-        razorpayPaymentLinkId: link.id
+        razorpayOrderId: rzpOrder.id
       },
       create: {
         orderId: order.id,
@@ -72,21 +74,18 @@ export class PaymentsService {
         status: PaymentStatus.PENDING,
         escrowStatus: EscrowStatus.PENDING,
         currency: defaultCurrency,
-        razorpayPaymentLinkId: link.id
+        razorpayOrderId: rzpOrder.id
       }
     });
 
-    return {
-      paymentLinkUrl: link.short_url,
-      paymentLinkId: link.id
-    };
+    return this.buildCheckoutResult(rzpOrder.id, totalAmount);
   }
 
   verifySignature(input: {
     readonly orderId: string;
     readonly paymentId: string;
     readonly signature: string;
-  }) {
+  }): boolean {
     const expectedSignature = createHmac('sha256', this.requireRazorpayKeySecret())
       .update(`${input.orderId}|${input.paymentId}`)
       .digest('hex');
@@ -96,10 +95,6 @@ export class PaymentsService {
     return expectedBuf.length === receivedBuf.length && timingSafeEqual(expectedBuf, receivedBuf);
   }
 
-  /**
-   * Execute a real refund via Razorpay API.
-   * Called when a dispute is resolved in the buyer's favour.
-   */
   async executeRefund(razorpayPaymentId: string, amountInr: number): Promise<void> {
     const response = await fetch(
       `${razorpayBaseUrl}/payments/${razorpayPaymentId}/refund`,
@@ -125,9 +120,28 @@ export class PaymentsService {
     this.logger.log(`Refund executed for payment ${razorpayPaymentId}, amount ₹${String(amountInr)}`);
   }
 
-  /**
-   * Create a Razorpay Contact for the seller.
-   */
+  async checkRazorpayOrderPaymentStatus(
+    razorpayOrderId: string
+  ): Promise<{ captured: boolean; razorpayPaymentId?: string }> {
+    const response = await fetch(`${razorpayBaseUrl}/orders/${razorpayOrderId}/payments`, {
+      headers: { Authorization: this.razorpayAuthHeader() }
+    });
+
+    if (!response.ok) {
+      throw new ServiceUnavailableException(
+        `Razorpay order payments fetch failed with status ${String(response.status)}.`
+      );
+    }
+
+    const raw = (await response.json()) as RazorpayOrderPaymentsResponse;
+    const items: ReadonlyArray<{ readonly id: string; readonly status: string }> = Array.isArray(raw.items) ? raw.items : [];
+    const capturedItem = items.find((p) => p.status === 'captured');
+
+    return capturedItem
+      ? { captured: true, razorpayPaymentId: capturedItem.id }
+      : { captured: false };
+  }
+
   async createRazorpayContact(name: string, phone: string): Promise<string> {
     const response = await fetch(razorpayBaseUrl + '/contacts', {
       method: 'POST',
@@ -148,9 +162,6 @@ export class PaymentsService {
     return payload.id;
   }
 
-  /**
-   * Create a Razorpay Fund Account for a UPI VPA tied to a Contact.
-   */
   async createRazorpayFundAccountUpi(contactId: string, upiId: string): Promise<string> {
     const response = await fetch(razorpayBaseUrl + '/fund_accounts', {
       method: 'POST',
@@ -175,9 +186,6 @@ export class PaymentsService {
     return payload.id;
   }
 
-  /**
-   * Create a Razorpay Fund Account for a bank account tied to a Contact.
-   */
   async createRazorpayFundAccountBank(
     contactId: string,
     accountHolderName: string,
@@ -193,11 +201,7 @@ export class PaymentsService {
       body: JSON.stringify({
         contact_id: contactId,
         account_type: 'bank_account',
-        bank_account: {
-          name: accountHolderName,
-          account_number: accountNumber,
-          ifsc
-        }
+        bank_account: { name: accountHolderName, account_number: accountNumber, ifsc }
       })
     });
 
@@ -211,13 +215,6 @@ export class PaymentsService {
     return payload.id;
   }
 
-  /**
-   * Trigger a RazorpayX Payout to a seller's registered fund account.
-   * Returns the Razorpay payout ID (pout_xxxx).
-   *
-   * @param orderId  Used as idempotency key — safe to retry on network failure.
-   * @param accountType  UPI → mode 'UPI', BANK_ACCOUNT → mode 'IMPS'.
-   */
   async executePayout(
     fundAccountId: string,
     amountInr: number,
@@ -256,38 +253,50 @@ export class PaymentsService {
     return payload.id;
   }
 
-  async checkPaymentLinkStatus(linkId: string): Promise<{ paid: boolean; razorpayPaymentId?: string }> {
-    const response = await fetch(`${razorpayBaseUrl}/payment_links/${linkId}`, {
-      headers: { Authorization: this.razorpayAuthHeader() }
+  private buildCheckoutResult(razorpayOrderId: string, totalAmountInr: number): CheckoutResult {
+    const keyId = process.env.RAZORPAY_KEY_ID;
+    if (!keyId) {
+      throw new ServiceUnavailableException('RAZORPAY_KEY_ID is not configured.');
+    }
+
+    return {
+      razorpayOrderId,
+      amountPaise: totalAmountInr * inrMinorUnitFactor,
+      currency: defaultCurrency,
+      keyId
+    };
+  }
+
+  private async createRazorpayOrder(internalOrderId: string, totalAmountInr: number): Promise<RazorpayOrderResponse> {
+    const response = await fetch(razorpayBaseUrl + '/orders', {
+      method: 'POST',
+      headers: {
+        Authorization: this.razorpayAuthHeader(),
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        amount: totalAmountInr * inrMinorUnitFactor,
+        currency: defaultCurrency,
+        receipt: internalOrderId,
+        notes: { appOrderId: internalOrderId }
+      })
     });
 
     if (!response.ok) {
       throw new ServiceUnavailableException(
-        `Razorpay payment link fetch failed with status ${String(response.status)}.`
+        `Razorpay order creation failed with status ${String(response.status)}.`
       );
     }
 
-    const payload: unknown = await response.json();
-
-    if (!payload || typeof payload !== 'object') {
-      throw new ServiceUnavailableException('Unexpected Razorpay payment link payload.');
+    const payload = (await response.json()) as RazorpayOrderResponse;
+    if (!payload.id) {
+      throw new ServiceUnavailableException('Unexpected Razorpay order creation payload.');
     }
 
-    const body = payload as Record<string, unknown>;
-    const paid = body.status === 'paid';
-    const payments = body.payments as readonly Record<string, unknown>[] | undefined;
-    const firstPayment = Array.isArray(payments) && payments.length > 0
-      ? (payments[0] as Record<string, unknown>)
-      : undefined;
-    const razorpayPaymentId =
-      typeof firstPayment?.razorpay_payment_id === 'string'
-        ? firstPayment.razorpay_payment_id
-        : undefined;
-
-    return razorpayPaymentId !== undefined ? { paid, razorpayPaymentId } : { paid };
+    return payload;
   }
 
-  private requireRazorpayKeySecret() {
+  private requireRazorpayKeySecret(): string {
     const keySecret = process.env.RAZORPAY_KEY_SECRET;
     if (!keySecret) {
       throw new ServiceUnavailableException('RAZORPAY_KEY_SECRET is not configured.');
@@ -296,7 +305,7 @@ export class PaymentsService {
     return keySecret;
   }
 
-  private requireRazorpayXAccountNumber() {
+  private requireRazorpayXAccountNumber(): string {
     const accountNumber = process.env.RAZORPAY_X_ACCOUNT_NUMBER;
     if (!accountNumber) {
       throw new ServiceUnavailableException('RAZORPAY_X_ACCOUNT_NUMBER is not configured.');
@@ -305,7 +314,15 @@ export class PaymentsService {
     return accountNumber;
   }
 
-  private razorpayXAuthHeader() {
+  isRazorpayXEnabled(): boolean {
+    return !!(
+      process.env.RAZORPAY_X_KEY_ID &&
+      process.env.RAZORPAY_X_KEY_SECRET &&
+      process.env.RAZORPAY_X_ACCOUNT_NUMBER
+    );
+  }
+
+  private razorpayXAuthHeader(): string {
     const keyId = process.env.RAZORPAY_X_KEY_ID;
     const keySecret = process.env.RAZORPAY_X_KEY_SECRET;
     if (!keyId || !keySecret) {
@@ -315,7 +332,7 @@ export class PaymentsService {
     return `Basic ${Buffer.from(`${keyId}:${keySecret}`).toString('base64')}`;
   }
 
-  private razorpayAuthHeader() {
+  private razorpayAuthHeader(): string {
     const keyId = process.env.RAZORPAY_KEY_ID;
     const keySecret = process.env.RAZORPAY_KEY_SECRET;
     if (!keyId || !keySecret) {
@@ -323,70 +340,5 @@ export class PaymentsService {
     }
 
     return `Basic ${Buffer.from(`${keyId}:${keySecret}`).toString('base64')}`;
-  }
-
-  private async createRazorpayPaymentLink(
-    orderId: string,
-    totalAmount: number,
-    order: CheckoutOrder
-  ): Promise<RazorpayPaymentLinkResponse> {
-    const response = await fetch(razorpayBaseUrl + '/payment_links', {
-      method: 'POST',
-      headers: {
-        Authorization: this.razorpayAuthHeader(),
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        amount: totalAmount * inrMinorUnitFactor,
-        currency: defaultCurrency,
-        reference_id: orderId,
-        callback_url: process.env.RAZORPAY_PAYMENT_CALLBACK_URL ?? 'vouchrex://payment-callback',
-        callback_method: 'get',
-        notes: {
-          appOrderId: order.id,
-          listingId: order.listingId,
-          buyerId: order.buyerId
-        }
-      })
-    });
-
-    if (!response.ok) {
-      throw new ServiceUnavailableException(
-        `Razorpay payment link creation failed with status ${String(response.status)}.`
-      );
-    }
-
-    const payload: unknown = await response.json();
-    return this.parsePaymentLinkResponse(payload);
-  }
-
-  private async fetchPaymentLink(linkId: string): Promise<RazorpayPaymentLinkResponse> {
-    const response = await fetch(`${razorpayBaseUrl}/payment_links/${linkId}`, {
-      headers: { Authorization: this.razorpayAuthHeader() }
-    });
-
-    if (!response.ok) {
-      throw new ServiceUnavailableException(
-        `Razorpay payment link fetch failed with status ${String(response.status)}.`
-      );
-    }
-
-    const payload: unknown = await response.json();
-    return this.parsePaymentLinkResponse(payload);
-  }
-
-  private parsePaymentLinkResponse(payload: unknown): RazorpayPaymentLinkResponse {
-    if (
-      !payload ||
-      typeof payload !== 'object' ||
-      !('id' in payload) ||
-      !('short_url' in payload) ||
-      typeof payload.id !== 'string' ||
-      typeof payload.short_url !== 'string'
-    ) {
-      throw new ServiceUnavailableException('Unexpected Razorpay payment link payload.');
-    }
-
-    return { id: payload.id, short_url: payload.short_url };
   }
 }

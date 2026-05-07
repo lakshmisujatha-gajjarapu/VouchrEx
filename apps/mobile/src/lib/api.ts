@@ -70,8 +70,10 @@ export type Listing = {
 
 export type Checkout = {
   readonly provider: 'RAZORPAY';
-  readonly paymentLinkUrl: string;
-  readonly paymentLinkId: string;
+  readonly razorpayOrderId: string;
+  readonly amountPaise: number;
+  readonly currency: string;
+  readonly keyId: string;
 };
 
 export type Payment = {

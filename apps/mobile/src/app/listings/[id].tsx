@@ -12,6 +12,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColorScheme } from 'nativewind';
 
+import { PrimaryButton } from '@/components/primary-button';
 import { useAuth } from '@/hooks/use-auth';
 import { useAsyncResource } from '@/hooks/use-async-resource';
 import { api } from '@/lib/api';
@@ -47,8 +48,10 @@ export default function ListingDetailScreen() {
         pathname: '/orders/[id]',
         params: {
           id: result.order.id,
-          checkoutPaymentLinkUrl: result.checkout.paymentLinkUrl,
-          checkoutPaymentLinkId: result.checkout.paymentLinkId,
+          checkoutRazorpayOrderId: result.checkout.razorpayOrderId,
+          checkoutAmountPaise: String(result.checkout.amountPaise),
+          checkoutCurrency: result.checkout.currency,
+          checkoutKeyId: result.checkout.keyId,
         },
       });
     } catch (error_) {
@@ -330,48 +333,16 @@ export default function ListingDetailScreen() {
                 {error}
               </Text>
             ) : null}
-            <Pressable
-              disabled={isOwnListing || submitting}
-              onPress={() => { void handleBuyNow(); }}
-              style={({ pressed }) => ({
-                flex: 1,
-                opacity: isOwnListing ? 0.5 : pressed ? 0.88 : 1,
-                transform: [{ scale: pressed && !isOwnListing && !submitting ? 0.97 : 1 }],
-                borderRadius: theme.radius.sm,
-                overflow: 'hidden',
-                // spec: shadow-[0_12px_30px_-6px_rgba(167,139,250,0.3)]
-                shadowColor: theme.colors.brand,
-                shadowOffset: { width: 0, height: 12 },
-                shadowOpacity: isOwnListing ? 0 : 0.3,
-                shadowRadius: 30,
-                elevation: isOwnListing ? 0 : 6,
-              })}>
-              <View style={{
-                height: 64,
-                borderRadius: theme.radius.sm,
-                backgroundColor: isOwnListing ? theme.colors.surfaceHigh : theme.colors.brand,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-              }}>
-                {submitting
-                  ? <ActivityIndicator color={theme.colors.surface} />
-                  : (
-                      <>
-                        <Text style={{
-                          color: isOwnListing ? theme.colors.inkMuted : theme.colors.white,
-                          fontSize: 16,
-                          fontWeight: '700',
-                          fontFamily: theme.fontFamily.headline,
-                        }}>
-                          {isOwnListing ? 'Your listing' : `Buy for ${formatCurrency(listing.sellingPrice)}`}
-                        </Text>
-                        {!isOwnListing ? <Ionicons name="arrow-forward" size={18} color={theme.colors.white} /> : null}
-                      </>
-                    )}
-              </View>
-            </Pressable>
+            <View style={{ flex: 1 }}>
+              <PrimaryButton
+                disabled={isOwnListing}
+                icon={isOwnListing ? undefined : 'ticket-outline'}
+                label={isOwnListing ? 'Your listing' : 'Buy'}
+                loading={submitting}
+                onPress={() => { void handleBuyNow(); }}
+                tone="brand"
+              />
+            </View>
           </View>
         </View>
 

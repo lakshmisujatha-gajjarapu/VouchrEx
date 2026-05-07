@@ -228,7 +228,6 @@ model Payment {
   provider              PaymentProvider @default(RAZORPAY)
   currency              String          @default("INR")
   razorpayOrderId       String?
-  razorpayPaymentLinkId String?
   razorpaySignature     String?
   capturedAt            DateTime?
   createdAt             DateTime        @default(now())

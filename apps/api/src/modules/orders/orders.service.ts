@@ -238,7 +238,7 @@ export class OrdersService {
           title: 'Complete payment',
           message: `Escrow checkout is ready for ${listing.brand.name}.`,
           metadata: {
-            checkoutPaymentLinkId: checkout.paymentLinkId
+            checkoutOrderId: checkout.razorpayOrderId
           }
         },
         {
@@ -368,7 +368,7 @@ export class OrdersService {
 
   /**
    * Called by the mobile app after the buyer returns from the Razorpay payment page.
-   * Proactively fetches the payment link status from Razorpay and activates escrow if paid,
+   * Proactively fetches the Razorpay order payment status and activates escrow if captured,
    * without waiting for Razorpay's webhook (which can lag 30s–2min).
    */
   async syncPaymentStatus(orderId: string, buyerUserId: string) {
@@ -385,37 +385,36 @@ export class OrdersService {
       throw new BadRequestException('Only the buyer can sync payment status.');
     }
 
-    // If already past PAYMENT_PENDING, nothing to do — return current state.
     if (order.status !== OrderStatus.PAYMENT_PENDING) {
       return { synced: false, status: order.status };
     }
 
-    const linkId = order.payment?.razorpayPaymentLinkId;
-    if (!linkId) {
+    const rzpOrderId = order.payment?.razorpayOrderId;
+    if (!rzpOrderId) {
       return { synced: false, status: order.status };
     }
 
-    const { paid, razorpayPaymentId } = await this.paymentsService.checkPaymentLinkStatus(linkId);
+    const { captured, razorpayPaymentId } =
+      await this.paymentsService.checkRazorpayOrderPaymentStatus(rzpOrderId);
 
-    if (!paid) {
+    if (!captured) {
       return { synced: false, status: order.status };
     }
 
-    this.logger.log(`syncPaymentStatus: payment confirmed via pull for order=${orderId}, activating escrow.`);
-    await this.activateEscrowForPaymentLink(linkId, razorpayPaymentId);
+    this.logger.log(`syncPaymentStatus: payment captured for order=${orderId}, activating escrow.`);
+    await this.activateEscrowForOrder(rzpOrderId, razorpayPaymentId);
 
-    // Reload and return the updated status.
     const updated = await this.prisma.order.findUnique({ where: { id: orderId } });
     return { synced: true, status: updated?.status ?? order.status };
   }
 
-  async activateEscrowForPaymentLink(paymentLinkId: string, razorpayPaymentId?: string) {
+  async activateEscrowForOrder(razorpayOrderId: string, razorpayPaymentId?: string) {
     const payment = await this.prisma.payment.findFirst({
-      where: { razorpayPaymentLinkId: paymentLinkId }
+      where: { razorpayOrderId }
     });
 
     if (!payment) {
-      this.logger.warn(`activateEscrowForPaymentLink: no payment found for linkId=${paymentLinkId}`);
+      this.logger.warn(`activateEscrowForOrder: no payment found for razorpayOrderId=${razorpayOrderId}`);
       return;
     }
 
@@ -427,6 +426,7 @@ export class OrdersService {
 
     await this.activateEscrow(payment.orderId, {
       method: 'razorpay',
+      razorpayOrderId,
       ...(razorpayPaymentId ? { razorpayPaymentId } : {})
     });
   }
@@ -1404,7 +1404,7 @@ export class OrdersService {
     const payoutAccount = order.seller.payoutAccount;
     const fundAccountId = payoutAccount?.razorpayFundAccountId;
     const kycVerified = payoutAccount?.kycStatus === 'VERIFIED';
-    if (order.payment && payoutAccount && fundAccountId && kycVerified) {
+    if (order.payment && payoutAccount && fundAccountId && kycVerified && this.paymentsService.isRazorpayXEnabled()) {
       try {
         const razorpayPayoutId = await this.paymentsService.executePayout(
           fundAccountId,

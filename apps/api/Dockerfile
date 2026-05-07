@@ -36,6 +36,9 @@ COPY --from=builder /app/node_modules         ./node_modules
 # Compiled API output only — no TypeScript source
 COPY --from=builder /app/apps/api/dist        ./apps/api/dist
 
+# Precompiled prisma config for the container (prisma.config.ts is dev-only with dotenv)
+COPY apps/api/prisma.config.js                          ./apps/api/prisma.config.js
+
 # Prisma schema — needed if you run `prisma migrate deploy` inside this image
 COPY apps/api/prisma                          ./apps/api/prisma
 
@@ -48,4 +51,4 @@ EXPOSE 3010
 USER app
 WORKDIR /app/apps/api
 
-CMD ["node", "dist/main.js"]
+CMD ["sh", "-c", "node /app/node_modules/.bin/prisma migrate deploy && node dist/main.js"]

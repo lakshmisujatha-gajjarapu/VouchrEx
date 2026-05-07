@@ -335,6 +335,9 @@ export class AdminController {
     if (!fundAccountId) {
       return { success: false, message: 'Seller has no registered payout account.' };
     }
+    if (!this.paymentsService.isRazorpayXEnabled()) {
+      return { success: false, message: 'RazorpayX is not configured. Use complete-payout to mark as manually settled.' };
+    }
 
     try {
       const razorpayPayoutId = await this.paymentsService.executePayout(

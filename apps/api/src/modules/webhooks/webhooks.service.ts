@@ -35,8 +35,8 @@ export class WebhooksService {
 
     const event = (body as Record<string, unknown>).event as string;
 
-    if (event === 'payment_link.paid') {
-      await this.handlePaymentLinkPaid(body as Record<string, unknown>, eventId);
+    if (event === 'payment.captured') {
+      await this.handlePaymentCaptured(body as Record<string, unknown>, eventId);
       return;
     }
 
@@ -48,21 +48,25 @@ export class WebhooksService {
     this.logger.log(`Ignoring Razorpay event: ${event} (eventId=${eventId}).`);
   }
 
-  private async handlePaymentLinkPaid(body: Record<string, unknown>, eventId: string): Promise<void> {
+  private async handlePaymentCaptured(body: Record<string, unknown>, eventId: string): Promise<void> {
     const payload = body.payload as Record<string, unknown> | undefined;
-    const paymentLinkEntity = (payload?.payment_link as Record<string, unknown> | undefined)?.entity as Record<string, unknown> | undefined;
-    const paymentEntity = (payload?.payment as Record<string, unknown> | undefined)?.entity as Record<string, unknown> | undefined;
+    const paymentEntity = (payload?.payment as Record<string, unknown> | undefined)?.entity as
+      | Record<string, unknown>
+      | undefined;
 
-    const paymentLinkId = paymentLinkEntity?.id;
     const razorpayPaymentId = typeof paymentEntity?.id === 'string' ? paymentEntity.id : undefined;
+    const razorpayOrderId =
+      typeof paymentEntity?.order_id === 'string' ? paymentEntity.order_id : undefined;
 
-    if (typeof paymentLinkId !== 'string') {
-      this.logger.warn(`payment_link.paid missing payment_link.entity.id (eventId=${eventId}).`);
+    if (!razorpayPaymentId || !razorpayOrderId) {
+      this.logger.warn(`payment.captured missing payment id or order_id (eventId=${eventId}).`);
       return;
     }
 
-    this.logger.log(`Processing payment_link.paid: linkId=${paymentLinkId} eventId=${eventId}`);
-    await this.ordersService.activateEscrowForPaymentLink(paymentLinkId, razorpayPaymentId);
+    this.logger.log(
+      `Processing payment.captured: paymentId=${razorpayPaymentId} razorpayOrderId=${razorpayOrderId} eventId=${eventId}`
+    );
+    await this.ordersService.activateEscrowForOrder(razorpayOrderId, razorpayPaymentId);
   }
 
   private async handlePayoutEvent(
@@ -71,8 +75,11 @@ export class WebhooksService {
     eventId: string
   ): Promise<void> {
     const payload = body.payload as Record<string, unknown> | undefined;
-    const payoutEntity = (payload?.payout as Record<string, unknown> | undefined)?.entity as Record<string, unknown> | undefined;
-    const razorpayPayoutId = typeof payoutEntity?.id === 'string' ? payoutEntity.id : undefined;
+    const payoutEntity = (payload?.payout as Record<string, unknown> | undefined)?.entity as
+      | Record<string, unknown>
+      | undefined;
+    const razorpayPayoutId =
+      typeof payoutEntity?.id === 'string' ? payoutEntity.id : undefined;
 
     if (!razorpayPayoutId) {
       this.logger.warn(`${event} missing payout.entity.id (eventId=${eventId}).`);

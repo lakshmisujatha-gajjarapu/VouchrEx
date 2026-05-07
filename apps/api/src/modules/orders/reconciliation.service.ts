@@ -6,7 +6,6 @@ import { PaymentsService } from '../payments/payments.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { OrdersService } from './orders.service';
 
-// Minimum age before reconciliation picks up a payment (avoids hammering Razorpay on brand-new orders).
 const stalePaymentSyncMinutes = Number(process.env.STALE_PAYMENT_SYNC_MINUTES ?? 1);
 const stalePaymentSyncMs = stalePaymentSyncMinutes * 60 * 1000;
 
@@ -18,7 +17,7 @@ export class ReconciliationService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly paymentsService: PaymentsService,
-    private readonly ordersService: OrdersService,
+    private readonly ordersService: OrdersService
   ) {}
 
   @Cron('*/1 * * * *')
@@ -40,7 +39,7 @@ export class ReconciliationService {
 
     const stalePendingPayments = await this.prisma.payment.findMany({
       where: {
-        razorpayPaymentLinkId: { not: null },
+        razorpayOrderId: { not: null },
         status: PaymentStatus.PENDING,
         order: { status: OrderStatus.PAYMENT_PENDING },
         createdAt: { lte: stalePaymentCutoff }
@@ -48,26 +47,19 @@ export class ReconciliationService {
       include: { order: true }
     });
 
-    if (stalePendingPayments.length === 0) {
-      return;
-    }
+    if (stalePendingPayments.length === 0) return;
 
     this.logger.log(`Reconciling ${String(stalePendingPayments.length)} stale PAYMENT_PENDING orders.`);
 
     for (const payment of stalePendingPayments) {
-      if (!payment.razorpayPaymentLinkId) continue;
-
+      if (!payment.razorpayOrderId) continue;
       try {
-        const { paid, razorpayPaymentId } = await this.paymentsService.checkPaymentLinkStatus(
-          payment.razorpayPaymentLinkId
-        );
+        const { captured, razorpayPaymentId } =
+          await this.paymentsService.checkRazorpayOrderPaymentStatus(payment.razorpayOrderId);
 
-        if (paid) {
+        if (captured) {
           this.logger.log(`Reconciliation: activating escrow for order ${payment.orderId}.`);
-          await this.ordersService.activateEscrowForPaymentLink(
-            payment.razorpayPaymentLinkId,
-            razorpayPaymentId
-          );
+          await this.ordersService.activateEscrowForOrder(payment.razorpayOrderId, razorpayPaymentId);
         }
       } catch (error) {
         this.logger.error(
