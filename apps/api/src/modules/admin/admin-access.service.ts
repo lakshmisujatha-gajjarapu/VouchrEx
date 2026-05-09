@@ -8,7 +8,13 @@ import { AdminRole } from '@prisma/client';
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import * as bcrypt from 'bcryptjs';
 
+import { ONE_HOUR_MS } from '../../common/time.constants';
+import { SESSION_TOKEN_BYTE_LENGTH } from '../auth/auth.constants';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  ADMIN_PASSWORD_BCRYPT_ROUNDS,
+  ADMIN_SESSION_TTL_HOURS
+} from './admin.constants';
 
 export type AdminIdentity =
   | { kind: 'session'; adminId: string; role: AdminRole; name: string; email: string }
@@ -86,9 +92,9 @@ export class AdminAccessService {
       throw new UnauthorizedException('Invalid credentials.');
     }
 
-    const token = randomBytes(32).toString('hex');
+    const token = randomBytes(SESSION_TOKEN_BYTE_LENGTH).toString('hex');
     const tokenHash = this.hashToken(token);
-    const expiresAt = new Date(Date.now() + 8 * 60 * 60 * 1000); // 8-hour session
+    const expiresAt = new Date(Date.now() + ADMIN_SESSION_TTL_HOURS * ONE_HOUR_MS);
 
     await this.prisma.adminSession.create({
       data: { adminId: admin.id, tokenHash, expiresAt }
@@ -112,7 +118,7 @@ export class AdminAccessService {
 
   /** Create a new admin user with the given password. */
   async createAdminUser(input: { email: string; name: string; password: string; role?: AdminRole }): Promise<object> {
-    const passwordHash = await bcrypt.hash(input.password, 12);
+    const passwordHash = await bcrypt.hash(input.password, ADMIN_PASSWORD_BCRYPT_ROUNDS);
 
     return this.prisma.adminUser.create({
       data: {
@@ -127,7 +133,7 @@ export class AdminAccessService {
 
   /** Set a new password for an existing admin and revoke all their sessions. */
   async setPassword(adminId: string, password: string): Promise<void> {
-    const passwordHash = await bcrypt.hash(password, 12);
+    const passwordHash = await bcrypt.hash(password, ADMIN_PASSWORD_BCRYPT_ROUNDS);
     await this.prisma.adminUser.update({ where: { id: adminId }, data: { passwordHash } });
     await this.prisma.adminSession.updateMany({
       where: { adminId, revokedAt: null },

@@ -5,13 +5,18 @@ import { useRouter } from 'next/navigation';
 import { io, type Socket } from 'socket.io-client';
 import { toast } from 'sonner';
 
-import { API_CONFIG } from '@/lib/constants';
+import {
+  API_CONFIG,
+  SOCKET_EVENTS,
+  SOCKET_RECONNECTION_DELAY_MAX_MS,
+  SOCKET_RECONNECTION_DELAY_MS,
+  TAB_FLASH_INTERVAL_MS,
+  TAB_FLASH_PREFIX
+} from '@/lib/constants';
 
 type Props = {
   readonly token: string | null;
 };
-
-const TAB_FLASH_PREFIX = '🔔 ';
 
 export function RealtimeBridge({ token }: Props) {
   const router = useRouter();
@@ -29,16 +34,16 @@ export function RealtimeBridge({ token }: Props) {
       transports: ['websocket'],
       auth: { token },
       reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 8000
+      reconnectionDelay: SOCKET_RECONNECTION_DELAY_MS,
+      reconnectionDelayMax: SOCKET_RECONNECTION_DELAY_MAX_MS
     });
     socketRef.current = socket;
 
     const refresh = () => { router.refresh(); };
 
-    socket.on('order:updated', refresh);
+    socket.on(SOCKET_EVENTS.ORDER_UPDATED, refresh);
 
-    socket.on('dispute:opened', (payload: { orderId: string }) => {
+    socket.on(SOCKET_EVENTS.DISPUTE_OPENED, (payload: { orderId: string }) => {
       refresh();
       toast.warning('New dispute opened', {
         description: `Order ${payload.orderId.slice(0, 8)}…`,
@@ -69,7 +74,7 @@ export function RealtimeBridge({ token }: Props) {
         document.title = flipped
           ? `${TAB_FLASH_PREFIX}${originalTitleRef.current}`
           : originalTitleRef.current;
-      }, 1000);
+      }, TAB_FLASH_INTERVAL_MS);
     }
 
     function stopTabFlash() {

@@ -2,6 +2,11 @@ import React, { createContext, useContext, useEffect, useRef, useState } from 'r
 import { io, type Socket } from 'socket.io-client';
 
 import { apiBaseUrl } from '@/lib/api';
+import {
+  SOCKET_RECONNECTION_ATTEMPTS,
+  SOCKET_RECONNECTION_DELAY_MAX_MS,
+  SOCKET_RECONNECTION_DELAY_MS
+} from '@/lib/realtime.constants';
 import { useAuth } from './use-auth';
 
 type SocketContextValue = {
@@ -29,9 +34,9 @@ export function SocketProvider({ children }: { readonly children: React.ReactNod
       transports: ['websocket'],
       auth: { token: sessionToken },
       reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 8000,
-      reconnectionAttempts: 10
+      reconnectionDelay: SOCKET_RECONNECTION_DELAY_MS,
+      reconnectionDelayMax: SOCKET_RECONNECTION_DELAY_MAX_MS,
+      reconnectionAttempts: SOCKET_RECONNECTION_ATTEMPTS
     });
 
     socket.on('connect', () => { setConnected(true); });

@@ -2,7 +2,13 @@ import { Body, Controller, Get, Headers, Ip, Post } from '@nestjs/common';
 import { ApiHeader, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 
-import { sessionHeaderName } from './auth.constants';
+import {
+  REQUEST_OTP_THROTTLE_MEDIUM,
+  REQUEST_OTP_THROTTLE_SHORT,
+  VERIFY_OTP_THROTTLE_MEDIUM,
+  VERIFY_OTP_THROTTLE_SHORT,
+  sessionHeaderName
+} from './auth.constants';
 import { AUTH_ROUTES } from './auth.routes';
 import { AuthService } from './auth.service';
 import { RequestOtpDto } from './dto/request-otp.dto';
@@ -15,14 +21,14 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   // Tight limit: 1 OTP request per 10s, 5 per minute to deter brute force / SMS flooding
-  @Throttle({ short: { limit: 1, ttl: 10000 }, medium: { limit: 5, ttl: 60000 } })
+  @Throttle({ short: REQUEST_OTP_THROTTLE_SHORT, medium: REQUEST_OTP_THROTTLE_MEDIUM })
   @Post(AUTH_ROUTES.OTP_REQUEST)
   requestOtp(@Body() requestOtpDto: RequestOtpDto, @Ip() clientIp: string) {
     return this.authService.requestOtp(requestOtpDto, clientIp);
   }
 
   // 5 verify attempts per minute per IP (service-layer also limits per phone)
-  @Throttle({ short: { limit: 1, ttl: 2000 }, medium: { limit: 5, ttl: 60000 } })
+  @Throttle({ short: VERIFY_OTP_THROTTLE_SHORT, medium: VERIFY_OTP_THROTTLE_MEDIUM })
   @Post(AUTH_ROUTES.OTP_VERIFY)
   verifyOtp(@Body() verifyOtpDto: VerifyOtpDto) {
     return this.authService.verifyOtp(verifyOtpDto);

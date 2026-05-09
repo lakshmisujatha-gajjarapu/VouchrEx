@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import Toast from 'react-native-toast-message';
 
 import { safeDeepLink } from '@/lib/push';
+import { SOCKET_EVENTS } from '@/lib/realtime.constants';
 
 import { useSocket } from './use-socket';
 
@@ -43,8 +44,8 @@ export function NotificationCenterProvider({ children }: { readonly children: Re
 
   useEffect(() => {
     if (!socket) return;
-    socket.on('notification:new', handleNew);
-    return () => { socket.off('notification:new', handleNew); };
+    socket.on(SOCKET_EVENTS.NOTIFICATION_NEW, handleNew);
+    return () => { socket.off(SOCKET_EVENTS.NOTIFICATION_NEW, handleNew); };
   }, [socket, handleNew]);
 
   const markAllRead = useCallback(() => { setUnreadCount(0); }, []);

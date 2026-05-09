@@ -5,6 +5,9 @@ import {
 } from '@nestjs/common';
 import { createHash } from 'node:crypto';
 
+import { ONE_MINUTE_MS } from '../../common/time.constants';
+import { OTP_FIXED_CODE_DEV, OTP_TTL_MINUTES_DEFAULT } from './auth.constants';
+
 type OtpProviderName = 'DEV' | 'MSG91_WIDGET';
 
 type Msg91WidgetValidateResponse = {
@@ -15,8 +18,8 @@ type Msg91WidgetValidateResponse = {
 @Injectable()
 export class OtpProviderService {
   private readonly log = new Logger(OtpProviderService.name);
-  private readonly devFixedCode = process.env.OTP_FIXED_CODE ?? '123456';
-  private readonly fallbackTtlMinutes = Number(process.env.OTP_TTL_MINUTES ?? 5);
+  private readonly devFixedCode = process.env.OTP_FIXED_CODE ?? OTP_FIXED_CODE_DEV;
+  private readonly fallbackTtlMinutes = Number(process.env.OTP_TTL_MINUTES ?? OTP_TTL_MINUTES_DEFAULT);
 
   resolveProvider(): OtpProviderName {
     const configured = (process.env.OTP_PROVIDER ?? '').trim().toUpperCase();
@@ -41,7 +44,7 @@ export class OtpProviderService {
 
   startVerification(phone: string) {
     const provider = this.resolveProvider();
-    const expiresAt = new Date(Date.now() + this.fallbackTtlMinutes * 60 * 1000);
+    const expiresAt = new Date(Date.now() + this.fallbackTtlMinutes * ONE_MINUTE_MS);
 
     if (provider === 'DEV') {
       return {

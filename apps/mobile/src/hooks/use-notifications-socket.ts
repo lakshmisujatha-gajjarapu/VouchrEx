@@ -1,4 +1,6 @@
 import { useEffect } from 'react';
+
+import { SOCKET_EVENTS } from '@/lib/realtime.constants';
 import { useSocket } from './use-socket';
 
 /**
@@ -11,7 +13,7 @@ export function useNotificationsSocket(onNewNotification: () => void) {
   useEffect(() => {
     if (!socket) return;
 
-    socket.on('notification:new', onNewNotification);
-    return () => { socket.off('notification:new', onNewNotification); };
+    socket.on(SOCKET_EVENTS.NOTIFICATION_NEW, onNewNotification);
+    return () => { socket.off(SOCKET_EVENTS.NOTIFICATION_NEW, onNewNotification); };
   }, [socket, onNewNotification]);
 }

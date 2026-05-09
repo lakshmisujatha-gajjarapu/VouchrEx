@@ -2,15 +2,24 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { OrderStatus, PaymentStatus, RefundStatus } from '@prisma/client';
 
+import { ONE_MINUTE_MS } from '../../common/time.constants';
 import { PaymentsService } from '../payments/payments.service';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  STALE_PAYMENT_SYNC_MINUTES_DEFAULT,
+  STUCK_REFUND_RECONCILE_MINUTES_DEFAULT
+} from './orders.constants';
 import { OrdersService } from './orders.service';
 
-const stalePaymentSyncMinutes = Number(process.env.STALE_PAYMENT_SYNC_MINUTES ?? 1);
-const stalePaymentSyncMs = stalePaymentSyncMinutes * 60 * 1000;
+const stalePaymentSyncMinutes = Number(
+  process.env.STALE_PAYMENT_SYNC_MINUTES ?? STALE_PAYMENT_SYNC_MINUTES_DEFAULT
+);
+const stalePaymentSyncMs = stalePaymentSyncMinutes * ONE_MINUTE_MS;
 
-const stuckRefundMinutes = Number(process.env.STUCK_REFUND_RECONCILE_MINUTES ?? 2);
-const stuckRefundMs = stuckRefundMinutes * 60 * 1000;
+const stuckRefundMinutes = Number(
+  process.env.STUCK_REFUND_RECONCILE_MINUTES ?? STUCK_REFUND_RECONCILE_MINUTES_DEFAULT
+);
+const stuckRefundMs = stuckRefundMinutes * ONE_MINUTE_MS;
 
 @Injectable()
 export class ReconciliationService {

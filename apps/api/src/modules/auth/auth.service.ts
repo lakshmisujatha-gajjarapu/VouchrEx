@@ -7,7 +7,18 @@ import {
 import { OtpPurpose, UserStatus } from '@prisma/client';
 import { createHash, randomBytes } from 'node:crypto';
 
+import { ONE_DAY_MS, ONE_HOUR_MS, ONE_MINUTE_MS } from '../../common/time.constants';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  ACCESS_TOKEN_TTL_MINUTES_DEFAULT,
+  OTP_MAX_ATTEMPTS_DEFAULT,
+  OTP_MAX_DISTINCT_PHONES_PER_DEVICE_DAY_DEFAULT,
+  OTP_MAX_PER_DEVICE_HOUR_DEFAULT,
+  OTP_MAX_PER_PHONE_HOUR_DEFAULT,
+  OTP_RESEND_COOLDOWN_SECONDS_DEFAULT,
+  REFRESH_TOKEN_TTL_DAYS_DEFAULT,
+  SESSION_TOKEN_BYTE_LENGTH
+} from './auth.constants';
 import { RequestOtpDto } from './dto/request-otp.dto';
 import { OtpProviderService } from './otp-provider.service';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
@@ -15,13 +26,13 @@ import { RefreshTokenDto } from './dto/refresh-token.dto';
 
 @Injectable()
 export class AuthService {
-  private readonly maxOtpAttempts = Number(process.env.OTP_MAX_ATTEMPTS ?? 5);
-  private readonly accessTokenTtlMinutes = Number(process.env.ACCESS_TOKEN_TTL_MINUTES ?? 15);
-  private readonly refreshTokenTtlDays = Number(process.env.REFRESH_TOKEN_TTL_DAYS ?? 90);
-  private readonly otpResendCooldownSeconds = Number(process.env.OTP_RESEND_COOLDOWN_SECONDS ?? 60);
-  private readonly otpMaxPerPhoneHour = Number(process.env.OTP_MAX_PER_PHONE_HOUR ?? 3);
-  private readonly otpMaxPerDeviceHour = Number(process.env.OTP_MAX_PER_DEVICE_HOUR ?? 4);
-  private readonly otpMaxDistinctPhonesPerDeviceDay = Number(process.env.OTP_MAX_DISTINCT_PHONES_PER_DEVICE_DAY ?? 3);
+  private readonly maxOtpAttempts = Number(process.env.OTP_MAX_ATTEMPTS ?? OTP_MAX_ATTEMPTS_DEFAULT);
+  private readonly accessTokenTtlMinutes = Number(process.env.ACCESS_TOKEN_TTL_MINUTES ?? ACCESS_TOKEN_TTL_MINUTES_DEFAULT);
+  private readonly refreshTokenTtlDays = Number(process.env.REFRESH_TOKEN_TTL_DAYS ?? REFRESH_TOKEN_TTL_DAYS_DEFAULT);
+  private readonly otpResendCooldownSeconds = Number(process.env.OTP_RESEND_COOLDOWN_SECONDS ?? OTP_RESEND_COOLDOWN_SECONDS_DEFAULT);
+  private readonly otpMaxPerPhoneHour = Number(process.env.OTP_MAX_PER_PHONE_HOUR ?? OTP_MAX_PER_PHONE_HOUR_DEFAULT);
+  private readonly otpMaxPerDeviceHour = Number(process.env.OTP_MAX_PER_DEVICE_HOUR ?? OTP_MAX_PER_DEVICE_HOUR_DEFAULT);
+  private readonly otpMaxDistinctPhonesPerDeviceDay = Number(process.env.OTP_MAX_DISTINCT_PHONES_PER_DEVICE_DAY ?? OTP_MAX_DISTINCT_PHONES_PER_DEVICE_DAY_DEFAULT);
 
   constructor(
     private readonly prisma: PrismaService,
@@ -32,8 +43,8 @@ export class AuthService {
     const phone = this.normalizePhone(dto.phone);
     const deviceId = dto.deviceId ?? null;
     const now = Date.now();
-    const oneHourAgo = new Date(now - 60 * 60 * 1000);
-    const oneDayAgo = new Date(now - 24 * 60 * 60 * 1000);
+    const oneHourAgo = new Date(now - ONE_HOUR_MS);
+    const oneDayAgo = new Date(now - ONE_DAY_MS);
 
     // All rate limits are skipped outside production to avoid frustrating developers
     if (process.env.NODE_ENV === 'production') {
@@ -432,10 +443,10 @@ export class AuthService {
   }
 
   private generateTokenPair(now: Date) {
-    const accessToken = randomBytes(32).toString('hex');
-    const refreshToken = randomBytes(32).toString('hex');
-    const accessTokenExpiresAt = new Date(now.getTime() + this.accessTokenTtlMinutes * 60 * 1000);
-    const refreshTokenExpiresAt = new Date(now.getTime() + this.refreshTokenTtlDays * 24 * 60 * 60 * 1000);
+    const accessToken = randomBytes(SESSION_TOKEN_BYTE_LENGTH).toString('hex');
+    const refreshToken = randomBytes(SESSION_TOKEN_BYTE_LENGTH).toString('hex');
+    const accessTokenExpiresAt = new Date(now.getTime() + this.accessTokenTtlMinutes * ONE_MINUTE_MS);
+    const refreshTokenExpiresAt = new Date(now.getTime() + this.refreshTokenTtlDays * ONE_DAY_MS);
 
     return {
       accessToken,

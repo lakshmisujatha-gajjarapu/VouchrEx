@@ -5,7 +5,10 @@ import { ZodValidationPipe, patchNestJsSwagger } from 'nestjs-zod';
 import helmet from 'helmet';
 import { z } from 'zod';
 
+import { ONE_YEAR_SECONDS } from './common/time.constants';
 import { AppModule } from './modules/app.module';
+
+const DEFAULT_API_PORT = 3010;
 
 const envSchema = z.object({
   // ── Required ─────────────────────────────────────────────────────────────
@@ -24,7 +27,7 @@ const envSchema = z.object({
   EXPO_ACCESS_TOKEN:         z.string().optional(),
 
   // ── Optional with defaults ────────────────────────────────────────────────
-  PORT:                         z.coerce.number().default(3010),
+  PORT:                         z.coerce.number().default(DEFAULT_API_PORT),
   RAZORPAY_PAYMENT_CALLBACK_URL: z.string().default('vouchrex://payment-callback'),
   // Marketplace economics
   PLATFORM_FEE_INR:             z.coerce.number().default(10),
@@ -79,7 +82,7 @@ async function bootstrap() {
     contentSecurityPolicy: false,      // irrelevant for JSON API
     crossOriginEmbedderPolicy: false,  // would break Swagger UI
     hsts: {
-      maxAge: 31536000,                // 1 year
+      maxAge: ONE_YEAR_SECONDS,
       includeSubDomains: true,
       preload: true,
     },
@@ -126,7 +129,7 @@ async function bootstrap() {
     customSiteTitle: 'VouchrEx API Docs'
   });
 
-  const port = Number(process.env.PORT ?? 3010);
+  const port = Number(process.env.PORT ?? DEFAULT_API_PORT);
   await app.listen(port, '0.0.0.0');
 
   const logger = new Logger('bootstrap');

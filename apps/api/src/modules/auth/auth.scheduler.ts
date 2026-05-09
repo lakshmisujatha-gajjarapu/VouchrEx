@@ -1,10 +1,15 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 
+import { ONE_DAY_MS, ONE_HOUR_MS } from '../../common/time.constants';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  AUDIT_RETENTION_DAYS_DEFAULT,
+  OTP_CHALLENGE_GRACE_HOURS_DEFAULT
+} from './auth.constants';
 
 /** Retain revoked/expired records for this many days before hard-deleting. */
-const auditRetentionDays = Number(process.env.AUDIT_RETENTION_DAYS ?? 7);
+const auditRetentionDays = Number(process.env.AUDIT_RETENTION_DAYS ?? AUDIT_RETENTION_DAYS_DEFAULT);
 
 @Injectable()
 export class AuthScheduler {
@@ -40,8 +45,8 @@ export class AuthScheduler {
   private async pruneOtpChallenges() {
     // Delete challenges that are either consumed or expired (past OTP TTL).
     // Keep a 24-hour grace window so ops can inspect recent auth failures.
-    const otpChallengeGraceHours = Number(process.env.OTP_CHALLENGE_GRACE_HOURS ?? 24);
-    const cutoff = new Date(Date.now() - otpChallengeGraceHours * 60 * 60 * 1000);
+    const otpChallengeGraceHours = Number(process.env.OTP_CHALLENGE_GRACE_HOURS ?? OTP_CHALLENGE_GRACE_HOURS_DEFAULT);
+    const cutoff = new Date(Date.now() - otpChallengeGraceHours * ONE_HOUR_MS);
 
     const { count } = await this.prisma.otpChallenge.deleteMany({
       where: {
@@ -59,9 +64,7 @@ export class AuthScheduler {
   }
 
   private async pruneSessions() {
-    const retentionCutoff = new Date(
-      Date.now() - auditRetentionDays * 24 * 60 * 60 * 1000
-    );
+    const retentionCutoff = new Date(Date.now() - auditRetentionDays * ONE_DAY_MS);
 
     // A session is fully dead when its refresh token has expired (the longer-lived token).
     // Consumed sessions (rotated) and revoked sessions are also pruned after the retention window.

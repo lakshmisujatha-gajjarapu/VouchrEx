@@ -9,6 +9,7 @@ import { Server, Socket } from 'socket.io';
 
 import { AdminAccessService } from '../admin/admin-access.service';
 import { AuthService } from '../auth/auth.service';
+import { SOCKET_EVENTS, SOCKET_ROOMS, userRoom } from './realtime.constants';
 
 export type NotificationCreatedEvent = {
   readonly userId: string;
@@ -65,14 +66,14 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
     const user = await this.authService.getSessionUser(token);
     if (user) {
       (socket.data as Record<string, unknown>)['userId'] = user.id;
-      await socket.join(`user:${user.id}`);
+      await socket.join(userRoom(user.id));
       return;
     }
 
     const adminIdentity = await this.adminAccessService.resolveIdentity(token);
     if (adminIdentity) {
       (socket.data as Record<string, unknown>)['adminId'] = adminIdentity.adminId;
-      await socket.join('admin');
+      await socket.join(SOCKET_ROOMS.ADMIN);
       return;
     }
 
@@ -84,26 +85,26 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
   }
 
   async isUserConnected(userId: string): Promise<boolean> {
-    const sockets = await this.server.in(`user:${userId}`).fetchSockets();
+    const sockets = await this.server.in(userRoom(userId)).fetchSockets();
     return sockets.length > 0;
   }
 
   @OnEvent('notification.created')
   handleNotificationCreated(payload: NotificationCreatedEvent) {
-    this.server.to(`user:${payload.userId}`).emit('notification:new', payload.notification);
+    this.server.to(userRoom(payload.userId)).emit(SOCKET_EVENTS.NOTIFICATION_NEW, payload.notification);
   }
 
   @OnEvent('order.updated')
   handleOrderUpdated(payload: OrderUpdatedEvent) {
     const data = { orderId: payload.orderId, status: payload.status };
-    this.server.to(`user:${payload.buyerId}`).emit('order:updated', data);
-    this.server.to(`user:${payload.sellerId}`).emit('order:updated', data);
-    this.server.to('admin').emit('order:updated', data);
+    this.server.to(userRoom(payload.buyerId)).emit(SOCKET_EVENTS.ORDER_UPDATED, data);
+    this.server.to(userRoom(payload.sellerId)).emit(SOCKET_EVENTS.ORDER_UPDATED, data);
+    this.server.to(SOCKET_ROOMS.ADMIN).emit(SOCKET_EVENTS.ORDER_UPDATED, data);
   }
 
   @OnEvent('dispute.created')
   handleDisputeCreated(payload: DisputeCreatedEvent) {
-    this.server.to('admin').emit('dispute:opened', {
+    this.server.to(SOCKET_ROOMS.ADMIN).emit(SOCKET_EVENTS.DISPUTE_OPENED, {
       orderId: payload.orderId,
       listingId: payload.listingId
     });
@@ -111,11 +112,11 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
 
   @OnEvent('listing.created')
   handleListingCreated(payload: ListingCreatedEvent) {
-    this.server.emit('listing:created', payload);
+    this.server.emit(SOCKET_EVENTS.LISTING_CREATED, payload);
   }
 
   @OnEvent('listing.updated')
   handleListingUpdated(payload: ListingUpdatedEvent) {
-    this.server.emit('listing:updated', payload);
+    this.server.emit(SOCKET_EVENTS.LISTING_UPDATED, payload);
   }
 }

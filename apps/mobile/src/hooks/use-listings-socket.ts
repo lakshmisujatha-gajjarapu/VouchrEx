@@ -1,4 +1,6 @@
 import { useEffect } from 'react';
+
+import { SOCKET_EVENTS } from '@/lib/realtime.constants';
 import { useSocket } from './use-socket';
 
 export type ListingCreatedPayload = {
@@ -28,12 +30,12 @@ export function useListingsSocket({ onCreated, onUpdated }: Handlers) {
   useEffect(() => {
     if (!socket) return;
 
-    if (onCreated) socket.on('listing:created', onCreated);
-    if (onUpdated) socket.on('listing:updated', onUpdated);
+    if (onCreated) socket.on(SOCKET_EVENTS.LISTING_CREATED, onCreated);
+    if (onUpdated) socket.on(SOCKET_EVENTS.LISTING_UPDATED, onUpdated);
 
     return () => {
-      if (onCreated) socket.off('listing:created', onCreated);
-      if (onUpdated) socket.off('listing:updated', onUpdated);
+      if (onCreated) socket.off(SOCKET_EVENTS.LISTING_CREATED, onCreated);
+      if (onUpdated) socket.off(SOCKET_EVENTS.LISTING_UPDATED, onUpdated);
     };
   }, [socket, onCreated, onUpdated]);
 }

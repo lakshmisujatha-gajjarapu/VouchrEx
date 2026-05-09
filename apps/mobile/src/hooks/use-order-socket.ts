@@ -1,4 +1,6 @@
 import { useEffect } from 'react';
+
+import { SOCKET_EVENTS } from '@/lib/realtime.constants';
 import { useSocket } from './use-socket';
 
 /**
@@ -18,7 +20,7 @@ export function useOrderSocket(orderId: string | undefined, onOrderUpdated: () =
       }
     };
 
-    socket.on('order:updated', handler);
-    return () => { socket.off('order:updated', handler); };
+    socket.on(SOCKET_EVENTS.ORDER_UPDATED, handler);
+    return () => { socket.off(SOCKET_EVENTS.ORDER_UPDATED, handler); };
   }, [socket, orderId, onOrderUpdated]);
 }

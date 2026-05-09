@@ -12,6 +12,8 @@ import {
   Prisma
 } from '@prisma/client';
 
+import { DEFAULT_CURRENCY } from '../../common/marketplace.constants';
+import { ONE_HOUR_MS } from '../../common/time.constants';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PayoutAccountsService } from '../payouts/payout-accounts.service';
 import { BrandsService } from '../brands/brands.service';
@@ -19,6 +21,11 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateListingDto } from './dto/create-listing.dto';
 import { QueryListingsDto } from './dto/query-listings.dto';
 import { UpdateListingDto } from './dto/update-listing.dto';
+import {
+  LISTING_MIN_EXPIRY_HOURS_DEFAULT,
+  LISTINGS_PAGE_SIZE_DEFAULT,
+  SELLER_MAX_LISTINGS_PER_HOUR_DEFAULT
+} from './listings.constants';
 import { CodeVaultService } from './services/code-vault.service';
 
 const editableStatuses: readonly ListingStatus[] = [
@@ -98,7 +105,7 @@ export class ListingsService {
         }
       },
       orderBy,
-      take: query.limit ?? 20
+      take: query.limit ?? LISTINGS_PAGE_SIZE_DEFAULT
     });
   }
 
@@ -154,9 +161,9 @@ export class ListingsService {
       readonly name: string;
     }
   ) {
-    const minExpiryHours = Number(process.env.LISTING_MIN_EXPIRY_HOURS ?? 48);
+    const minExpiryHours = Number(process.env.LISTING_MIN_EXPIRY_HOURS ?? LISTING_MIN_EXPIRY_HOURS_DEFAULT);
     const expiryDate = new Date(createListingDto.expiryDate);
-    const minExpiryDate = new Date(Date.now() + minExpiryHours * 60 * 60 * 1000);
+    const minExpiryDate = new Date(Date.now() + minExpiryHours * ONE_HOUR_MS);
     if (expiryDate <= minExpiryDate) {
       throw new BadRequestException(`Voucher must expire at least ${String(minExpiryHours)} hours from now to allow time for buyer verification.`);
     }
@@ -174,8 +181,8 @@ export class ListingsService {
     }
 
     // Seller velocity: max N listings per hour (HLD fraud rule S1)
-    const sellerMaxListingsPerHour = Number(process.env.SELLER_MAX_LISTINGS_PER_HOUR ?? 5);
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const sellerMaxListingsPerHour = Number(process.env.SELLER_MAX_LISTINGS_PER_HOUR ?? SELLER_MAX_LISTINGS_PER_HOUR_DEFAULT);
+    const oneHourAgo = new Date(Date.now() - ONE_HOUR_MS);
     const recentListings = await this.prisma.voucherListing.count({
       where: { sellerId: seller.id, createdAt: { gte: oneHourAgo } }
     });
@@ -233,7 +240,7 @@ export class ListingsService {
         channel: NotificationChannel.IN_APP,
         eventType: 'listing.created',
         title: 'Listing is live',
-        message: `${brand.name} voucher has been listed for INR ${String(
+        message: `${brand.name} voucher has been listed for ${DEFAULT_CURRENCY} ${String(
           createListingDto.sellingPrice
         )}.`,
         metadata: {
@@ -286,9 +293,12 @@ export class ListingsService {
       throw new BadRequestException('Expiry date must be in the future.');
     }
     if (updateListingDto.expiryDate) {
-      const minExpiryDate = new Date(Date.now() + 48 * 60 * 60 * 1000);
+      const minExpiryHours = Number(process.env.LISTING_MIN_EXPIRY_HOURS ?? LISTING_MIN_EXPIRY_HOURS_DEFAULT);
+      const minExpiryDate = new Date(Date.now() + minExpiryHours * ONE_HOUR_MS);
       if (nextExpiryDate <= minExpiryDate) {
-        throw new BadRequestException('Voucher must expire at least 48 hours from now to allow time for buyer verification.');
+        throw new BadRequestException(
+          `Voucher must expire at least ${String(minExpiryHours)} hours from now to allow time for buyer verification.`
+        );
       }
     }
 

@@ -4,8 +4,7 @@ import { type ExpoPushMessage } from 'expo-server-sdk';
 import { PrismaService } from '../prisma/prisma.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { ExpoPushClient } from './expo-push.client';
-
-const DEDUP_TTL_MS = 60_000;
+import { EXPO_DEAD_TOKEN_ERRORS, PUSH_DEDUP_TTL_MS } from './push.constants';
 
 export type SendPushPayload = {
   readonly title: string;
@@ -73,7 +72,7 @@ export class PushService {
     const now = Date.now();
     this.purgeExpiredDedupEntries(now);
     if (this.dedupCache.has(dedupeKey)) return true;
-    this.dedupCache.set(dedupeKey, now + DEDUP_TTL_MS);
+    this.dedupCache.set(dedupeKey, now + PUSH_DEDUP_TTL_MS);
     return false;
   }
 
@@ -95,7 +94,11 @@ export class PushService {
     tickets.forEach((ticket, i) => {
       const error = ticket.details?.error;
       const token = tokens[i];
-      if (token && ticket.status === 'error' && (error === 'DeviceNotRegistered' || error === 'InvalidCredentials')) {
+      if (
+        token &&
+        ticket.status === 'error' &&
+        EXPO_DEAD_TOKEN_ERRORS.includes(error as (typeof EXPO_DEAD_TOKEN_ERRORS)[number])
+      ) {
         deadTokenIds.push(token.id);
       }
     });

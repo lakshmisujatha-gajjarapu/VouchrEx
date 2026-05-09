@@ -118,8 +118,8 @@ export function DateField({
           onChange: (e: { target: { value: string } }) => {
             if (e.target.value) onChange(e.target.value);
           },
-          onFocus: () => setFocused(true),
-          onBlur: () => setFocused(false),
+          onFocus: () => { setFocused(true); },
+          onBlur: () => { setFocused(false); },
           'aria-label': label,
           style: {
             position: 'absolute',

@@ -5,6 +5,14 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 
+import {
+  THROTTLE_LONG_LIMIT_DEFAULT,
+  THROTTLE_LONG_TTL_MS_DEFAULT,
+  THROTTLE_MEDIUM_LIMIT_DEFAULT,
+  THROTTLE_MEDIUM_TTL_MS_DEFAULT,
+  THROTTLE_SHORT_LIMIT_DEFAULT,
+  THROTTLE_SHORT_TTL_MS_DEFAULT
+} from '../common/throttle.constants';
 import { AdminModule } from './admin/admin.module';
 import { AuthModule } from './auth/auth.module';
 import { BrandsModule } from './brands/brands.module';
@@ -30,9 +38,9 @@ import { WebhooksModule } from './webhooks/webhooks.module';
       useFactory: () => ({
         skipIf: () => process.env.NODE_ENV !== 'production',
         throttlers: [
-          { name: 'short',  ttl: Number(process.env.THROTTLE_SHORT_TTL_MS  ?? 1000),   limit: Number(process.env.THROTTLE_SHORT_LIMIT  ?? 10)  },
-          { name: 'medium', ttl: Number(process.env.THROTTLE_MEDIUM_TTL_MS ?? 60000),  limit: Number(process.env.THROTTLE_MEDIUM_LIMIT ?? 100) },
-          { name: 'long',   ttl: Number(process.env.THROTTLE_LONG_TTL_MS   ?? 900000), limit: Number(process.env.THROTTLE_LONG_LIMIT   ?? 500) },
+          { name: 'short',  ttl: Number(process.env.THROTTLE_SHORT_TTL_MS  ?? THROTTLE_SHORT_TTL_MS_DEFAULT),  limit: Number(process.env.THROTTLE_SHORT_LIMIT  ?? THROTTLE_SHORT_LIMIT_DEFAULT)  },
+          { name: 'medium', ttl: Number(process.env.THROTTLE_MEDIUM_TTL_MS ?? THROTTLE_MEDIUM_TTL_MS_DEFAULT), limit: Number(process.env.THROTTLE_MEDIUM_LIMIT ?? THROTTLE_MEDIUM_LIMIT_DEFAULT) },
+          { name: 'long',   ttl: Number(process.env.THROTTLE_LONG_TTL_MS   ?? THROTTLE_LONG_TTL_MS_DEFAULT),   limit: Number(process.env.THROTTLE_LONG_LIMIT   ?? THROTTLE_LONG_LIMIT_DEFAULT) },
         ],
       }),
     }),

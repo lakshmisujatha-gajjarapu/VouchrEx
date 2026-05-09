@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 import * as Device from 'expo-device';
 
 import { api, type OtpRequestResult, type SessionUser } from '@/lib/api';
+import { DEVICE_FINGERPRINT_MAX_LENGTH, REFRESH_BEFORE_EXPIRY_MS } from '@/lib/auth.constants';
 import { unregisterFromPush } from '@/lib/push';
 import {
   clearAccessTokenExpiresAt,
@@ -19,11 +20,8 @@ function getDeviceFingerprint(): string {
   return [Device.brand, Device.modelName, Device.osName, Device.osVersion]
     .filter(Boolean)
     .join(':')
-    .slice(0, 128);
+    .slice(0, DEVICE_FINGERPRINT_MAX_LENGTH);
 }
-
-// Refresh the access token this many ms before it expires
-const REFRESH_BEFORE_EXPIRY_MS = 2 * 60 * 1000; // 2 minutes
 
 type AuthStatus = 'loading' | 'signedOut' | 'signedIn';
 

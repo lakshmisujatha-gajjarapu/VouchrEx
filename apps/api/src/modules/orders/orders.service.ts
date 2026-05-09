@@ -20,13 +20,21 @@ import {
   UserStatus
 } from '@prisma/client';
 
+import { ONE_HOUR_MS, ONE_MINUTE_MS } from '../../common/time.constants';
 import { CodeVaultService } from '../listings/services/code-vault.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PaymentsService } from '../payments/payments.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { USER_TIERS } from '../users/users.constants';
 import { CreateDisputeDto } from './dto/create-dispute.dto';
 import { CreateOrderDto } from './dto/create-order.dto';
 import {
+  BUYER_MAX_ORDERS_PER_HOUR_DEFAULT,
+  DEFAULT_CURRENCY,
+  SELLER_DISPUTE_RATE_THRESHOLD_DEFAULT,
+  SELLER_MIN_SALES_FOR_RATE_CHECK_DEFAULT,
+  VERIFICATION_REMINDER_MATCH_WINDOW_MINUTES,
+  VERIFICATION_REMINDER_WINDOWS,
   commissionRate,
   highValueThresholdInr,
   highValueWindowHours,
@@ -143,7 +151,7 @@ export class OrdersService {
     }
 
     // Buyer velocity: max 3 orders per hour (HLD fraud rule B1)
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const oneHourAgo = new Date(Date.now() - ONE_HOUR_MS);
     const recentBuyerOrders = await this.prisma.order.count({
       where: {
         buyerId: buyer.id,
@@ -151,13 +159,13 @@ export class OrdersService {
         status: { not: OrderStatus.CANCELLED }
       }
     });
-    const buyerMaxOrdersPerHour = Number(process.env.BUYER_MAX_ORDERS_PER_HOUR ?? 3);
+    const buyerMaxOrdersPerHour = Number(process.env.BUYER_MAX_ORDERS_PER_HOUR ?? BUYER_MAX_ORDERS_PER_HOUR_DEFAULT);
     if (recentBuyerOrders >= buyerMaxOrdersPerHour) {
       throw new BadRequestException('Too many purchases in a short period. Please try again later.');
     }
 
     // Bronze users cannot purchase high-value vouchers (HLD fraud rule B5 / trust tier gating)
-    if (buyer.tier === 'BRONZE' && listing.sellingPrice > highValueThresholdInr) {
+    if (buyer.tier === USER_TIERS.BRONZE && listing.sellingPrice > highValueThresholdInr) {
       throw new BadRequestException(
         'New accounts cannot purchase high-value vouchers. Complete more transactions to raise your trust tier.'
       );
@@ -493,7 +501,7 @@ export class OrdersService {
         : order.listing.brand.verificationWindowHours;
     const verificationDeadline =
       order.verificationDeadline ??
-      new Date(now.getTime() + verificationWindowHours * 60 * 60 * 1000);
+      new Date(now.getTime() + verificationWindowHours * ONE_HOUR_MS);
 
     const code = this.codeVaultService.decrypt(codeVault);
     const watermarkedCodeImageUrl = this.codeVaultService.renderWatermarkedCodeCard({
@@ -1059,7 +1067,7 @@ export class OrdersService {
    * Resolution is admin-only — this scheduler never auto-resolves a dispute.
    */
   async alertStaleDisputes(alertHours: number): Promise<number> {
-    const cutoff = new Date(Date.now() - alertHours * 60 * 60 * 1000);
+    const cutoff = new Date(Date.now() - alertHours * ONE_HOUR_MS);
 
     const stale = await this.prisma.dispute.findMany({
       where: {
@@ -1093,7 +1101,7 @@ export class OrdersService {
           actorId: null,
           metadata: {
             orderId: dispute.orderId,
-            ageHours: Math.round((Date.now() - dispute.createdAt.getTime()) / 3600000),
+            ageHours: Math.round((Date.now() - dispute.createdAt.getTime()) / ONE_HOUR_MS),
             sellerResponded: Boolean(dispute.sellerResponse)
           }
         }
@@ -1193,18 +1201,14 @@ export class OrdersService {
    */
   async sendVerificationReminders(): Promise<number> {
     const now = new Date();
-    const reminderWindows = [
-      { minutesBefore: 60, eventType: 'code.reveal_reminder_60min', label: '1 hour' },
-      { minutesBefore: 30, eventType: 'code.reveal_reminder_30min', label: '30 minutes' },
-      { minutesBefore: 5, eventType: 'code.reveal_reminder_5min', label: '5 minutes' }
-    ] as const;
+    const reminderWindows = VERIFICATION_REMINDER_WINDOWS;
 
     let sent = 0;
 
     for (const window of reminderWindows) {
-      // Find orders whose deadline falls within a 5-minute window around this reminder point
-      const deadlineFrom = new Date(now.getTime() + (window.minutesBefore - 3) * 60 * 1000);
-      const deadlineTo = new Date(now.getTime() + (window.minutesBefore + 3) * 60 * 1000);
+      // Find orders whose deadline falls within a ±VERIFICATION_REMINDER_MATCH_WINDOW_MINUTES band of the reminder point.
+      const deadlineFrom = new Date(now.getTime() + (window.minutesBefore - VERIFICATION_REMINDER_MATCH_WINDOW_MINUTES) * ONE_MINUTE_MS);
+      const deadlineTo = new Date(now.getTime() + (window.minutesBefore + VERIFICATION_REMINDER_MATCH_WINDOW_MINUTES) * ONE_MINUTE_MS);
 
       const orders = await this.prisma.order.findMany({
         where: {
@@ -1258,7 +1262,7 @@ export class OrdersService {
     for (const order of stuck) {
       const windowHours = order.listing.brand.verificationWindowHours;
       // Use a conservative recovery: deadline starts from now (not from when reveal happened)
-      const deadline = new Date(Date.now() + windowHours * 60 * 60 * 1000);
+      const deadline = new Date(Date.now() + windowHours * ONE_HOUR_MS);
       await this.prisma.order.update({
         where: { id: order.id },
         data: { verificationDeadline: deadline }
@@ -1292,7 +1296,7 @@ export class OrdersService {
    * Uses conditional updateMany to safely handle races with the reconciliation job.
    */
   async cancelStalePaymentPendingOrders(timeoutMinutes: number): Promise<number> {
-    const cutoff = new Date(Date.now() - timeoutMinutes * 60 * 1000);
+    const cutoff = new Date(Date.now() - timeoutMinutes * ONE_MINUTE_MS);
 
     const staleOrders = await this.prisma.order.findMany({
       where: {
@@ -1537,7 +1541,7 @@ export class OrdersService {
         status: PaymentStatus.CAPTURED,
         escrowStatus: EscrowStatus.ACTIVE,
         provider,
-        currency: order.payment?.currency ?? 'INR',
+        currency: order.payment?.currency ?? DEFAULT_CURRENCY,
         capturedAt: new Date(),
         ...(paymentDetails.razorpayOrderId ? { razorpayOrderId: paymentDetails.razorpayOrderId } : {}),
         ...(paymentDetails.razorpayPaymentId ? { razorpayPaymentId: paymentDetails.razorpayPaymentId } : {}),
@@ -1804,8 +1808,8 @@ export class OrdersService {
   }
 
   private async updateSellerDisputeStats(sellerId: string) {
-    const disputeRateThreshold = Number(process.env.SELLER_DISPUTE_RATE_THRESHOLD ?? 0.3);
-    const minSalesForCheck = Number(process.env.SELLER_MIN_SALES_FOR_RATE_CHECK ?? 3);
+    const disputeRateThreshold = Number(process.env.SELLER_DISPUTE_RATE_THRESHOLD ?? SELLER_DISPUTE_RATE_THRESHOLD_DEFAULT);
+    const minSalesForCheck = Number(process.env.SELLER_MIN_SALES_FOR_RATE_CHECK ?? SELLER_MIN_SALES_FOR_RATE_CHECK_DEFAULT);
 
     const seller = await this.prisma.user.update({
       where: { id: sellerId },

@@ -1,14 +1,21 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 
+import {
+  DISPUTE_ADMIN_ALERT_HOURS_DEFAULT,
+  PAYMENT_TIMEOUT_MINUTES_DEFAULT
+} from './orders.constants';
 import { OrdersService } from './orders.service';
 
 const rawTimeout = Number(process.env.PAYMENT_TIMEOUT_MINUTES);
-const paymentTimeoutMinutes = Number.isFinite(rawTimeout) && rawTimeout > 0 ? rawTimeout : 30;
+const paymentTimeoutMinutes =
+  Number.isFinite(rawTimeout) && rawTimeout > 0 ? rawTimeout : PAYMENT_TIMEOUT_MINUTES_DEFAULT;
 
 const rawDisputeAlert = Number(process.env.DISPUTE_ADMIN_ALERT_HOURS);
 const disputeAdminAlertHours =
-  Number.isFinite(rawDisputeAlert) && rawDisputeAlert > 0 ? rawDisputeAlert : 24;
+  Number.isFinite(rawDisputeAlert) && rawDisputeAlert > 0
+    ? rawDisputeAlert
+    : DISPUTE_ADMIN_ALERT_HOURS_DEFAULT;
 
 @Injectable()
 export class OrdersScheduler {
