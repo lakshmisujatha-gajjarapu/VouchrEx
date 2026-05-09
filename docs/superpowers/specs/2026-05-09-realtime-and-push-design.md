@@ -23,7 +23,7 @@ The infrastructure for in-app realtime already exists (`RealtimeGateway` Socket.
 - Per-channel notification preferences UI ("mute marketing", "mute disputes", etc.)
 - Quiet hours
 - Push receipt polling (Expo ticket-only for Phase 1)
-- Web push (admin app)
+- Web Push delivery (admin app) — `PushToken.platform = WEB` is reserved in the schema for Phase 2; no registration, no send path implemented in Phase 1
 - Direct APNs/FCM integration (Expo Push handles forwarding for Phase 1)
 - Patch-in-place Bazaar list updates (full reload on event for now)
 - Chat / DM realtime (chat module does not exist yet)
@@ -110,6 +110,7 @@ model PushToken {
 enum Platform {
   IOS
   ANDROID
+  WEB
 }
 ```
 
