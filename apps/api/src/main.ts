@@ -16,10 +16,10 @@ const envSchema = z.object({
   RAZORPAY_KEY_ID:          z.string().min(1),
   RAZORPAY_KEY_SECRET:      z.string().min(1),
   RAZORPAY_WEBHOOK_SECRET:  z.string().min(1),
-  // RazorpayX — payouts to sellers
-  RAZORPAY_X_KEY_ID:        z.string().min(1),
-  RAZORPAY_X_KEY_SECRET:    z.string().min(1),
-  RAZORPAY_X_ACCOUNT_NUMBER: z.string().min(1),
+  // RazorpayX — payouts to sellers (optional until onboarded)
+  RAZORPAY_X_KEY_ID:         z.string().min(1).optional(),
+  RAZORPAY_X_KEY_SECRET:     z.string().min(1).optional(),
+  RAZORPAY_X_ACCOUNT_NUMBER: z.string().min(1).optional(),
 
   // ── Optional with defaults ────────────────────────────────────────────────
   PORT:                         z.coerce.number().default(3010),
