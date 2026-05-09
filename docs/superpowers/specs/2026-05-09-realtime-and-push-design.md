@@ -237,7 +237,50 @@ Every push message MUST include:
 
 **Done state:** sellers receive "voucher sold" pushes with the app closed. Tapping deep-links to the order. Buyers receive payment/reveal/dispute pushes.
 
-### Phase 1C — Hardening (0.5–1 day)
+### Phase 1C — Admin app realtime (0.5–1 day)
+
+The admin Next.js app (`apps/admin/`) has operational queues (orders, disputes, payouts, refunds) where staff need to see new events without manual refresh. Push notifications are out of scope (desktop web app, no Web Push for Phase 1).
+
+#### Gateway change
+
+`RealtimeGateway.handleConnection` already authenticates via `AuthService.getSessionUser(token)`. Extend it to also accept the admin API token:
+
+1. Try session token → if valid, join `user:{userId}` (existing behaviour)
+2. Else try admin token (compare against `ADMIN_API_TOKEN`) → if valid, join `admin` room
+3. Else disconnect
+
+A single socket joins exactly one of those rooms. No mixing.
+
+#### New events emitted to the `admin` room
+
+| Event | Source | Audience |
+|---|---|---|
+| `order:updated` *(existing event, additional broadcast)* | `OrdersService` | per-user rooms **and** `admin` |
+| `dispute:opened` *(new)* | `DisputesService` (when service exists; emit on creation) | `admin` |
+| `dispute:updated` *(new)* | `DisputesService` | `admin` + buyer + seller |
+| `payout:updated` *(new)* | `PayoutsService` | `admin` + seller |
+
+User-feed events (`listing:created`, `listing:updated`, `notification:new`) do **not** go to `admin` — too noisy.
+
+#### Admin client
+
+- Add `socket.io-client` to `apps/admin/package.json`
+- New `lib/socket.ts` — singleton client, connects with `auth: { token: ADMIN_TOKEN }` (token already on the admin app — same one used for HTTP requests)
+- New `hooks/use-admin-socket.ts` — thin event-to-callback bridge, mirrors mobile pattern
+- Per-view wiring:
+  - `app/orders/` → reload on `order:updated`
+  - `app/disputes/` → reload on `dispute:opened` / `dispute:updated`; flash unread badge in nav
+  - `app/payouts/` → reload on `payout:updated`
+  - `app/dashboard/` → reload on any of the above
+- **Tab title flash** — when a high-priority event (`dispute:opened`) arrives and the tab is not focused, prefix the document title with `(N) ` until the tab is focused again
+- **In-app toast** — same library family as mobile (`react-hot-toast` or equivalent for Next.js); skip if already implemented in admin
+
+#### Out of scope for admin (Phase 1)
+
+- Web Push (requires VAPID key setup, low value when staff have dashboard open during shifts)
+- Per-admin filtering (all admins see all events; fine at current team size)
+
+### Phase 1D — Hardening (0.5–1 day)
 
 - Wire socket reconnect → `reload()` on visible screens (extend `useRefetchOnFocus`)
 - Real-device QA matrix: foreground / background / killed × iOS / Android × permission granted/denied
@@ -261,6 +304,19 @@ Every push message MUST include:
 
 - Manual real-device QA for Phase 1B (Expo Push doesn't work in iOS simulator)
 - Permission denied path: app must function normally; no crashes on `getExpoPushTokenAsync` failure
+
+## Considered alternatives
+
+### Server-Sent Events (SSE) instead of Socket.IO
+
+SSE is a simpler protocol — pure HTTP, no WebSocket handshake, native `EventSource` in browsers. We chose to keep Socket.IO for these reasons:
+
+- **It's already implemented and working** in `RealtimeGateway`, `SocketProvider`, `useOrderSocket`, `useNotificationsSocket`. Switching means rewriting all four files for no end-user-visible benefit.
+- **Per-user routing is fundamental to this design** (the `user:{id}` room is how every personal event is delivered). SSE has no rooms primitive — we would reimplement `Map<userId, Set<Response>>` with manual `res.write()` and connection cleanup, effectively rebuilding the smallest useful subset of Socket.IO without its battle-tested reconnect logic.
+- **React Native has no native `EventSource`.** Going SSE means adding `react-native-sse` (its own quirks around auth headers and reconnect) — equal or larger surface area than the already-installed `socket.io-client`.
+- **Future optionality.** Chat, typing indicators, presence are all bidirectional. Socket.IO supports them on the same connection; SSE forces a separate HTTP POST channel.
+
+SSE would be the right call for a greenfield project with broadcast-only events and no per-user routing. That is not this project.
 
 ## Risks & open questions
 
