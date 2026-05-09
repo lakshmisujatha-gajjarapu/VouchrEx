@@ -64,48 +64,85 @@ export function DateField({
   // Match SubmergedInput exactly
   const inputBg = focused ? theme.colors.surfaceHighest : theme.colors.surfaceHigh;
 
+  const trigger = (
+    <Pressable
+      accessibilityLabel={label}
+      accessibilityRole="button"
+      onPress={Platform.OS === 'web' ? undefined : handleOpen}
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        height: 56,
+        borderRadius: 14,
+        backgroundColor: inputBg,
+        borderWidth: focused ? 1.5 : 0,
+        borderColor: focused ? theme.colors.focusRing : theme.colors.transparent,
+        shadowColor: theme.colors.brand,
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: focused ? 0.12 : 0,
+        shadowRadius: 8,
+        paddingHorizontal: 16,
+        gap: 10,
+      }}>
+      <Ionicons
+        name="calendar-clear-outline"
+        size={18}
+        color={hasValue ? theme.colors.brand : theme.colors.inkMuted}
+      />
+      <Text
+        style={{
+          flex: 1,
+          fontFamily: theme.fontFamily.body,
+          fontSize: 15,
+          color: hasValue ? theme.colors.ink : theme.colors.inkMuted,
+          letterSpacing: 0,
+        }}>
+        {hasValue ? formatDisplayDate(value) : 'Select date'}
+      </Text>
+      <Ionicons
+        name={focused ? 'chevron-up' : 'chevron-down'}
+        size={16}
+        color={theme.colors.inkMuted}
+      />
+    </Pressable>
+  );
+
+  if (Platform.OS === 'web') {
+    return (
+      <View style={{ position: 'relative' }}>
+        {trigger}
+        {React.createElement('input', {
+          type: 'date',
+          value: value || '',
+          min: minimumDate ? toIsoDateString(minimumDate) : undefined,
+          onChange: (e: { target: { value: string } }) => {
+            if (e.target.value) onChange(e.target.value);
+          },
+          onFocus: () => setFocused(true),
+          onBlur: () => setFocused(false),
+          'aria-label': label,
+          style: {
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            opacity: 0,
+            border: 'none',
+            background: 'transparent',
+            cursor: 'pointer',
+            padding: 0,
+            margin: 0,
+            font: 'inherit',
+            color: 'transparent',
+          },
+        })}
+      </View>
+    );
+  }
+
   return (
     <>
-      <Pressable
-        accessibilityLabel={label}
-        accessibilityRole="button"
-        onPress={handleOpen}
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          height: 56,
-          borderRadius: 14,
-          backgroundColor: inputBg,
-          borderWidth: focused ? 1.5 : 0,
-          borderColor: focused ? theme.colors.focusRing : theme.colors.transparent,
-          shadowColor: theme.colors.brand,
-          shadowOffset: { width: 0, height: 0 },
-          shadowOpacity: focused ? 0.12 : 0,
-          shadowRadius: 8,
-          paddingHorizontal: 16,
-          gap: 10,
-        }}>
-        <Ionicons
-          name="calendar-clear-outline"
-          size={18}
-          color={hasValue ? theme.colors.brand : theme.colors.inkMuted}
-        />
-        <Text
-          style={{
-            flex: 1,
-            fontFamily: theme.fontFamily.body,
-            fontSize: 15,
-            color: hasValue ? theme.colors.ink : theme.colors.inkMuted,
-            letterSpacing: 0,
-          }}>
-          {hasValue ? formatDisplayDate(value) : 'Select date'}
-        </Text>
-        <Ionicons
-          name={focused ? 'chevron-up' : 'chevron-down'}
-          size={16}
-          color={theme.colors.inkMuted}
-        />
-      </Pressable>
+      {trigger}
 
       {/* Android — system dialog */}
       {Platform.OS === 'android' && showPicker ? (
