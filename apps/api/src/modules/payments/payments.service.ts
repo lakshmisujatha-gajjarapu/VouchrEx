@@ -95,29 +95,91 @@ export class PaymentsService {
     return expectedBuf.length === receivedBuf.length && timingSafeEqual(expectedBuf, receivedBuf);
   }
 
-  async executeRefund(razorpayPaymentId: string, amountInr: number): Promise<void> {
+  /**
+   * Initiate a Razorpay normal refund. Always pass `idempotencyKey` so retries
+   * with the same DB attempt collapse at Razorpay (returns 200 with the original
+   * refund) rather than charging twice.
+   *
+   * Header: `X-Refund-Idempotency` (min 10 chars, [a-zA-Z0-9_-] only).
+   * Razorpay 409 responses indicate either an in-progress duplicate (retry safely)
+   * or a conflicting request with the same key (different params) — both are surfaced
+   * to the caller as a ServiceUnavailableException so the caller can decide.
+   * @see https://razorpay.com/docs/api/refunds/normal-refunds-idempotent/
+   */
+  async executeRefund(
+    razorpayPaymentId: string,
+    amountInr: number,
+    options: { idempotencyKey: string; orderId: string }
+  ): Promise<{ razorpayRefundId: string | null }> {
     const response = await fetch(
       `${razorpayBaseUrl}/payments/${razorpayPaymentId}/refund`,
       {
         method: 'POST',
         headers: {
           Authorization: this.razorpayAuthHeader(),
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'X-Refund-Idempotency': options.idempotencyKey
         },
         body: JSON.stringify({
           amount: amountInr * inrMinorUnitFactor,
-          notes: { reason: 'dispute_refund' }
+          notes: { reason: 'dispute_refund', orderId: options.orderId },
+          receipt: options.orderId
         })
       }
     );
 
     if (!response.ok) {
+      const errorBody = await response.text().catch(() => '');
       throw new ServiceUnavailableException(
-        `Razorpay refund failed with status ${String(response.status)}.`
+        `Razorpay refund failed with status ${String(response.status)}: ${errorBody}`
       );
     }
 
-    this.logger.log(`Refund executed for payment ${razorpayPaymentId}, amount ₹${String(amountInr)}`);
+    const body = (await response.json().catch(() => ({}))) as { id?: string };
+    this.logger.log(`Refund executed for payment ${razorpayPaymentId}, amount ₹${String(amountInr)} (refund ${body.id ?? 'unknown'}, key ${options.idempotencyKey})`);
+    return { razorpayRefundId: body.id ?? null };
+  }
+
+  /**
+   * Fetch all refunds Razorpay has on file for a payment. Used by reconciliation
+   * to recover from crashes between "POST refund" returning and us persisting the
+   * resulting refund ID.
+   * @see https://razorpay.com/docs/api/refunds/fetch-multiple-refund-payment/
+   */
+  async fetchRefundsForPayment(razorpayPaymentId: string): Promise<ReadonlyArray<{
+    readonly id: string;
+    readonly status: 'pending' | 'processed' | 'failed';
+    readonly amount: number;
+    readonly notes: Record<string, string> | null;
+  }>> {
+    const response = await fetch(
+      `${razorpayBaseUrl}/payments/${razorpayPaymentId}/refunds`,
+      {
+        method: 'GET',
+        headers: { Authorization: this.razorpayAuthHeader() }
+      }
+    );
+
+    if (!response.ok) {
+      throw new ServiceUnavailableException(
+        `Razorpay fetch refunds failed with status ${String(response.status)}.`
+      );
+    }
+
+    const body = (await response.json()) as {
+      items?: ReadonlyArray<{
+        id: string;
+        status: 'pending' | 'processed' | 'failed';
+        amount: number;
+        notes?: Record<string, string> | null;
+      }>;
+    };
+    return (body.items ?? []).map((r) => ({
+      id: r.id,
+      status: r.status,
+      amount: r.amount,
+      notes: r.notes ?? null
+    }));
   }
 
   async checkRazorpayOrderPaymentStatus(

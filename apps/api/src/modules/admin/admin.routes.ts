@@ -9,6 +9,7 @@ export const ADMIN_ROUTES = {
   USER_SUSPEND:             'users/:id/suspend',
   USER_REACTIVATE:          'users/:id/reactivate',
   PAYOUTS_PENDING:          'payouts/pending',
+  REFUNDS_PENDING:          'refunds/pending',
   ORDER_RETRY_PAYOUT:       'orders/:orderId/retry-payout',
   ORDER_COMPLETE_PAYOUT:    'orders/:orderId/complete-payout',
   AUTH_LOGIN:               'auth/login',

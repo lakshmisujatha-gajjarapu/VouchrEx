@@ -21,6 +21,7 @@ import {
   ClipboardList,
   Users,
   Wallet,
+  Undo2,
   LogOut,
   ShieldCheck,
 } from 'lucide-react';
@@ -31,6 +32,7 @@ const baseNavItems = [
   { name: 'Orders',    href: ROUTES.ORDERS,    icon: ClipboardList },
   { name: 'Users',     href: ROUTES.USERS,     icon: Users },
   { name: 'Payouts',   href: ROUTES.PAYOUTS,   icon: Wallet },
+  { name: 'Refunds',   href: ROUTES.REFUNDS,   icon: Undo2 },
 ];
 
 interface NavigationProps {

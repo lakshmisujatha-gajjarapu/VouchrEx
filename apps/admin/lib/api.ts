@@ -8,6 +8,7 @@ import type {
   Dispute,
   Order,
   PendingPayout,
+  PendingRefund,
 } from './types';
 
 async function getAdminToken(): Promise<string> {
@@ -60,6 +61,10 @@ export async function getUsers(status?: string): Promise<AdminUser[]> {
 
 export async function getPendingPayouts(): Promise<PendingPayout[]> {
   return apiFetch<PendingPayout[]>('/admin/payouts/pending');
+}
+
+export async function getPendingRefunds(): Promise<PendingRefund[]> {
+  return apiFetch<PendingRefund[]>('/admin/refunds/pending');
 }
 
 export async function suspendUser(id: string): Promise<AdminUser> {

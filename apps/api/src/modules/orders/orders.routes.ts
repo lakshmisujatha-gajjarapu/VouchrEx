@@ -9,4 +9,6 @@ export const ORDERS_ROUTES = {
   DISPUTES:            ':id/disputes',
   DISPUTE_SELLER_RESP: 'disputes/:id/seller-response',
   DISPUTE_RESOLVE:     'disputes/:id/resolve',
+  RETRY_REFUND:        ':id/retry-refund',
+  COMPLETE_REFUND:     ':id/complete-refund',
 } as const;

@@ -10,8 +10,11 @@ export const metadata: Metadata = { title: 'Dashboard | VouchrEx Admin' };
 export default async function DashboardPage() {
   const metrics = await getMetrics();
 
-  const { orders, disputes, payments } = metrics;
-  const hasUrgent = disputes.open > 0 || disputes.underReview > 0;
+  const { orders, disputes, payments, refunds } = metrics;
+  const hasUrgent =
+    disputes.open > 0 ||
+    disputes.underReview > 0 ||
+    refunds.failed > 0;
 
   return (
     <div className="p-8 animate-slide-up">
@@ -49,6 +52,19 @@ export default async function DashboardPage() {
           value={formatCurrency(payments.totalRefundedInr)}
           sub="All-time refunds issued"
         />
+        <StatCard
+          label="Refunds Processing"
+          value={refunds.processing}
+          sub="In-flight to Razorpay"
+          href={refunds.processing > 0 ? ROUTES.REFUNDS : undefined}
+        />
+        <StatCard
+          label="Refunds Failed"
+          value={refunds.failed}
+          sub="Need admin intervention"
+          href={refunds.failed > 0 ? ROUTES.REFUNDS : undefined}
+          highlight={refunds.failed > 0}
+        />
       </div>
 
       {hasUrgent && (
@@ -76,6 +92,15 @@ export default async function DashboardPage() {
                 {disputes.underReview} dispute{disputes.underReview !== 1 ? 's' : ''} under review →
               </Link>
             )}
+            {refunds.failed > 0 && (
+              <Link
+                href={ROUTES.REFUNDS}
+                className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-colors"
+                style={{ backgroundColor: 'rgba(217,119,6,0.12)', color: 'var(--color-warning)', fontFamily: 'var(--font-body)' }}
+              >
+                {refunds.failed} refund{refunds.failed !== 1 ? 's' : ''} failed →
+              </Link>
+            )}
           </div>
         </div>
       )}
@@ -86,6 +111,7 @@ export default async function DashboardPage() {
           { label: 'Manage Orders',   href: ROUTES.ORDERS,   desc: 'View all platform orders' },
           { label: 'Manage Users',    href: ROUTES.USERS,    desc: 'Suspend or reactivate accounts' },
           { label: 'Process Payouts', href: ROUTES.PAYOUTS,  desc: 'Mark pending payouts complete' },
+          { label: 'Process Refunds', href: ROUTES.REFUNDS,  desc: 'Retry or settle buyer refunds' },
         ].map((action) => (
           <Link
             key={action.href}

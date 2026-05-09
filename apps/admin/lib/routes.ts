@@ -6,5 +6,6 @@ export const ROUTES = {
   ORDERS: '/orders',
   USERS: '/users',
   PAYOUTS: '/payouts',
+  REFUNDS: '/refunds',
   TEAM: '/team',
 };

@@ -164,7 +164,35 @@ export class OrdersController {
     @Body() resolveDisputeDto: ResolveDisputeDto,
     @Headers(adminHeaderName) adminToken?: string
   ) {
-    await this.adminAccessService.requireAdminAccess(adminToken);
-    return this.ordersService.resolveDispute(id, resolveDisputeDto.resolution);
+    const identity = await this.adminAccessService.requireAdminAccess(adminToken);
+    return this.ordersService.resolveDispute(id, resolveDisputeDto.resolution, identity.adminId);
+  }
+
+  @ApiHeader({
+    name: adminHeaderName,
+    required: true,
+    description: 'Admin token. Retries a failed Razorpay refund for a disputed order.'
+  })
+  @Post(ORDERS_ROUTES.RETRY_REFUND)
+  async retryRefund(
+    @Param('id') id: string,
+    @Headers(adminHeaderName) adminToken?: string
+  ) {
+    const identity = await this.adminAccessService.requireAdminAccess(adminToken);
+    return this.ordersService.retryDisputeRefund(id, identity.adminId);
+  }
+
+  @ApiHeader({
+    name: adminHeaderName,
+    required: true,
+    description: 'Admin token. Manually marks a dispute refund as completed (out-of-band transfer).'
+  })
+  @Post(ORDERS_ROUTES.COMPLETE_REFUND)
+  async completeRefundManually(
+    @Param('id') id: string,
+    @Headers(adminHeaderName) adminToken?: string
+  ) {
+    const identity = await this.adminAccessService.requireAdminAccess(adminToken);
+    return this.ordersService.completeDisputeRefundManually(id, identity.adminId);
   }
 }

@@ -201,6 +201,12 @@ export default function DisputesView({ disputes }: DisputesViewProps) {
                 </span>
               </div>
 
+              {selected.status !== 'RESOLVED' && (
+                <p className="rounded-xl px-4 py-3 text-xs" style={{ backgroundColor: 'var(--color-surface-raised)', color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}>
+                  <strong style={{ color: 'var(--color-foreground)' }}>Refund Buyer</strong> initiates a Razorpay refund to the original payment method. Buyer typically sees funds in 5–7 working days. If Razorpay fails, the order will appear on the Refunds page for retry.
+                </p>
+              )}
+
               {error && (
                 <p className="rounded-xl px-4 py-3 text-sm" style={{ backgroundColor: 'var(--color-destructive-soft)', color: 'var(--color-destructive)', fontFamily: 'var(--font-body)' }}>
                   {error}

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Headers, Param, Post, Query } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Headers, Param, Post, Query } from '@nestjs/common';
 import { ApiHeader, ApiTags } from '@nestjs/swagger';
 import {
   AdminRole,
@@ -7,6 +7,7 @@ import {
   OrderStatus,
   PaymentStatus,
   PayoutStatus,
+  RefundStatus,
   UserStatus
 } from '@prisma/client';
 
@@ -38,6 +39,8 @@ export class AdminController {
       disputesUnderReview,
       totalCaptured,
       totalRefunded,
+      refundsProcessing,
+      refundsFailed,
       activeListings,
       totalUsers
     ] = await Promise.all([
@@ -53,6 +56,8 @@ export class AdminController {
         where: { status: PaymentStatus.REFUNDED },
         _sum: { amount: true }
       }),
+      this.prisma.payment.count({ where: { refundStatus: RefundStatus.PROCESSING } }),
+      this.prisma.payment.count({ where: { refundStatus: RefundStatus.FAILED } }),
       this.prisma.voucherListing.count({ where: { status: 'ACTIVE' } }),
       this.prisma.user.count()
     ]);
@@ -64,6 +69,7 @@ export class AdminController {
         totalCapturedInr: totalCaptured._sum.amount ?? 0,
         totalRefundedInr: totalRefunded._sum.amount ?? 0
       },
+      refunds: { processing: refundsProcessing, failed: refundsFailed },
       listings: { active: activeListings },
       users: { total: totalUsers },
       generatedAt: new Date().toISOString()
@@ -79,14 +85,15 @@ export class AdminController {
   ) {
     await this.adminAccessService.requireAdminAccess(adminToken);
 
-    const statusFilter =
-      status === 'OPEN'
-        ? DisputeStatus.OPEN
-        : status === 'UNDER_REVIEW'
-          ? DisputeStatus.UNDER_REVIEW
-          : status === 'RESOLVED'
-            ? DisputeStatus.RESOLVED
-            : undefined;
+    let statusFilter: DisputeStatus | undefined;
+    if (status !== undefined) {
+      if (!(status in DisputeStatus)) {
+        throw new BadRequestException(
+          `Invalid status '${status}'. Allowed: ${Object.values(DisputeStatus).join(', ')}.`
+        );
+      }
+      statusFilter = DisputeStatus[status as keyof typeof DisputeStatus];
+    }
 
     return this.prisma.dispute.findMany({
       where: statusFilter
@@ -297,6 +304,34 @@ export class AdminController {
         listing: { include: { brand: true } }
       },
       orderBy: { createdAt: 'asc' }
+    });
+  }
+
+  /**
+   * Refunds that are stuck in PROCESSING (in-flight to Razorpay) or FAILED
+   * (Razorpay error, no razorpayPaymentId, or expired-in-escrow with no auto-refund path).
+   * These need admin attention — either retry via /orders/:id/retry-refund or
+   * complete manually via /orders/:id/complete-refund after an out-of-band transfer.
+   */
+  @ApiHeader({ name: adminHeaderName, required: true })
+  @Get(ADMIN_ROUTES.REFUNDS_PENDING)
+  async getPendingRefunds(@Headers(adminHeaderName) adminToken?: string) {
+    await this.adminAccessService.requireAdminAccess(adminToken);
+
+    return this.prisma.order.findMany({
+      where: {
+        payment: {
+          refundStatus: { in: [RefundStatus.PROCESSING, RefundStatus.FAILED] }
+        }
+      },
+      include: {
+        payment: true,
+        buyer: { select: { id: true, name: true, phone: true } },
+        seller: { select: { id: true, name: true, phone: true } },
+        listing: { include: { brand: true } },
+        dispute: true
+      },
+      orderBy: { updatedAt: 'asc' }
     });
   }
 

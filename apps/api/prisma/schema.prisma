@@ -69,6 +69,13 @@ enum PayoutStatus {
   FAILED
 }
 
+enum RefundStatus {
+  NOT_APPLICABLE
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
 enum PayoutAccountType {
   UPI
   BANK_ACCOUNT
@@ -224,7 +231,12 @@ model Payment {
   payoutInitiatedAt     DateTime?
   payoutCompletedAt     DateTime?
   payoutFailureReason   String?
+  refundStatus          RefundStatus    @default(NOT_APPLICABLE)
+  razorpayRefundId      String?
+  refundInitiatedAt     DateTime?
   refundCompletedAt     DateTime?
+  refundFailureReason   String?
+  refundAttempts        Int             @default(0)
   provider              PaymentProvider @default(RAZORPAY)
   currency              String          @default("INR")
   razorpayOrderId       String?
@@ -262,6 +274,8 @@ model Dispute {
   resolution    DisputeResolution?
   status        DisputeStatus      @default(OPEN)
   resolvedAt    DateTime?
+  resolvedById  String?            // adminId of the admin who resolved this dispute (null for bootstrap token)
+  adminAlertedAt DateTime?         // set by scheduler when stale-dispute admin alert is sent; prevents repeat alerts
   createdAt     DateTime           @default(now())
   updatedAt     DateTime           @updatedAt
   order         Order              @relation(fields: [orderId], references: [id], onDelete: Cascade)

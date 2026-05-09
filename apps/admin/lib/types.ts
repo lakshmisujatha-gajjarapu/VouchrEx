@@ -11,6 +11,10 @@ export interface AdminMetrics {
     totalCapturedInr: number;
     totalRefundedInr: number;
   };
+  refunds: {
+    processing: number;
+    failed: number;
+  };
   listings: {
     active: number;
   };
@@ -32,16 +36,24 @@ export interface UserSummary {
   phone: string;
 }
 
+export type RefundStatus = 'NOT_APPLICABLE' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+
 export interface Payment {
   id: string;
   orderId: string;
   amount: number;
   status: string;
+  razorpayPaymentId: string | null;
   escrowStatus: 'PENDING' | 'ACTIVE' | 'RELEASED' | 'REFUNDED' | 'CANCELLED';
   payoutStatus: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
   payoutFailureReason: string | null;
   payoutCompletedAt: string | null;
+  refundStatus: RefundStatus;
+  razorpayRefundId: string | null;
+  refundInitiatedAt: string | null;
   refundCompletedAt: string | null;
+  refundFailureReason: string | null;
+  refundAttempts: number;
 }
 
 export interface VoucherListing {
@@ -70,6 +82,9 @@ export interface Dispute {
   reason: string;
   sellerResponse: string | null;
   resolution: string | null;
+  resolvedAt: string | null;
+  resolvedById: string | null;
+  adminAlertedAt: string | null;
   createdAt: string;
   order: Order;
   raisedBy: { id: string; name: string | null };
@@ -91,6 +106,11 @@ export interface AdminUser {
 
 // PendingPayout is an Order with a non-null payment (sellerPayout lives on Order)
 export interface PendingPayout extends Order {
+  payment: Payment;
+}
+
+// PendingRefund is an Order whose payment is in PROCESSING/FAILED refundStatus.
+export interface PendingRefund extends Order {
   payment: Payment;
 }
 

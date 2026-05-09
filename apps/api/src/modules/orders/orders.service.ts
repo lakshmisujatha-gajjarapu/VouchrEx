@@ -16,6 +16,7 @@ import {
   PaymentProvider,
   PaymentStatus,
   PayoutStatus,
+  RefundStatus,
   UserStatus
 } from '@prisma/client';
 
@@ -695,7 +696,7 @@ export class OrdersService {
     return dispute;
   }
 
-  async resolveDispute(id: string, resolution: DisputeResolution) {
+  async resolveDispute(id: string, resolution: DisputeResolution, actorId: string | null) {
     const dispute = await this.prisma.dispute.findUnique({
       where: { id },
       include: {
@@ -735,59 +736,7 @@ export class OrdersService {
     if (resolution === DisputeResolution.RELEASE_TO_SELLER) {
       await this.finalizeRelease(dispute.orderId, OrderStatus.CONFIRMED, new Date(), null);
     } else {
-      await this.prisma.$transaction(async (tx) => {
-        await tx.order.update({
-          where: { id: dispute.orderId },
-          data: {
-            status: OrderStatus.CANCELLED,
-            confirmedAt: new Date()
-          }
-        });
-
-        await tx.voucherListing.update({
-          where: { id: dispute.order.listingId },
-          data: {
-            status: ListingStatus.REFUNDED,
-            buyerId: null
-          }
-        });
-
-        if (dispute.order.payment) {
-          await tx.payment.update({
-            where: { orderId: dispute.orderId },
-            data: {
-              status: PaymentStatus.REFUNDED,
-              escrowStatus: EscrowStatus.REFUNDED,
-              refundCompletedAt: new Date()
-            }
-          });
-        }
-
-        await tx.auditLog.create({
-          data: {
-            entityType: 'dispute',
-            entityId: dispute.id,
-            action: 'dispute.refund_initiated',
-            actorId: null,
-            metadata: { orderId: dispute.orderId }
-          }
-        });
-      });
-
-      // Execute the actual refund via Razorpay (no-op for MOCK provider)
-      if (dispute.order.payment?.razorpayPaymentId) {
-        try {
-          await this.paymentsService.executeRefund(
-            dispute.order.payment.razorpayPaymentId,
-            dispute.order.payment.amount
-          );
-        } catch (error) {
-          this.logger.error(
-            `Razorpay refund failed for dispute ${dispute.id}: ${error instanceof Error ? error.message : String(error)}. Manual refund required.`
-          );
-          // Don't rethrow — DB already updated, ops team must handle manually
-        }
-      }
+      await this.initiateDisputeRefund(dispute.id, dispute.orderId, actorId);
     }
 
     const resolvedDispute = await this.prisma.dispute.update({
@@ -795,7 +744,8 @@ export class OrdersService {
       data: {
         status: DisputeStatus.RESOLVED,
         resolution,
-        resolvedAt: new Date()
+        resolvedAt: new Date(),
+        resolvedById: actorId
       }
     });
 
@@ -839,6 +789,295 @@ export class OrdersService {
     ]);
 
     return resolvedDispute;
+  }
+
+  /**
+   * Mark a dispute refund as in-flight in the DB, then call Razorpay.
+   * On Razorpay success: payment.status -> REFUNDED, refundStatus -> COMPLETED.
+   * On Razorpay failure: refundStatus -> FAILED with reason; payment.status stays CAPTURED
+   * so admin can retry via /orders/:id/retry-refund. Order/listing state still flips to
+   * CANCELLED/REFUNDED — the buyer's voucher is gone either way; only the money movement
+   * is the open question.
+   */
+  private async initiateDisputeRefund(
+    disputeId: string,
+    orderId: string,
+    actorId: string | null
+  ): Promise<void> {
+    const order = await this.prisma.$transaction(async (tx) => {
+      const updatedOrder = await tx.order.update({
+        where: { id: orderId },
+        data: {
+          status: OrderStatus.CANCELLED,
+          confirmedAt: new Date()
+        },
+        include: { payment: true }
+      });
+
+      await tx.voucherListing.update({
+        where: { id: updatedOrder.listingId },
+        data: {
+          status: ListingStatus.REFUNDED,
+          buyerId: null
+        }
+      });
+
+      if (updatedOrder.payment) {
+        await tx.payment.update({
+          where: { orderId },
+          data: {
+            escrowStatus: EscrowStatus.REFUNDED,
+            refundStatus: RefundStatus.PROCESSING,
+            refundInitiatedAt: new Date(),
+            refundFailureReason: null,
+            refundAttempts: { increment: 1 }
+          }
+        });
+      }
+
+      await tx.auditLog.create({
+        data: {
+          entityType: 'dispute',
+          entityId: disputeId,
+          action: 'dispute.refund_initiated',
+          actorId,
+          metadata: { orderId }
+        }
+      });
+
+      return updatedOrder;
+    });
+
+    if (order.payment?.razorpayPaymentId) {
+      await this.executeAndRecordRefund(
+        orderId,
+        order.payment.razorpayPaymentId,
+        order.payment.amount,
+        disputeId,
+        actorId
+      );
+    } else if (order.payment) {
+      // No razorpay payment ID — flag as failed so it surfaces in the admin queue.
+      await this.prisma.payment.update({
+        where: { orderId },
+        data: {
+          refundStatus: RefundStatus.FAILED,
+          refundFailureReason: 'No razorpayPaymentId on payment; manual refund required.'
+        }
+      });
+    }
+  }
+
+  /**
+   * Admin retries a failed dispute refund. Only valid when refundStatus === FAILED.
+   */
+  async retryDisputeRefund(orderId: string, actorId: string | null) {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: { payment: true, dispute: true }
+    });
+
+    if (!order) {
+      throw new NotFoundException(`Order ${orderId} was not found.`);
+    }
+    if (!order.payment) {
+      throw new BadRequestException('Order has no payment to refund.');
+    }
+    if (order.payment.refundStatus !== RefundStatus.FAILED) {
+      throw new BadRequestException(
+        `Refund is not in FAILED state (current: ${order.payment.refundStatus}).`
+      );
+    }
+    if (!order.payment.razorpayPaymentId) {
+      throw new BadRequestException('Payment has no razorpayPaymentId; cannot auto-refund.');
+    }
+
+    await this.prisma.payment.update({
+      where: { orderId },
+      data: {
+        refundStatus: RefundStatus.PROCESSING,
+        refundInitiatedAt: new Date(),
+        refundFailureReason: null,
+        refundAttempts: { increment: 1 }
+      }
+    });
+
+    await this.executeAndRecordRefund(
+      orderId,
+      order.payment.razorpayPaymentId,
+      order.payment.amount,
+      order.dispute?.id ?? null,
+      actorId
+    );
+
+    return this.prisma.payment.findUnique({ where: { orderId } });
+  }
+
+  /**
+   * Admin manually marks a refund as completed (e.g. funds returned out-of-band).
+   */
+  async completeDisputeRefundManually(orderId: string, actorId: string | null) {
+    const payment = await this.prisma.payment.findUnique({ where: { orderId } });
+    if (!payment) {
+      throw new NotFoundException(`Payment for order ${orderId} not found.`);
+    }
+    if (payment.refundStatus === RefundStatus.COMPLETED) {
+      throw new BadRequestException('Refund already completed.');
+    }
+
+    const updated = await this.prisma.payment.update({
+      where: { orderId },
+      data: {
+        status: PaymentStatus.REFUNDED,
+        refundStatus: RefundStatus.COMPLETED,
+        refundCompletedAt: new Date(),
+        refundFailureReason: null
+      }
+    });
+
+    await this.prisma.auditLog.create({
+      data: {
+        entityType: 'payment',
+        entityId: payment.id,
+        action: 'payment.refund_completed_manually',
+        actorId,
+        metadata: { orderId }
+      }
+    });
+
+    return updated;
+  }
+
+  private async executeAndRecordRefund(
+    orderId: string,
+    razorpayPaymentId: string,
+    amount: number,
+    disputeId: string | null,
+    actorId: string | null
+  ): Promise<void> {
+    // Idempotency key is per-(order, attempt). refundAttempts has already been
+    // incremented in the DB before this method is called, so reading it here
+    // gives us a stable key for the *current* attempt — re-entry with the same
+    // attempt number (e.g. transient network retry inside fetch) collapses at
+    // Razorpay, while a fresh admin-initiated retry bumps the attempt counter
+    // and gets a new key.
+    const payment = await this.prisma.payment.findUnique({
+      where: { orderId },
+      select: { refundAttempts: true }
+    });
+    const idempotencyKey = `refund-${orderId}-${String(payment?.refundAttempts ?? 1)}`;
+
+    try {
+      const { razorpayRefundId } = await this.paymentsService.executeRefund(
+        razorpayPaymentId,
+        amount,
+        { idempotencyKey, orderId }
+      );
+      await this.prisma.payment.update({
+        where: { orderId },
+        data: {
+          status: PaymentStatus.REFUNDED,
+          refundStatus: RefundStatus.COMPLETED,
+          refundCompletedAt: new Date(),
+          razorpayRefundId
+        }
+      });
+      await this.prisma.auditLog.create({
+        data: {
+          entityType: 'payment',
+          entityId: orderId,
+          action: 'payment.refund_completed',
+          actorId,
+          metadata: { orderId, disputeId, razorpayRefundId }
+        }
+      });
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Razorpay refund failed for order ${orderId}: ${reason}`);
+      await this.prisma.payment.update({
+        where: { orderId },
+        data: {
+          refundStatus: RefundStatus.FAILED,
+          refundFailureReason: reason
+        }
+      });
+      await this.prisma.auditLog.create({
+        data: {
+          entityType: 'payment',
+          entityId: orderId,
+          action: 'payment.refund_failed',
+          actorId,
+          metadata: { orderId, disputeId, reason }
+        }
+      });
+    }
+  }
+
+  /**
+   * Find disputes that have been OPEN longer than the alert threshold and which
+   * have not yet been flagged for admin attention. For each:
+   *   - audit-log a `dispute.stale_admin_alert` entry (admins watch the queue)
+   *   - if the seller still hasn't responded, send them a reminder push
+   *   - mark adminAlertedAt so we don't re-alert on the next tick
+   *
+   * Resolution is admin-only — this scheduler never auto-resolves a dispute.
+   */
+  async alertStaleDisputes(alertHours: number): Promise<number> {
+    const cutoff = new Date(Date.now() - alertHours * 60 * 60 * 1000);
+
+    const stale = await this.prisma.dispute.findMany({
+      where: {
+        status: DisputeStatus.OPEN,
+        createdAt: { lte: cutoff },
+        adminAlertedAt: null
+      },
+      include: {
+        order: {
+          include: {
+            listing: { include: { brand: true } },
+            seller: { select: { id: true } }
+          }
+        }
+      }
+    });
+
+    if (stale.length === 0) return 0;
+
+    for (const dispute of stale) {
+      await this.prisma.dispute.update({
+        where: { id: dispute.id },
+        data: { adminAlertedAt: new Date() }
+      });
+
+      await this.prisma.auditLog.create({
+        data: {
+          entityType: 'dispute',
+          entityId: dispute.id,
+          action: 'dispute.stale_admin_alert',
+          actorId: null,
+          metadata: {
+            orderId: dispute.orderId,
+            ageHours: Math.round((Date.now() - dispute.createdAt.getTime()) / 3600000),
+            sellerResponded: Boolean(dispute.sellerResponse)
+          }
+        }
+      });
+
+      if (!dispute.sellerResponse) {
+        await this.notificationsService.createNotification({
+          userId: dispute.order.seller.id,
+          orderId: dispute.orderId,
+          listingId: dispute.order.listingId,
+          channel: NotificationChannel.PUSH,
+          eventType: 'dispute.seller_reminder',
+          title: 'Pending dispute on your sale',
+          message: `Please respond to the dispute on your ${dispute.order.listing.brand.name} voucher to avoid admin escalation.`,
+          metadata: { disputeId: dispute.id }
+        });
+      }
+    }
+
+    return stale.length;
   }
 
   /**
@@ -1167,9 +1406,10 @@ export class OrdersService {
           await tx.payment.update({
             where: { orderId: order.id },
             data: {
-              status: PaymentStatus.REFUNDED,
               escrowStatus: EscrowStatus.REFUNDED,
-              refundCompletedAt: new Date()
+              refundStatus: RefundStatus.FAILED,
+              refundFailureReason: 'Voucher expired in escrow; manual refund required.',
+              refundInitiatedAt: new Date()
             }
           });
         }

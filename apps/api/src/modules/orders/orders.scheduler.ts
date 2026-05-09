@@ -6,6 +6,10 @@ import { OrdersService } from './orders.service';
 const rawTimeout = Number(process.env.PAYMENT_TIMEOUT_MINUTES);
 const paymentTimeoutMinutes = Number.isFinite(rawTimeout) && rawTimeout > 0 ? rawTimeout : 30;
 
+const rawDisputeAlert = Number(process.env.DISPUTE_ADMIN_ALERT_HOURS);
+const disputeAdminAlertHours =
+  Number.isFinite(rawDisputeAlert) && rawDisputeAlert > 0 ? rawDisputeAlert : 24;
+
 @Injectable()
 export class OrdersScheduler {
   private readonly logger = new Logger(OrdersScheduler.name);
@@ -15,6 +19,7 @@ export class OrdersScheduler {
   private expiredEscrowRunning = false;
   private reminderRunning = false;
   private recoveryRunning = false;
+  private staleDisputeRunning = false;
 
   constructor(private readonly ordersService: OrdersService) {}
 
@@ -111,6 +116,33 @@ export class OrdersScheduler {
       this.logger.error(`handleVerificationReminders failed: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       this.reminderRunning = false;
+    }
+  }
+
+  /**
+   * Flag stale OPEN disputes for admin attention. Resolution stays admin-only —
+   * this only writes an audit-log entry, nudges the seller if they haven't
+   * responded, and marks adminAlertedAt to prevent repeat alerts.
+   * Runs every 30 minutes. Threshold is DISPUTE_ADMIN_ALERT_HOURS (default 24).
+   */
+  @Cron('*/30 * * * *')
+  async handleStaleDisputes() {
+    if (this.staleDisputeRunning) {
+      this.logger.warn('handleStaleDisputes still running — skipping tick.');
+      return;
+    }
+    this.staleDisputeRunning = true;
+    try {
+      const alerted = await this.ordersService.alertStaleDisputes(disputeAdminAlertHours);
+      if (alerted > 0) {
+        this.logger.warn(
+          `Flagged ${String(alerted)} stale dispute(s) for admin attention (threshold=${String(disputeAdminAlertHours)}h).`
+        );
+      }
+    } catch (error) {
+      this.logger.error(`handleStaleDisputes failed: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      this.staleDisputeRunning = false;
     }
   }
 
