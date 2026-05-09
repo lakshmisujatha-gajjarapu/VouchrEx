@@ -186,7 +186,7 @@ Every push message MUST include:
 | Code revealed / ready to use | ✅ | ✅ |
 | Auto-confirm in 1 hour (warning) | ✅ | ✅ |
 | Order auto-confirmed | ✅ | ✅ |
-| Dispute resolved | ✅ | ✅ |
+| Dispute resolved (by admin) | ✅ | ✅ |
 
 **Seller side**
 
@@ -196,6 +196,7 @@ Every push message MUST include:
 | Buyer revealed the code | ✅ | ✅ |
 | Order auto-confirmed (payout incoming) | ✅ | ✅ |
 | Dispute opened | ✅ | ✅ |
+| Dispute resolved (by admin) | ✅ | ✅ |
 | Payout completed | ✅ | ✅ |
 | Listing expired without selling | ❌ | ✅ |
 
@@ -262,6 +263,17 @@ A single socket joins exactly one of those rooms. No mixing.
 | `payout:updated` *(new)* | `PayoutsService` | `admin` + seller |
 
 User-feed events (`listing:created`, `listing:updated`, `notification:new`) do **not** go to `admin` — too noisy.
+
+#### Admin actions propagate to both parties
+
+When admin opens, updates, or resolves a dispute (or processes a payout), the service method must do **both**:
+
+1. Emit the operational event (`dispute:updated`, `payout:updated`) → broadcast to `admin` + per-user rooms for the affected buyer/seller
+2. Call `NotificationsService.create()` for buyer and seller → persists Inbox row, fires `notification:new` (toast + tab badge), triggers push via `PushDispatcher`
+
+Concretely: when an admin clicks "resolve dispute", buyer and seller both see a live status flip on the order screen (socket), an Inbox entry, an in-app toast if the app is open, and an OS push if it isn't. Same flow applies to "approve payout", "reject dispute", etc.
+
+This is a **service-layer responsibility**, not a gateway responsibility. The dispatcher does not synthesize notifications from operational events — services emit both explicitly.
 
 #### Admin client
 
