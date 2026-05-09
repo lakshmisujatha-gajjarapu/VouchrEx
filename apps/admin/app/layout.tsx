@@ -5,6 +5,9 @@ import "./globals.css";
 import { NavigationWrapper } from "@/components/NavigationWrapper";
 import { ThemeProvider } from "@/components/theme-provider";
 import { PageWrapper } from "@/components/PageWrapper";
+import { RealtimeBridge } from "@/components/realtime-bridge";
+import { ToastHost } from "@/components/toast-host";
+import { getAdminTokenForClient } from "@/lib/admin-token";
 
 const manrope = Manrope({
   subsets: ["latin"],
@@ -32,14 +35,17 @@ export const metadata: Metadata = {
 
 export const dynamic = 'force-dynamic';
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const realtimeToken = await getAdminTokenForClient();
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${manrope.variable} ${workSans.variable} ${jetbrainsMono.variable}`}>
+        <RealtimeBridge token={realtimeToken} />
+        <ToastHost />
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <div className="min-h-screen">
             <Suspense fallback={null}>

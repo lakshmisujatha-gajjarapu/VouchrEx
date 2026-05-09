@@ -21,8 +21,12 @@ import React from 'react';
 import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import Toast from 'react-native-toast-message';
+
 import { LoadingScreen } from '@/components/loading-screen';
 import { AuthProvider, useAuth } from '@/hooks/use-auth';
+import { NotificationCenterProvider } from '@/hooks/use-notification-center';
+import { PushRegistrar } from '@/hooks/use-push-registrar';
 import { SocketProvider } from '@/hooks/use-socket';
 import { ThemeProvider, useTheme } from '@/theme/ThemeContext';
 import { ThemePreferenceProvider, useThemePreference } from '@/theme/theme-preference';
@@ -53,7 +57,12 @@ function InnerApp() {
     <ThemeProvider preference={preference}>
       <AuthProvider>
         <SocketProvider>
-          <AppStack />
+          <PushRegistrar>
+            <NotificationCenterProvider>
+              <AppStack />
+              <Toast />
+            </NotificationCenterProvider>
+          </PushRegistrar>
         </SocketProvider>
       </AuthProvider>
     </ThemeProvider>

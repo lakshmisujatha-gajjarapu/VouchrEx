@@ -453,4 +453,24 @@ export const api = {
       body: input,
     });
   },
+  registerPushToken(
+    sessionToken: string,
+    input: {
+      readonly deviceId: string;
+      readonly token: string;
+      readonly platform: 'IOS' | 'ANDROID' | 'WEB';
+    }
+  ) {
+    return apiRequest<unknown>(USERS.PUSH_TOKENS, {
+      method: 'POST',
+      sessionToken,
+      body: input,
+    });
+  },
+  unregisterPushToken(sessionToken: string, deviceId: string) {
+    return apiRequest<unknown>(USERS.PUSH_TOKEN_BY_DEVICE(deviceId), {
+      method: 'DELETE',
+      sessionToken,
+    });
+  },
 };

@@ -20,7 +20,9 @@ import { StatusPill } from '@/components/status-pill';
 import { TicketCard } from '@/components/ticket-card';
 import { useAuth } from '@/hooks/use-auth';
 import { useAsyncResource } from '@/hooks/use-async-resource';
+import { useListingsSocket } from '@/hooks/use-listings-socket';
 import { useRefetchOnFocus } from '@/hooks/use-refetch-on-focus';
+import { useRefetchOnReconnect } from '@/hooks/use-refetch-on-reconnect';
 import { api, type Listing } from '@/lib/api';
 import { formatCurrency, formatDate, formatStatus } from '@/lib/format';
 import { getCardEyebrow, getCardTone, getStatusPillTone, getExpiryUrgency } from '@/lib/status';
@@ -227,7 +229,11 @@ export default function ListingsScreen() {
     { enabled: Boolean(sessionToken) },
   );
 
+  const reloadListings = useCallback(() => { void listingsResource.reload(); }, [listingsResource]);
+  useListingsSocket({ onCreated: reloadListings, onUpdated: reloadListings });
+
   useRefetchOnFocus(useCallback(() => { void listingsResource.reload(); }, [listingsResource.reload]));
+  useRefetchOnReconnect(useCallback(() => { void listingsResource.reload(); }, [listingsResource.reload]));
 
   const visibleListings = useMemo(
     () =>

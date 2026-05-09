@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from 'expo-router';
 import React, { useCallback } from 'react';
 import {
   ActivityIndicator,
@@ -10,8 +11,10 @@ import {
 import { AppShell } from '@/components/app-shell';
 import { useAuth } from '@/hooks/use-auth';
 import { useAsyncResource } from '@/hooks/use-async-resource';
+import { useNotificationCenter } from '@/hooks/use-notification-center';
 import { useNotificationsSocket } from '@/hooks/use-notifications-socket';
 import { useRefetchOnFocus } from '@/hooks/use-refetch-on-focus';
+import { useRefetchOnReconnect } from '@/hooks/use-refetch-on-reconnect';
 import { api } from '@/lib/api';
 import { formatDateTime } from '@/lib/format';
 import { useTheme } from '@/theme/ThemeContext';
@@ -80,6 +83,7 @@ function NotificationRow({
 export default function InboxScreen() {
   const { sessionToken } = useAuth();
   const theme = useTheme();
+  const { markAllRead } = useNotificationCenter();
 
   const notificationsResource = useAsyncResource(
     useCallback(() => {
@@ -90,7 +94,9 @@ export default function InboxScreen() {
   );
 
   useRefetchOnFocus(useCallback(() => { void notificationsResource.reload(); }, [notificationsResource.reload]));
+  useRefetchOnReconnect(useCallback(() => { void notificationsResource.reload(); }, [notificationsResource.reload]));
   useNotificationsSocket(useCallback(() => { void notificationsResource.reload(); }, [notificationsResource.reload]));
+  useFocusEffect(useCallback(() => { markAllRead(); }, [markAllRead]));
 
   async function handleMarkRead(id: string) {
     if (!sessionToken) return;

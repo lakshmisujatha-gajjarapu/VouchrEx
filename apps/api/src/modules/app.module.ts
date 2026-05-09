@@ -14,6 +14,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { OrdersModule } from './orders/orders.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { PayoutsModule } from './payouts/payouts.module';
+import { PushModule } from './push/push.module';
 import { RealtimeModule } from './realtime/realtime.module';
 import { UsersModule } from './users/users.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
@@ -45,6 +46,7 @@ import { WebhooksModule } from './webhooks/webhooks.module';
     OrdersModule,
     NotificationsModule,
     PayoutsModule,
+    PushModule,
     RealtimeModule,
     UsersModule,
     WebhooksModule

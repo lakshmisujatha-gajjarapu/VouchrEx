@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { LoadingScreen } from '@/components/loading-screen';
 import { useAuth } from '@/hooks/use-auth';
+import { useNotificationCenter } from '@/hooks/use-notification-center';
 import { useTheme } from '@/theme/ThemeContext';
 
 function TabBarButton({ children, onPress, onLongPress, accessibilityState }: BottomTabBarButtonProps) {
@@ -39,6 +40,7 @@ function TabBarButton({ children, onPress, onLongPress, accessibilityState }: Bo
 export default function TabsLayout() {
   const { status } = useAuth();
   const theme = useTheme();
+  const { unreadCount } = useNotificationCenter();
   const insets = useSafeAreaInsets();
   const bottomOffset = Math.max(insets.bottom, 8);
   const tabBarStyle = {
@@ -119,6 +121,7 @@ export default function TabsLayout() {
         options={{
           title: 'Inbox',
           tabBarIcon: ({ color, size }) => <Ionicons color={color} name="notifications-outline" size={size} />,
+          tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
         }}
       />
     </Tabs>

@@ -220,6 +220,11 @@ export class OrdersService {
       return createdOrder;
     });
 
+    this.eventEmitter.emit('listing.updated', {
+      listingId: listing.id,
+      status: ListingStatus.RESERVED
+    });
+
     try {
       const checkout = await this.paymentsService.prepareCheckout({
         id: order.id,
@@ -276,6 +281,11 @@ export class OrdersService {
             buyerId: null
           }
         });
+      });
+
+      this.eventEmitter.emit('listing.updated', {
+        listingId: listing.id,
+        status: ListingStatus.ACTIVE
       });
 
       if (error instanceof ServiceUnavailableException) {
@@ -614,7 +624,7 @@ export class OrdersService {
       throw new BadRequestException('Only the buyer can raise the Phase 1 dispute.');
     }
 
-    const dispute = await this.prisma.$transaction(async (tx) => {
+    const { dispute, listingTransitioned } = await this.prisma.$transaction(async (tx) => {
       const createdDispute = await tx.dispute.create({
         data: {
           orderId: id,
@@ -633,8 +643,10 @@ export class OrdersService {
         }
       });
 
-      await tx.voucherListing.update({
-        where: { id: order.listingId },
+      // Conditional: only flip listing if it's still RESERVED. If a concurrent
+      // transition (e.g. confirm) beat us to it, count = 0 and we skip the emit.
+      const listingResult = await tx.voucherListing.updateMany({
+        where: { id: order.listingId, status: ListingStatus.RESERVED },
         data: {
           status: ListingStatus.DISPUTED
         }
@@ -653,7 +665,7 @@ export class OrdersService {
         }
       });
 
-      return createdDispute;
+      return { dispute: createdDispute, listingTransitioned: listingResult.count > 0 };
     });
 
     await this.notificationsService.createMany([
@@ -689,6 +701,21 @@ export class OrdersService {
       sellerId: order.sellerId,
       status: OrderStatus.DISPUTED
     });
+
+    this.eventEmitter.emit('dispute.created', {
+      orderId: order.id,
+      listingId: order.listingId,
+      buyerId: order.buyerId,
+      sellerId: order.sellerId,
+      raisedByUserId
+    });
+
+    if (listingTransitioned) {
+      this.eventEmitter.emit('listing.updated', {
+        listingId: order.listingId,
+        status: ListingStatus.DISPUTED
+      });
+    }
 
     // Update seller dispute stats — may auto-suspend if dispute rate exceeds threshold
     await this.updateSellerDisputeStats(order.sellerId);
@@ -804,7 +831,7 @@ export class OrdersService {
     orderId: string,
     actorId: string | null
   ): Promise<void> {
-    const order = await this.prisma.$transaction(async (tx) => {
+    const { order, listingTransitioned } = await this.prisma.$transaction(async (tx) => {
       const updatedOrder = await tx.order.update({
         where: { id: orderId },
         data: {
@@ -814,8 +841,10 @@ export class OrdersService {
         include: { payment: true }
       });
 
-      await tx.voucherListing.update({
-        where: { id: updatedOrder.listingId },
+      // Conditional: only flip listing if it's still DISPUTED. Skip the emit if
+      // a concurrent transition already moved it.
+      const listingResult = await tx.voucherListing.updateMany({
+        where: { id: updatedOrder.listingId, status: ListingStatus.DISPUTED },
         data: {
           status: ListingStatus.REFUNDED,
           buyerId: null
@@ -845,8 +874,15 @@ export class OrdersService {
         }
       });
 
-      return updatedOrder;
+      return { order: updatedOrder, listingTransitioned: listingResult.count > 0 };
     });
+
+    if (listingTransitioned) {
+      this.eventEmitter.emit('listing.updated', {
+        listingId: order.listingId,
+        status: ListingStatus.REFUNDED
+      });
+    }
 
     if (order.payment?.razorpayPaymentId) {
       await this.executeAndRecordRefund(
@@ -1273,7 +1309,7 @@ export class OrdersService {
     let cancelled = 0;
 
     for (const order of staleOrders) {
-      const updated = await this.prisma.$transaction(async (tx) => {
+      const txResult = await this.prisma.$transaction(async (tx) => {
         // Conditional update: only proceed if still PAYMENT_PENDING.
         // If reconciliation activated escrow between our read and this write, count = 0.
         const result = await tx.order.updateMany({
@@ -1281,9 +1317,9 @@ export class OrdersService {
           data: { status: OrderStatus.CANCELLED }
         });
 
-        if (result.count === 0) return false;
+        if (result.count === 0) return { orderCancelled: false, listingReactivated: false };
 
-        await tx.voucherListing.updateMany({
+        const listingUpdate = await tx.voucherListing.updateMany({
           where: { id: order.listingId, status: ListingStatus.RESERVED },
           data: { status: ListingStatus.ACTIVE, buyerId: null }
         });
@@ -1305,11 +1341,17 @@ export class OrdersService {
           }
         });
 
-        return true;
+        return { orderCancelled: true, listingReactivated: listingUpdate.count > 0 };
       });
 
-      if (updated) {
+      if (txResult.orderCancelled) {
         cancelled++;
+        if (txResult.listingReactivated) {
+          this.eventEmitter.emit('listing.updated', {
+            listingId: order.listingId,
+            status: ListingStatus.ACTIVE
+          });
+        }
         await this.notificationsService.createMany([
           {
             userId: order.buyerId,
@@ -1391,14 +1433,16 @@ export class OrdersService {
     });
 
     for (const order of expiredEscrows) {
-      await this.prisma.$transaction(async (tx) => {
+      const listingTransitioned = await this.prisma.$transaction(async (tx) => {
         await tx.order.update({
           where: { id: order.id },
           data: { status: OrderStatus.CANCELLED, confirmedAt: new Date() }
         });
 
-        await tx.voucherListing.update({
-          where: { id: order.listingId },
+        // Conditional: only flip if listing is still RESERVED. Skip the emit if
+        // a concurrent transition already moved it.
+        const listingResult = await tx.voucherListing.updateMany({
+          where: { id: order.listingId, status: ListingStatus.RESERVED },
           data: { status: ListingStatus.REFUNDED, buyerId: null }
         });
 
@@ -1423,7 +1467,16 @@ export class OrdersService {
             metadata: { listingId: order.listingId }
           }
         });
+
+        return listingResult.count > 0;
       });
+
+      if (listingTransitioned) {
+        this.eventEmitter.emit('listing.updated', {
+          listingId: order.listingId,
+          status: ListingStatus.REFUNDED
+        });
+      }
 
       await this.notificationsService.createMany([
         {
@@ -1632,6 +1685,11 @@ export class OrdersService {
           payment: true
         }
       });
+    });
+
+    this.eventEmitter.emit('listing.updated', {
+      listingId: order.listingId,
+      status: ListingStatus.SOLD
     });
 
     // Increment seller totalSales counter

@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 import * as Device from 'expo-device';
 
 import { api, type OtpRequestResult, type SessionUser } from '@/lib/api';
+import { unregisterFromPush } from '@/lib/push';
 import {
   clearAccessTokenExpiresAt,
   clearRefreshToken,
@@ -223,6 +224,11 @@ export function AuthProvider({ children }: { readonly children: React.ReactNode 
       },
       async signOut() {
         if (sessionToken) {
+          try {
+            await unregisterFromPush(sessionToken);
+          } catch {
+            // best-effort
+          }
           await api.logout(sessionToken).catch(() => null);
         }
         if (refreshTimerRef.current) {

@@ -20,6 +20,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAsyncResource } from '@/hooks/use-async-resource';
+import { useListingsSocket } from '@/hooks/use-listings-socket';
 import { api } from '@/lib/api';
 import { useTheme } from '@/theme/ThemeContext';
 
@@ -195,6 +196,9 @@ export default function ShopScreen() {
     ),
     { enabled: true },
   );
+
+  const reloadListings = useCallback(() => { void listingsResource.reload(); }, [listingsResource]);
+  useListingsSocket({ onCreated: reloadListings, onUpdated: reloadListings });
 
   const categories = useMemo(() => {
     const raw = brandsResource.data?.map((b) => b.category) ?? [];

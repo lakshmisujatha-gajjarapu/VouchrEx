@@ -20,6 +20,8 @@ const envSchema = z.object({
   RAZORPAY_X_KEY_ID:         z.string().min(1).optional(),
   RAZORPAY_X_KEY_SECRET:     z.string().min(1).optional(),
   RAZORPAY_X_ACCOUNT_NUMBER: z.string().min(1).optional(),
+  // Expo push notifications — optional; required only for production push delivery
+  EXPO_ACCESS_TOKEN:         z.string().optional(),
 
   // ── Optional with defaults ────────────────────────────────────────────────
   PORT:                         z.coerce.number().default(3010),

@@ -8,7 +8,9 @@ import { StatusPill } from '@/components/status-pill';
 import { TicketCard } from '@/components/ticket-card';
 import { useAuth } from '@/hooks/use-auth';
 import { useAsyncResource } from '@/hooks/use-async-resource';
+import { useOrdersListSocket } from '@/hooks/use-orders-list-socket';
 import { useRefetchOnFocus } from '@/hooks/use-refetch-on-focus';
+import { useRefetchOnReconnect } from '@/hooks/use-refetch-on-reconnect';
 import { api } from '@/lib/api';
 import { formatCountdown, formatCurrency, formatStatus } from '@/lib/format';
 import { useTheme } from '@/theme/ThemeContext';
@@ -68,7 +70,11 @@ export default function OrdersScreen() {
     { enabled: Boolean(sessionToken) }
   );
 
+  const reloadOrders = useCallback(() => { void ordersResource.reload(); }, [ordersResource]);
+  useOrdersListSocket(reloadOrders);
+
   useRefetchOnFocus(useCallback(() => { void ordersResource.reload(); }, [ordersResource.reload]));
+  useRefetchOnReconnect(useCallback(() => { void ordersResource.reload(); }, [ordersResource.reload]));
 
   const visibleOrders = useMemo(
     () => ordersResource.data?.filter((o) =>

@@ -115,6 +115,12 @@ enum AdminRole {
   SUPER_ADMIN
 }
 
+enum Platform {
+  IOS
+  ANDROID
+  WEB
+}
+
 model User {
   id             String           @id @default(cuid())
   phone          String           @unique
@@ -134,6 +140,7 @@ model User {
   sessions      UserSession[]
   notifications Notification[]
   payoutAccount SellerPayoutAccount?
+  pushTokens    PushToken[]
 }
 
 model Brand {
@@ -343,6 +350,20 @@ model Notification {
   @@index([userId, createdAt])
   @@index([orderId, createdAt])
   @@index([listingId, createdAt])
+}
+
+model PushToken {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceId   String
+  token      String
+  platform   Platform
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @updatedAt
+
+  @@unique([userId, deviceId])
+  @@index([userId])
 }
 
 model AdminUser {

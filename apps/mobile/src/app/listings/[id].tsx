@@ -15,6 +15,7 @@ import { useColorScheme } from 'nativewind';
 import { PrimaryButton } from '@/components/primary-button';
 import { useAuth } from '@/hooks/use-auth';
 import { useAsyncResource } from '@/hooks/use-async-resource';
+import { useListingsSocket } from '@/hooks/use-listings-socket';
 import { api } from '@/lib/api';
 import { formatCurrency, formatDate } from '@/lib/format';
 import { useTheme } from '@/theme/ThemeContext';
@@ -37,6 +38,13 @@ export default function ListingDetailScreen() {
     }, [listingId]),
     { enabled: Boolean(listingId) },
   );
+
+  const handleListingUpdated = useCallback((payload: { listingId: string }) => {
+    if (payload.listingId === listingId) {
+      void listingResource.reload();
+    }
+  }, [listingId, listingResource]);
+  useListingsSocket({ onUpdated: handleListingUpdated });
 
   async function handleBuyNow() {
     if (!sessionToken || !listingId) return;

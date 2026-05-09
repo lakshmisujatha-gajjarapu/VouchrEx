@@ -5,6 +5,7 @@ import {
   ForbiddenException,
   NotFoundException
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
   ListingStatus,
   NotificationChannel,
@@ -33,7 +34,8 @@ export class ListingsService {
     private readonly codeVaultService: CodeVaultService,
     private readonly notificationsService: NotificationsService,
     private readonly brandsService: BrandsService,
-    private readonly payoutAccountsService: PayoutAccountsService
+    private readonly payoutAccountsService: PayoutAccountsService,
+    private readonly eventEmitter: EventEmitter2
   ) {}
 
   findActive(query: QueryListingsDto) {
@@ -240,6 +242,13 @@ export class ListingsService {
         }
       });
 
+      this.eventEmitter.emit('listing.created', {
+        listingId: createdListing.id,
+        sellerId: createdListing.sellerId,
+        brandId: createdListing.brandId,
+        status: createdListing.status
+      });
+
       return createdListing;
     } catch (error) {
       if (
@@ -375,10 +384,30 @@ export class ListingsService {
 
     if (stale.length === 0) return 0;
 
-    const { count } = await this.prisma.voucherListing.updateMany({
-      where: { id: { in: stale.map((l) => l.id) } },
-      data: { status: ListingStatus.EXPIRED }
-    });
+    let count = 0;
+    const now = new Date();
+
+    for (const listing of stale) {
+      // Per-id conditional update: avoids over-emitting if a concurrent
+      // process moved the listing out of ACTIVE between our read and write.
+      const result = await this.prisma.voucherListing.updateMany({
+        where: {
+          id: listing.id,
+          status: ListingStatus.ACTIVE,
+          expiryDate: { lte: now },
+          buyerId: null
+        },
+        data: { status: ListingStatus.EXPIRED }
+      });
+
+      if (result.count > 0) {
+        count++;
+        this.eventEmitter.emit('listing.updated', {
+          listingId: listing.id,
+          status: ListingStatus.EXPIRED
+        });
+      }
+    }
 
     return count;
   }
