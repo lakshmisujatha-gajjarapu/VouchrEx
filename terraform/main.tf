@@ -104,7 +104,7 @@ resource "null_resource" "run_migrations" {
     command = <<-EOT
       cd ${path.root}/..
       DATABASE_URL="${module.postgres_instance.db_url}" \
-        yarn workspace @cb/api prisma:migrate:deploy
+        yarn workspace vouchrex-api prisma:migrate:deploy
     EOT
   }
 
