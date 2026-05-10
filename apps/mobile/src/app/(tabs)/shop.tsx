@@ -22,7 +22,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAsyncResource } from '@/hooks/use-async-resource';
 import { useListingsSocket } from '@/hooks/use-listings-socket';
 import { api } from '@/lib/api';
-import { useTheme } from '@/theme/ThemeContext';
+import { useTheme } from '@/theme/theme-context';
 
 const SORT_OPTIONS = ['latest', 'best-discount', 'expiring', 'price-low'] as const;
 type SortOption = (typeof SORT_OPTIONS)[number];

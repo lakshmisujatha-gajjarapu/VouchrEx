@@ -2,7 +2,7 @@ import React from 'react';
 import { ScrollView, type StyleProp, type ViewStyle } from 'react-native';
 
 import { FilterChip } from '@/components/filter-chip';
-import { useTheme } from '@/theme/ThemeContext';
+import { useTheme } from '@/theme/theme-context';
 
 type HorizontalChipRowProps<T extends string> = {
   readonly options: readonly T[];

@@ -1,5 +1,5 @@
 import { getMe } from '@/lib/api';
-import { Navigation } from './Navigation';
+import { Navigation } from './navigation';
 
 export async function NavigationWrapper() {
   let isSuperAdmin = false;

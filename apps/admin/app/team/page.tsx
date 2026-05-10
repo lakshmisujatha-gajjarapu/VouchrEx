@@ -1,5 +1,5 @@
 import { getTeam, getMe } from '@/lib/api';
-import TeamView from './TeamView';
+import TeamView from './team-view';
 import { redirect } from 'next/navigation';
 import { ROUTES } from '@/lib/routes';
 import type { Metadata } from 'next';

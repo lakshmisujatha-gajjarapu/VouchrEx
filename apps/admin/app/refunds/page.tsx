@@ -1,5 +1,5 @@
 import { getPendingRefunds } from '@/lib/api';
-import RefundsView from './RefundsView';
+import RefundsView from './refunds-view';
 import { formatCurrency } from '@/lib/utils';
 import type { Metadata } from 'next';
 

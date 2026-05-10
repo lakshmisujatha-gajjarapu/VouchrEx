@@ -13,7 +13,7 @@ import { useRefetchOnFocus } from '@/hooks/use-refetch-on-focus';
 import { useRefetchOnReconnect } from '@/hooks/use-refetch-on-reconnect';
 import { api } from '@/lib/api';
 import { formatCountdown, formatCurrency, formatStatus } from '@/lib/format';
-import { useTheme } from '@/theme/ThemeContext';
+import { useTheme } from '@/theme/theme-context';
 
 type Segment = 'buying' | 'selling';
 

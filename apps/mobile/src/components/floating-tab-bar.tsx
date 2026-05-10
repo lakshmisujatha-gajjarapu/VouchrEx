@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useColorScheme } from 'nativewind';
 
-import { useTheme } from '@/theme/ThemeContext';
+import { useTheme } from '@/theme/theme-context';
 
 type Tab = {
   readonly name: string;

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Text, TextInput, View } from 'react-native';
 
-import { useTheme } from '@/theme/ThemeContext';
+import { useTheme } from '@/theme/theme-context';
 
 export function SubmergedInput({
   value,

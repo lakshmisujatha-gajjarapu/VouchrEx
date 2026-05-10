@@ -26,7 +26,7 @@ import { useOrderSocket } from '@/hooks/use-order-socket';
 import { api, apiBaseUrl, type Checkout, type RevealResult } from '@/lib/api';
 import { formatCountdown, formatCurrency, formatDate, formatStatus } from '@/lib/format';
 import { cardToneForStatus, escrowBadgeLabel, escrowBadgeColors, buildFlowSteps } from '@/lib/status';
-import { useTheme } from '@/theme/ThemeContext';
+import { useTheme } from '@/theme/theme-context';
 
 function firstRouteParam(value?: string | string[]) {
   return Array.isArray(value) ? value[0] : value;

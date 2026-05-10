@@ -8,7 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LoadingScreen } from '@/components/loading-screen';
 import { useAuth } from '@/hooks/use-auth';
 import { useNotificationCenter } from '@/hooks/use-notification-center';
-import { useTheme } from '@/theme/ThemeContext';
+import { useTheme } from '@/theme/theme-context';
 
 function TabBarButton({ children, onPress, onLongPress, accessibilityState }: BottomTabBarButtonProps) {
   const theme = useTheme();

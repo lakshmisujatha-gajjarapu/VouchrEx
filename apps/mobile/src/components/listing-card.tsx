@@ -3,7 +3,7 @@ import { Pressable, Text, View } from 'react-native';
 import { TrustBadge } from '@/components/trust-badge';
 import type { Listing } from '@/lib/api';
 import { formatCurrency, formatDate } from '@/lib/format';
-import { useTheme } from '@/theme/ThemeContext';
+import { useTheme } from '@/theme/theme-context';
 
 type Props = {
   listing: Listing;

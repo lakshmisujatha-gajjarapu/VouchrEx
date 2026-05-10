@@ -12,7 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/hooks/use-auth';
-import { useTheme } from '@/theme/ThemeContext';
+import { useTheme } from '@/theme/theme-context';
 import { useThemePreference } from '@/theme/theme-preference';
 import type { ThemePreference } from '@/theme/tokens';
 

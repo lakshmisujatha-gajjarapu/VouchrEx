@@ -4,7 +4,7 @@ import React from 'react';
 import { Pressable, Text } from 'react-native';
 
 import { useAuth } from '@/hooks/use-auth';
-import { useTheme } from '@/theme/ThemeContext';
+import { useTheme } from '@/theme/theme-context';
 
 export function ProfileAvatar({ marginTop = 0 }: { readonly marginTop?: number }) {
   const theme = useTheme();

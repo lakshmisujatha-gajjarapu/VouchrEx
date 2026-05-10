@@ -26,7 +26,7 @@ import { useRefetchOnReconnect } from '@/hooks/use-refetch-on-reconnect';
 import { api, type Listing } from '@/lib/api';
 import { formatCurrency, formatDate, formatStatus } from '@/lib/format';
 import { getCardEyebrow, getCardTone, getStatusPillTone, getExpiryUrgency } from '@/lib/status';
-import { useTheme } from '@/theme/ThemeContext';
+import { useTheme } from '@/theme/theme-context';
 
 // ─── constants ────────────────────────────────────────────────────────────────
 

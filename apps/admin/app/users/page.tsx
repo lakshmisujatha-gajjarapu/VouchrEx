@@ -1,5 +1,5 @@
 import { getUsers } from '@/lib/api';
-import UsersView from './UsersView';
+import UsersView from './users-view';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = { title: 'Users | VouchrEx Admin' };

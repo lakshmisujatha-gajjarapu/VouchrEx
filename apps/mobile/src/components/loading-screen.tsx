@@ -1,7 +1,7 @@
 import React from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 
-import { useTheme } from '@/theme/ThemeContext';
+import { useTheme } from '@/theme/theme-context';
 
 export function LoadingScreen({ label }: { readonly label: string }) {
   const theme = useTheme();

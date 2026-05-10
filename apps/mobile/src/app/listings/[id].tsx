@@ -18,7 +18,7 @@ import { useAsyncResource } from '@/hooks/use-async-resource';
 import { useListingsSocket } from '@/hooks/use-listings-socket';
 import { api } from '@/lib/api';
 import { formatCurrency, formatDate } from '@/lib/format';
-import { useTheme } from '@/theme/ThemeContext';
+import { useTheme } from '@/theme/theme-context';
 
 export default function ListingDetailScreen() {
   const router = useRouter();

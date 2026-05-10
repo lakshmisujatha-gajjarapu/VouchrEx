@@ -28,7 +28,7 @@ import { AuthProvider, useAuth } from '@/hooks/use-auth';
 import { NotificationCenterProvider } from '@/hooks/use-notification-center';
 import { PushRegistrar } from '@/hooks/use-push-registrar';
 import { SocketProvider } from '@/hooks/use-socket';
-import { ThemeProvider, useTheme } from '@/theme/ThemeContext';
+import { ThemeProvider, useTheme } from '@/theme/theme-context';
 import { ThemePreferenceProvider, useThemePreference } from '@/theme/theme-preference';
 import { darkTheme } from '@/theme/tokens';
 

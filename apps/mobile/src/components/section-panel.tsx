@@ -1,7 +1,7 @@
 import React from 'react';
 import { Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
-import { useTheme } from '@/theme/ThemeContext';
+import { useTheme } from '@/theme/theme-context';
 
 export function SectionPanel({
   eyebrow,

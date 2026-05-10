@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { AUTH_CONFIG } from '@/lib/constants';
 import { ROUTES } from '@/lib/routes';
-import LoginView from './LoginView';
+import LoginView from './login-view';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {

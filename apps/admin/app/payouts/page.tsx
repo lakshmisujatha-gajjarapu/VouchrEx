@@ -1,5 +1,5 @@
 import { getPendingPayouts } from '@/lib/api';
-import PayoutsView from './PayoutsView';
+import PayoutsView from './payouts-view';
 import { formatCurrency } from '@/lib/utils';
 import type { Metadata } from 'next';
 

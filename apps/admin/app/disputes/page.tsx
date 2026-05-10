@@ -1,5 +1,5 @@
 import { getDisputes } from '@/lib/api';
-import DisputesView from './DisputesView';
+import DisputesView from './disputes-view';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = { title: 'Disputes | VouchrEx Admin' };

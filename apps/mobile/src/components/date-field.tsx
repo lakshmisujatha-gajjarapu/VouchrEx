@@ -3,7 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import { Modal, Platform, Pressable, Text, View } from 'react-native';
 
-import { useTheme } from '@/theme/ThemeContext';
+import { useTheme } from '@/theme/theme-context';
 
 function toIsoDateString(date: Date) {
   const y = date.getFullYear();

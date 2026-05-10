@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { getMetrics } from '@/lib/api';
-import { StatCard } from '@/components/StatCard';
+import { StatCard } from '@/components/stat-card';
 import { formatCurrency } from '@/lib/utils';
 import { ROUTES } from '@/lib/routes';
 import type { Metadata } from 'next';

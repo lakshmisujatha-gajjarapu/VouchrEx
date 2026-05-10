@@ -21,7 +21,7 @@ import { useAsyncResource } from '@/hooks/use-async-resource';
 import { api } from '@/lib/api';
 import { searchBrandfetchBrands } from '@/lib/brandfetch';
 import { formatStatus } from '@/lib/format';
-import { useTheme } from '@/theme/ThemeContext';
+import { useTheme } from '@/theme/theme-context';
 
 const VOUCHER_TYPES = ['gift-card', 'promo-code', 'cashback', 'subscription'] as const;
 type VoucherType = (typeof VOUCHER_TYPES)[number];

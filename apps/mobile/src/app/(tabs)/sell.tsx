@@ -23,7 +23,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useAsyncResource } from '@/hooks/use-async-resource';
 import { api, type PayoutAccount } from '@/lib/api';
 import { searchBrandfetchBrands } from '@/lib/brandfetch';
-import { useTheme } from '@/theme/ThemeContext';
+import { useTheme } from '@/theme/theme-context';
 
 const VOUCHER_TYPES = ['gift-card', 'promo-code'] as const;
 type VoucherType = (typeof VOUCHER_TYPES)[number];
