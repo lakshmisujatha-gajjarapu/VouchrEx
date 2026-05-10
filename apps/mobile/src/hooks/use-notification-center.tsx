@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import Toast from 'react-native-toast-message';
 
 import { safeDeepLink } from '@/lib/push';
-import { SOCKET_EVENTS } from '@/lib/realtime.constants';
+import { SOCKET_EVENTS } from '@/constants';
 
 import { useSocket } from './use-socket';
 

@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 
-import { SOCKET_EVENTS } from '@/lib/realtime.constants';
+import { SOCKET_EVENTS } from '@/constants';
 import { useSocket } from './use-socket';
 
 export type ListingCreatedPayload = {

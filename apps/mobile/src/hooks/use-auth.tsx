@@ -2,7 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 import * as Device from 'expo-device';
 
 import { api, type OtpRequestResult, type SessionUser } from '@/lib/api';
-import { DEVICE_FINGERPRINT_MAX_LENGTH, REFRESH_BEFORE_EXPIRY_MS } from '@/lib/auth.constants';
+import { DEVICE_FINGERPRINT_MAX_LENGTH, REFRESH_BEFORE_EXPIRY_MS } from '@/constants';
 import { unregisterFromPush } from '@/lib/push';
 import {
   clearAccessTokenExpiresAt,

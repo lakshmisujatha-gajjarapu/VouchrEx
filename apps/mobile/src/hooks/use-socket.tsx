@@ -6,7 +6,7 @@ import {
   SOCKET_RECONNECTION_ATTEMPTS,
   SOCKET_RECONNECTION_DELAY_MAX_MS,
   SOCKET_RECONNECTION_DELAY_MS
-} from '@/lib/realtime.constants';
+} from '@/constants';
 import { useAuth } from './use-auth';
 
 type SocketContextValue = {

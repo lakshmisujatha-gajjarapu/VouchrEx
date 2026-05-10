@@ -1,3 +1,5 @@
+import { BRANDFETCH_MIN_QUERY_LENGTH, BRANDFETCH_SEARCH_URL } from '@/constants';
+
 export type BrandfetchSuggestion = {
   readonly name: string;
   readonly domain?: string;
@@ -19,12 +21,12 @@ function normalizeBrandName(value: string) {
 
 export async function searchBrandfetchBrands(query: string) {
   const normalizedQuery = query.trim();
-  if (!brandfetchClientId || normalizedQuery.length < 2) {
+  if (!brandfetchClientId || normalizedQuery.length < BRANDFETCH_MIN_QUERY_LENGTH) {
     return [] as readonly BrandfetchSuggestion[];
   }
 
   const response = await fetch(
-    `https://api.brandfetch.io/v2/search/${encodeURIComponent(normalizedQuery)}?c=${encodeURIComponent(brandfetchClientId)}`,
+    `${BRANDFETCH_SEARCH_URL}/${encodeURIComponent(normalizedQuery)}?c=${encodeURIComponent(brandfetchClientId)}`,
     {
       headers: {
         Accept: 'application/json',
