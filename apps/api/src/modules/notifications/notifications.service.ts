@@ -59,7 +59,11 @@ export class NotificationsService {
   }
 
   async createMany(inputs: readonly CreateNotificationInput[]) {
-    return Promise.all(inputs.map((input) => this.createNotification(input)));
+    const results = [];
+    for (const input of inputs) {
+      results.push(await this.createNotification(input));
+    }
+    return results;
   }
 
   listForUser(userId: string) {

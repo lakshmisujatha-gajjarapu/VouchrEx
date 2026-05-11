@@ -95,35 +95,22 @@ export class AdminController {
   async getMetrics(@Headers(adminHeaderName) adminToken?: string) {
     await this.adminAccessService.requireAdminAccess(adminToken);
 
-    const [
-      totalOrders,
-      escrowActive,
-      openDisputes,
-      disputesUnderReview,
-      totalCaptured,
-      totalRefunded,
-      refundsProcessing,
-      refundsFailed,
-      activeListings,
-      totalUsers
-    ] = await Promise.all([
-      this.prisma.order.count(),
-      this.prisma.order.count({ where: { status: OrderStatus.ESCROW_ACTIVE } }),
-      this.prisma.dispute.count({ where: { status: DisputeStatus.OPEN } }),
-      this.prisma.dispute.count({ where: { status: DisputeStatus.UNDER_REVIEW } }),
-      this.prisma.payment.aggregate({
-        where: { status: PaymentStatus.CAPTURED },
-        _sum: { amount: true }
-      }),
-      this.prisma.payment.aggregate({
-        where: { status: PaymentStatus.REFUNDED },
-        _sum: { amount: true }
-      }),
-      this.prisma.payment.count({ where: { refundStatus: RefundStatus.PROCESSING } }),
-      this.prisma.payment.count({ where: { refundStatus: RefundStatus.FAILED } }),
-      this.prisma.voucherListing.count({ where: { status: 'ACTIVE' } }),
-      this.prisma.user.count()
-    ]);
+    const totalOrders          = await this.prisma.order.count();
+    const escrowActive         = await this.prisma.order.count({ where: { status: OrderStatus.ESCROW_ACTIVE } });
+    const openDisputes         = await this.prisma.dispute.count({ where: { status: DisputeStatus.OPEN } });
+    const disputesUnderReview  = await this.prisma.dispute.count({ where: { status: DisputeStatus.UNDER_REVIEW } });
+    const totalCaptured        = await this.prisma.payment.aggregate({
+      where: { status: PaymentStatus.CAPTURED },
+      _sum: { amount: true }
+    });
+    const totalRefunded        = await this.prisma.payment.aggregate({
+      where: { status: PaymentStatus.REFUNDED },
+      _sum: { amount: true }
+    });
+    const refundsProcessing    = await this.prisma.payment.count({ where: { refundStatus: RefundStatus.PROCESSING } });
+    const refundsFailed        = await this.prisma.payment.count({ where: { refundStatus: RefundStatus.FAILED } });
+    const activeListings       = await this.prisma.voucherListing.count({ where: { status: 'ACTIVE' } });
+    const totalUsers           = await this.prisma.user.count();
 
     return {
       orders: { total: totalOrders, escrowActive },
