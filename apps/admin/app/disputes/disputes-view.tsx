@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import type { Dispute } from '@/lib/types';
+import type { Dispute, DisputePartyUser } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -13,6 +13,53 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { formatShortId, getRelativeTime, formatPhone } from '@/lib/utils';
+
+function PartyCard({ role, user }: { readonly role: 'Buyer' | 'Seller'; readonly user: DisputePartyUser }) {
+  return (
+    <div className="rounded-xl p-3 space-y-2" style={{ backgroundColor: 'var(--color-surface-raised)' }}>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}>{role}</p>
+        <span className="status-badge" style={{ backgroundColor: 'var(--color-surface-high)', color: 'var(--color-muted-foreground)' }}>{user.tier}</span>
+      </div>
+      <div>
+        <p className="font-semibold" style={{ fontFamily: 'var(--font-body)', color: 'var(--color-foreground)' }}>
+          {user.name ?? 'Unnamed'}
+        </p>
+        <p className="text-xs" style={{ fontFamily: 'var(--font-mono)', color: 'var(--color-muted-foreground)' }}>
+          {formatShortId(user.id)}
+        </p>
+      </div>
+      <div className="text-xs space-y-0.5" style={{ fontFamily: 'var(--font-body)', color: 'var(--color-foreground)' }}>
+        <p>{formatPhone(user.phone)}</p>
+        {user.email && <p style={{ color: 'var(--color-muted-foreground)' }}>{user.email}</p>}
+      </div>
+      <div className="grid grid-cols-3 gap-2 pt-1 text-xs" style={{ fontFamily: 'var(--font-body)' }}>
+        <div>
+          <p style={{ color: 'var(--color-muted-foreground)' }}>Trust</p>
+          <p style={{ color: 'var(--color-foreground)' }}>{user.trustScore}</p>
+        </div>
+        <div>
+          <p style={{ color: 'var(--color-muted-foreground)' }}>Disputes</p>
+          <p style={{ color: 'var(--color-foreground)' }}>{user.disputeCount}</p>
+        </div>
+        <div>
+          <p style={{ color: 'var(--color-muted-foreground)' }}>Sales</p>
+          <p style={{ color: 'var(--color-foreground)' }}>{user.totalSales}</p>
+        </div>
+      </div>
+      <div className="flex items-center justify-between text-xs pt-1" style={{ fontFamily: 'var(--font-body)', color: 'var(--color-muted-foreground)' }}>
+        <span>Status: <span style={{ color: 'var(--color-foreground)' }}>{user.status}</span></span>
+        <span>Joined {getRelativeTime(user.createdAt)}</span>
+      </div>
+      {user.payoutAccount && (
+        <div className="text-xs pt-1" style={{ fontFamily: 'var(--font-body)', color: 'var(--color-muted-foreground)' }}>
+          KYC: <span style={{ color: 'var(--color-foreground)' }}>{user.payoutAccount.kycStatus}</span>
+          {user.payoutAccount.upiId && <> · UPI: <span style={{ color: 'var(--color-foreground)' }}>{user.payoutAccount.upiId}</span></>}
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface DisputesViewProps {
   disputes: Dispute[];
@@ -141,7 +188,7 @@ export default function DisputesView({ disputes }: DisputesViewProps) {
 
       {selected && (
         <Dialog open onOpenChange={() => { setSelected(null); }}>
-          <DialogContent className="sm:max-w-lg">
+          <DialogContent className="sm:max-w-2xl">
             <DialogHeader>
               <DialogTitle style={{ fontFamily: 'var(--font-headline)', fontWeight: 800 }}>
                 Dispute {formatShortId(selected.id)}
@@ -152,15 +199,9 @@ export default function DisputesView({ disputes }: DisputesViewProps) {
             </DialogHeader>
 
             <div className="space-y-3 text-sm">
-              <div className="grid grid-cols-2 gap-2">
-                <div className="rounded-xl p-3" style={{ backgroundColor: 'var(--color-surface-raised)' }}>
-                  <p className="text-xs font-semibold uppercase tracking-widest mb-0.5" style={{ color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}>Buyer</p>
-                  <p className="font-medium" style={{ fontFamily: 'var(--font-body)', color: 'var(--color-foreground)' }}>{formatPhone(selected.order.buyer.phone)}</p>
-                </div>
-                <div className="rounded-xl p-3" style={{ backgroundColor: 'var(--color-surface-raised)' }}>
-                  <p className="text-xs font-semibold uppercase tracking-widest mb-0.5" style={{ color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}>Seller</p>
-                  <p className="font-medium" style={{ fontFamily: 'var(--font-body)', color: 'var(--color-foreground)' }}>{formatPhone(selected.order.seller.phone)}</p>
-                </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <PartyCard role="Buyer" user={selected.order.buyer} />
+                <PartyCard role="Seller" user={selected.order.seller} />
               </div>
 
               <div className="rounded-xl p-3" style={{ backgroundColor: 'var(--color-surface-raised)' }}>

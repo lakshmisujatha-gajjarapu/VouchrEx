@@ -11,11 +11,74 @@ import {
   UserStatus
 } from '@prisma/client';
 
+import { parsePagination, normalizeSearch, normalizeQBy, containsCi, startsWithCi } from '../../common/pagination';
 import { PaymentsService } from '../payments/payments.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AdminAccessService } from './admin-access.service';
 import { adminHeaderName } from './admin.constants';
 import { ADMIN_ROUTES } from './admin.routes';
+
+/** Build a single-column search filter for /admin/orders. */
+function buildOrderSearchWhere(search: string | undefined, key: string | undefined): object {
+  if (!search || !key) return {};
+  switch (key) {
+    case 'id':           return { id: startsWithCi(search) };
+    case 'buyerPhone':   return { buyer:  { phone: containsCi(search) } };
+    case 'buyerName':    return { buyer:  { name:  containsCi(search) } };
+    case 'sellerPhone':  return { seller: { phone: containsCi(search) } };
+    case 'sellerName':   return { seller: { name:  containsCi(search) } };
+    case 'brand':        return { listing: { brand: { name: containsCi(search) } } };
+    default:             return {};
+  }
+}
+
+/** Build a single-column search filter for /admin/disputes. */
+function buildDisputeSearchWhere(search: string | undefined, key: string | undefined): object {
+  if (!search || !key) return {};
+  switch (key) {
+    case 'id':           return { id: startsWithCi(search) };
+    case 'orderId':      return { orderId: startsWithCi(search) };
+    case 'buyerPhone':   return { order: { buyer:  { phone: containsCi(search) } } };
+    case 'buyerName':    return { order: { buyer:  { name:  containsCi(search) } } };
+    case 'sellerPhone':  return { order: { seller: { phone: containsCi(search) } } };
+    case 'sellerName':   return { order: { seller: { name:  containsCi(search) } } };
+    default:             return {};
+  }
+}
+
+/** Build a single-column search filter for /admin/users. */
+function buildUserSearchWhere(search: string | undefined, key: string | undefined): object {
+  if (!search || !key) return {};
+  switch (key) {
+    case 'phone': return { phone: containsCi(search) };
+    case 'name':  return { name:  containsCi(search) };
+    case 'email': return { email: containsCi(search) };
+    default:      return {};
+  }
+}
+
+/** Build a single-column search filter for /admin/payouts/pending and /admin/refunds/pending. */
+function buildOrderPartySearchWhere(search: string | undefined, key: string | undefined): object {
+  if (!search || !key) return {};
+  switch (key) {
+    case 'id':          return { id: startsWithCi(search) };
+    case 'buyerPhone':  return { buyer:  { phone: containsCi(search) } };
+    case 'buyerName':   return { buyer:  { name:  containsCi(search) } };
+    case 'sellerPhone': return { seller: { phone: containsCi(search) } };
+    case 'sellerName':  return { seller: { name:  containsCi(search) } };
+    default:            return {};
+  }
+}
+
+/** Build a single-column search filter for /admin/team. */
+function buildTeamSearchWhere(search: string | undefined, key: string | undefined): object {
+  if (!search || !key) return {};
+  switch (key) {
+    case 'name':  return { name:  containsCi(search) };
+    case 'email': return { email: containsCi(search) };
+    default:      return {};
+  }
+}
 
 @ApiTags('admin')
 @Controller(ADMIN_ROUTES.BASE)
@@ -76,12 +139,16 @@ export class AdminController {
     };
   }
 
-  /** List open and under-review disputes for admin triage. */
+  /** List disputes for admin triage. Paginated + searchable. */
   @ApiHeader({ name: adminHeaderName, required: true })
   @Get(ADMIN_ROUTES.DISPUTES)
   async getDisputes(
     @Headers(adminHeaderName) adminToken?: string,
-    @Query('status') status?: string
+    @Query('status') status?: string,
+    @Query('q') q?: string,
+    @Query('qBy') qBy?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string
   ) {
     await this.adminAccessService.requireAdminAccess(adminToken);
 
@@ -95,35 +162,76 @@ export class AdminController {
       statusFilter = DisputeStatus[status as keyof typeof DisputeStatus];
     }
 
-    return this.prisma.dispute.findMany({
-      where: statusFilter
-        ? { status: statusFilter }
-        : { status: { in: [DisputeStatus.OPEN, DisputeStatus.UNDER_REVIEW] } },
+    const search = normalizeSearch(q);
+    const key = normalizeQBy(qBy);
+    const { skip, take, page: p, pageSize: ps } = parsePagination(page, pageSize);
+
+    const statusWhere = statusFilter
+      ? { status: statusFilter }
+      : { status: { in: [DisputeStatus.OPEN, DisputeStatus.UNDER_REVIEW] } };
+
+    const searchWhere = buildDisputeSearchWhere(search, key);
+    const where = { AND: [statusWhere, searchWhere] };
+
+    const data = await this.prisma.dispute.findMany({
+      where,
       include: {
         order: {
           include: {
             listing: { include: { brand: true } },
-            buyer: { select: { id: true, name: true, phone: true } },
-            seller: { select: { id: true, name: true, phone: true } },
+            buyer: {
+              select: {
+                id: true, name: true, phone: true, email: true,
+                tier: true, trustScore: true, status: true,
+                disputeCount: true, totalSales: true, createdAt: true
+              }
+            },
+            seller: {
+              select: {
+                id: true, name: true, phone: true, email: true,
+                tier: true, trustScore: true, status: true,
+                disputeCount: true, totalSales: true, createdAt: true,
+                payoutAccount: { select: { kycStatus: true, upiId: true } }
+              }
+            },
             payment: true
           }
         },
         raisedBy: { select: { id: true, name: true } }
       },
-      orderBy: { createdAt: 'asc' }
+      orderBy: { createdAt: 'asc' },
+      skip,
+      take
     });
+    const total = await this.prisma.dispute.count({ where });
+
+    return { data, total, page: p, pageSize: ps };
   }
 
-  /** List orders with optional status filter. */
+
+  /** List orders. Paginated + searchable. */
   @ApiHeader({ name: adminHeaderName, required: true })
   @Get(ADMIN_ROUTES.ORDERS)
   async getOrders(
     @Headers(adminHeaderName) adminToken?: string,
-    @Query('status') status?: string
+    @Query('status') status?: string,
+    @Query('q') q?: string,
+    @Query('qBy') qBy?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string
   ) {
     await this.adminAccessService.requireAdminAccess(adminToken);
-    return this.prisma.order.findMany({
-      ...(status ? { where: { status: status as OrderStatus } } : {}),
+
+    const search = normalizeSearch(q);
+    const key = normalizeQBy(qBy);
+    const { skip, take, page: p, pageSize: ps } = parsePagination(page, pageSize);
+
+    const statusWhere = status ? { status: status as OrderStatus } : {};
+    const searchWhere = buildOrderSearchWhere(search, key);
+    const where = { AND: [statusWhere, searchWhere] };
+
+    const data = await this.prisma.order.findMany({
+      where,
       include: {
         listing: { include: { brand: true } },
         buyer: { select: { id: true, name: true, phone: true } },
@@ -132,20 +240,37 @@ export class AdminController {
         dispute: true
       },
       orderBy: { createdAt: 'desc' },
-      take: 100
+      skip,
+      take
     });
+    const total = await this.prisma.order.count({ where });
+
+    return { data, total, page: p, pageSize: ps };
   }
 
-  /** List users with optional status filter. */
+  /** List users. Paginated + searchable. */
   @ApiHeader({ name: adminHeaderName, required: true })
   @Get(ADMIN_ROUTES.USERS)
   async getUsers(
     @Headers(adminHeaderName) adminToken?: string,
-    @Query('status') status?: string
+    @Query('status') status?: string,
+    @Query('q') q?: string,
+    @Query('qBy') qBy?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string
   ) {
     await this.adminAccessService.requireAdminAccess(adminToken);
-    return this.prisma.user.findMany({
-      ...(status ? { where: { status: status as UserStatus } } : {}),
+
+    const search = normalizeSearch(q);
+    const key = normalizeQBy(qBy);
+    const { skip, take, page: p, pageSize: ps } = parsePagination(page, pageSize);
+
+    const statusWhere = status ? { status: status as UserStatus } : {};
+    const searchWhere = buildUserSearchWhere(search, key);
+    const where = { AND: [statusWhere, searchWhere] };
+
+    const data = await this.prisma.user.findMany({
+      where,
       select: {
         id: true,
         phone: true,
@@ -157,13 +282,15 @@ export class AdminController {
         disputeCount: true,
         totalSales: true,
         createdAt: true,
-        payoutAccount: {
-          select: { kycStatus: true, upiId: true }
-        }
+        payoutAccount: { select: { kycStatus: true, upiId: true } }
       },
       orderBy: { createdAt: 'desc' },
-      take: 100
+      skip,
+      take
     });
+    const total = await this.prisma.user.count({ where });
+
+    return { data, total, page: p, pageSize: ps };
   }
 
   /** Manually approve KYC for a seller (accounts are auto-verified on registration; use this to re-approve after a rejection). */
@@ -280,31 +407,43 @@ export class AdminController {
    */
   @ApiHeader({ name: adminHeaderName, required: true })
   @Get(ADMIN_ROUTES.PAYOUTS_PENDING)
-  async getPendingPayouts(@Headers(adminHeaderName) adminToken?: string) {
+  async getPendingPayouts(
+    @Headers(adminHeaderName) adminToken?: string,
+    @Query('q') q?: string,
+    @Query('qBy') qBy?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string
+  ) {
     await this.adminAccessService.requireAdminAccess(adminToken);
 
-    return this.prisma.order.findMany({
-      where: {
-        payment: {
-          escrowStatus: EscrowStatus.RELEASED,
-          payoutStatus: { in: [PayoutStatus.PENDING, PayoutStatus.FAILED] }
-        }
-      },
+    const search = normalizeSearch(q);
+    const key = normalizeQBy(qBy);
+    const { skip, take, page: p, pageSize: ps } = parsePagination(page, pageSize);
+
+    const baseWhere = {
+      payment: {
+        escrowStatus: EscrowStatus.RELEASED,
+        payoutStatus: { in: [PayoutStatus.PENDING, PayoutStatus.FAILED] }
+      }
+    };
+    const searchWhere = buildOrderPartySearchWhere(search, key);
+    const where = { AND: [baseWhere, searchWhere] };
+
+    const data = await this.prisma.order.findMany({
+      where,
       include: {
         payment: true,
         buyer: { select: { id: true, name: true, phone: true } },
-        seller: {
-          select: {
-            id: true,
-            name: true,
-            phone: true,
-            payoutAccount: true
-          }
-        },
+        seller: { select: { id: true, name: true, phone: true, payoutAccount: true } },
         listing: { include: { brand: true } }
       },
-      orderBy: { createdAt: 'asc' }
+      orderBy: { createdAt: 'asc' },
+      skip,
+      take
     });
+    const total = await this.prisma.order.count({ where });
+
+    return { data, total, page: p, pageSize: ps };
   }
 
   /**
@@ -315,15 +454,27 @@ export class AdminController {
    */
   @ApiHeader({ name: adminHeaderName, required: true })
   @Get(ADMIN_ROUTES.REFUNDS_PENDING)
-  async getPendingRefunds(@Headers(adminHeaderName) adminToken?: string) {
+  async getPendingRefunds(
+    @Headers(adminHeaderName) adminToken?: string,
+    @Query('q') q?: string,
+    @Query('qBy') qBy?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string
+  ) {
     await this.adminAccessService.requireAdminAccess(adminToken);
 
-    return this.prisma.order.findMany({
-      where: {
-        payment: {
-          refundStatus: { in: [RefundStatus.PROCESSING, RefundStatus.FAILED] }
-        }
-      },
+    const search = normalizeSearch(q);
+    const key = normalizeQBy(qBy);
+    const { skip, take, page: p, pageSize: ps } = parsePagination(page, pageSize);
+
+    const baseWhere = {
+      payment: { refundStatus: { in: [RefundStatus.PROCESSING, RefundStatus.FAILED] } }
+    };
+    const searchWhere = buildOrderPartySearchWhere(search, key);
+    const where = { AND: [baseWhere, searchWhere] };
+
+    const data = await this.prisma.order.findMany({
+      where,
       include: {
         payment: true,
         buyer: { select: { id: true, name: true, phone: true } },
@@ -331,8 +482,13 @@ export class AdminController {
         listing: { include: { brand: true } },
         dispute: true
       },
-      orderBy: { updatedAt: 'asc' }
+      orderBy: { updatedAt: 'asc' },
+      skip,
+      take
     });
+    const total = await this.prisma.order.count({ where });
+
+    return { data, total, page: p, pageSize: ps };
   }
 
   /**
@@ -475,15 +631,34 @@ export class AdminController {
 
   // ─── Team Management (SUPER_ADMIN only) ──────────────────────────────────────
 
-  /** List all admin users. */
+  /** List all admin users. Paginated + searchable. */
   @ApiHeader({ name: adminHeaderName, required: true })
   @Get(ADMIN_ROUTES.TEAM)
-  async getTeam(@Headers(adminHeaderName) adminToken?: string) {
+  async getTeam(
+    @Headers(adminHeaderName) adminToken?: string,
+    @Query('q') q?: string,
+    @Query('qBy') qBy?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string
+  ) {
     await this.adminAccessService.requireSuperAdmin(adminToken);
-    return this.prisma.adminUser.findMany({
+
+    const search = normalizeSearch(q);
+    const key = normalizeQBy(qBy);
+    const { skip, take, page: p, pageSize: ps } = parsePagination(page, pageSize);
+
+    const where = buildTeamSearchWhere(search, key);
+
+    const data = await this.prisma.adminUser.findMany({
+      where,
       select: { id: true, email: true, name: true, role: true, active: true, createdAt: true },
-      orderBy: { createdAt: 'asc' }
+      orderBy: { createdAt: 'asc' },
+      skip,
+      take
     });
+    const total = await this.prisma.adminUser.count({ where });
+
+    return { data, total, page: p, pageSize: ps };
   }
 
   /** Create a new admin user. */

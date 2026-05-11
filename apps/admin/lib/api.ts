@@ -6,7 +6,9 @@ import type {
   AdminTeamMember,
   AdminUser,
   Dispute,
+  ListQuery,
   Order,
+  PaginatedResult,
   PendingPayout,
   PendingRefund,
 } from './types';
@@ -40,31 +42,41 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+function buildListQuery(q: ListQuery): string {
+  const params = new URLSearchParams();
+  if (q.status) params.set('status', q.status);
+  if (q.q && q.q.trim() && q.qBy) {
+    params.set('q', q.q.trim());
+    params.set('qBy', q.qBy);
+  }
+  if (q.page && q.page > 1) params.set('page', String(q.page));
+  if (q.pageSize) params.set('pageSize', String(q.pageSize));
+  const qs = params.toString();
+  return qs ? `?${qs}` : '';
+}
+
 export async function getMetrics(): Promise<AdminMetrics> {
   return apiFetch<AdminMetrics>('/admin/metrics');
 }
 
-export async function getDisputes(status?: string): Promise<Dispute[]> {
-  const qs = status ? `?status=${status}` : '';
-  return apiFetch<Dispute[]>(`/admin/disputes${qs}`);
+export async function getDisputes(query: ListQuery = {}): Promise<PaginatedResult<Dispute>> {
+  return apiFetch<PaginatedResult<Dispute>>(`/admin/disputes${buildListQuery(query)}`);
 }
 
-export async function getOrders(status?: string): Promise<Order[]> {
-  const qs = status ? `?status=${status}` : '';
-  return apiFetch<Order[]>(`/admin/orders${qs}`);
+export async function getOrders(query: ListQuery = {}): Promise<PaginatedResult<Order>> {
+  return apiFetch<PaginatedResult<Order>>(`/admin/orders${buildListQuery(query)}`);
 }
 
-export async function getUsers(status?: string): Promise<AdminUser[]> {
-  const qs = status ? `?status=${status}` : '';
-  return apiFetch<AdminUser[]>(`/admin/users${qs}`);
+export async function getUsers(query: ListQuery = {}): Promise<PaginatedResult<AdminUser>> {
+  return apiFetch<PaginatedResult<AdminUser>>(`/admin/users${buildListQuery(query)}`);
 }
 
-export async function getPendingPayouts(): Promise<PendingPayout[]> {
-  return apiFetch<PendingPayout[]>('/admin/payouts/pending');
+export async function getPendingPayouts(query: ListQuery = {}): Promise<PaginatedResult<PendingPayout>> {
+  return apiFetch<PaginatedResult<PendingPayout>>(`/admin/payouts/pending${buildListQuery(query)}`);
 }
 
-export async function getPendingRefunds(): Promise<PendingRefund[]> {
-  return apiFetch<PendingRefund[]>('/admin/refunds/pending');
+export async function getPendingRefunds(query: ListQuery = {}): Promise<PaginatedResult<PendingRefund>> {
+  return apiFetch<PaginatedResult<PendingRefund>>(`/admin/refunds/pending${buildListQuery(query)}`);
 }
 
 export async function suspendUser(id: string): Promise<AdminUser> {
@@ -85,7 +97,6 @@ export async function getMe(): Promise<AdminMe> {
   return apiFetch<AdminMe>('/admin/me');
 }
 
-export async function getTeam(): Promise<AdminTeamMember[]> {
-  return apiFetch<AdminTeamMember[]>('/admin/team');
+export async function getTeam(query: ListQuery = {}): Promise<PaginatedResult<AdminTeamMember>> {
+  return apiFetch<PaginatedResult<AdminTeamMember>>(`/admin/team${buildListQuery(query)}`);
 }
-

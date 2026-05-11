@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import { Eye, EyeOff } from 'lucide-react';
 import type { AdminTeamMember } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import {
@@ -25,6 +26,45 @@ const inputStyle = {
   backgroundColor: 'var(--color-surface-high)', color: 'var(--color-foreground)',
   fontFamily: 'var(--font-body)',
 } as const;
+
+function PasswordInput({
+  value,
+  onChange,
+  placeholder = '••••••••',
+  autoFocus = false,
+}: {
+  readonly value: string;
+  readonly onChange: (v: string) => void;
+  readonly placeholder?: string;
+  readonly autoFocus?: boolean;
+}) {
+  const [visible, setVisible] = useState(false);
+  return (
+    <div style={{ position: 'relative' }}>
+      <input
+        type={visible ? 'text' : 'password'}
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => { onChange(e.target.value); }}
+        autoFocus={autoFocus}
+        style={{ ...inputStyle, paddingRight: '2.75rem' }}
+      />
+      <button
+        type="button"
+        aria-label={visible ? 'Hide password' : 'Show password'}
+        onClick={() => { setVisible((v) => !v); }}
+        style={{
+          position: 'absolute', right: '0.5rem', top: '50%', transform: 'translateY(-50%)',
+          height: '2rem', width: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          borderRadius: '0.5rem', background: 'transparent', border: 'none', cursor: 'pointer',
+          color: 'var(--color-muted-foreground)',
+        }}
+      >
+        {visible ? <EyeOff size={16} /> : <Eye size={16} />}
+      </button>
+    </div>
+  );
+}
 
 export default function TeamView({ team, currentAdminId }: TeamViewProps) {
   const router = useRouter();
@@ -198,7 +238,7 @@ export default function TeamView({ team, currentAdminId }: TeamViewProps) {
             </div>
             <div className="space-y-1.5">
               <label className="block text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}>Password</label>
-              <input type="password" placeholder="••••••••" value={newPassword} onChange={(e) => { setNewPassword(e.target.value); }} style={inputStyle} />
+              <PasswordInput value={newPassword} onChange={setNewPassword} />
             </div>
             <div className="space-y-1.5">
               <label className="block text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}>Role</label>
@@ -227,7 +267,7 @@ export default function TeamView({ team, currentAdminId }: TeamViewProps) {
           </DialogHeader>
           <div className="space-y-1.5">
             <label className="block text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}>New Password</label>
-            <input type="password" placeholder="••••••••" value={newPw} onChange={(e) => { setNewPw(e.target.value); }} style={inputStyle} autoFocus />
+            <PasswordInput value={newPw} onChange={setNewPw} autoFocus />
           </div>
           {error && <p className="rounded-xl px-4 py-3 text-sm" style={{ backgroundColor: 'var(--color-destructive-soft)', color: 'var(--color-destructive)', fontFamily: 'var(--font-body)' }}>{error}</p>}
           <DialogFooter className="gap-2">

@@ -1,7 +1,7 @@
 import { getOrders } from '@/lib/api';
 import { formatShortId, formatCurrency, formatDate, formatPhone } from '@/lib/utils';
+import TableToolbar from '@/components/table-toolbar';
 import type { Metadata } from 'next';
-import type { Order } from '@/lib/types';
 
 export const metadata: Metadata = { title: 'Orders | VouchrEx Admin' };
 
@@ -20,13 +20,36 @@ function statusStyle(status: string): { bg: string; color: string } {
   return                                 { bg: 'var(--color-primary-soft)',     color: 'var(--color-primary)' };
 }
 
+function tabHref(status: string | undefined, currentQ: string): string {
+  const params = new URLSearchParams();
+  if (status) params.set('status', status);
+  if (currentQ) params.set('q', currentQ);
+  const qs = params.toString();
+  return qs ? `/orders?${qs}` : '/orders';
+}
+
+const SEARCH_KEYS = [
+  { value: 'id',          label: 'Order ID',     placeholder: 'Order id starts with…' },
+  { value: 'buyerPhone',  label: 'Buyer phone',  placeholder: '+91…' },
+  { value: 'buyerName',   label: 'Buyer name',   placeholder: 'Buyer name contains…' },
+  { value: 'sellerPhone', label: 'Seller phone', placeholder: '+91…' },
+  { value: 'sellerName',  label: 'Seller name',  placeholder: 'Seller name contains…' },
+  { value: 'brand',       label: 'Brand',        placeholder: 'Brand name contains…' },
+] as const;
+
 interface PageProps {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; q?: string; qBy?: string; page?: string; pageSize?: string }>;
 }
 
 export default async function OrdersPage({ searchParams }: PageProps) {
-  const { status } = await searchParams;
-  const orders: Order[] = await getOrders(status);
+  const sp = await searchParams;
+  const status = sp.status;
+  const q = sp.q ?? '';
+  const qBy = sp.qBy ?? '';
+  const pageNum = Number.parseInt(sp.page ?? '1', 10) || 1;
+  const pageSize = Number.parseInt(sp.pageSize ?? '25', 10) || 25;
+
+  const { data: orders, total, page, pageSize: ps } = await getOrders({ status, q, qBy, page: pageNum, pageSize });
 
   return (
     <div className="p-8 animate-slide-up">
@@ -35,7 +58,7 @@ export default async function OrdersPage({ searchParams }: PageProps) {
           Orders
         </h1>
         <p style={{ color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)', fontSize: '0.9375rem' }}>
-          {orders.length} orders
+          {total} orders
         </p>
       </header>
 
@@ -46,7 +69,7 @@ export default async function OrdersPage({ searchParams }: PageProps) {
           return (
             <a
               key={tab.label}
-              href={tab.value ? `?status=${tab.value}` : '/orders'}
+              href={tabHref(tab.value, q)}
               className="px-4 py-2 rounded-xl text-sm font-medium transition-colors"
               style={active
                 ? { backgroundColor: 'var(--color-primary-soft)', color: 'var(--color-primary)', fontFamily: 'var(--font-body)' }
@@ -58,6 +81,16 @@ export default async function OrdersPage({ searchParams }: PageProps) {
           );
         })}
       </div>
+
+      <TableToolbar
+        basePath="/orders"
+        total={total}
+        page={page}
+        pageSize={ps}
+        q={q}
+        qBy={qBy}
+        searchKeys={SEARCH_KEYS}
+      />
 
       <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: 'var(--color-card)', boxShadow: '0 0 40px rgba(26,27,33,0.06)' }}>
         <div className="overflow-x-auto">
@@ -92,11 +125,13 @@ export default async function OrdersPage({ searchParams }: PageProps) {
                     <td className="px-5 py-3.5 font-medium" style={{ fontFamily: 'var(--font-body)', color: 'var(--color-foreground)' }}>
                       {o.listing.brand.name}
                     </td>
-                    <td className="px-5 py-3.5" style={{ fontFamily: 'var(--font-body)', color: 'var(--color-foreground)' }}>
-                      {formatPhone(o.buyer.phone)}
+                    <td className="px-5 py-3.5" style={{ fontFamily: 'var(--font-body)' }}>
+                      <div style={{ color: 'var(--color-foreground)' }}>{o.buyer.name ?? '—'}</div>
+                      <div className="text-xs" style={{ color: 'var(--color-muted-foreground)' }}>{formatPhone(o.buyer.phone)}</div>
                     </td>
-                    <td className="px-5 py-3.5" style={{ fontFamily: 'var(--font-body)', color: 'var(--color-foreground)' }}>
-                      {formatPhone(o.seller.phone)}
+                    <td className="px-5 py-3.5" style={{ fontFamily: 'var(--font-body)' }}>
+                      <div style={{ color: 'var(--color-foreground)' }}>{o.seller.name ?? '—'}</div>
+                      <div className="text-xs" style={{ color: 'var(--color-muted-foreground)' }}>{formatPhone(o.seller.phone)}</div>
                     </td>
                     <td className="px-5 py-3.5 tabular-nums" style={{ fontFamily: 'var(--font-mono)', color: 'var(--color-foreground)' }}>
                       {o.payment ? formatCurrency(o.payment.amount) : '—'}

@@ -1,3 +1,18 @@
+export interface PaginatedResult<T> {
+  data: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface ListQuery {
+  page?: number;
+  pageSize?: number;
+  q?: string;
+  qBy?: string;
+  status?: string;
+}
+
 export interface AdminMetrics {
   orders: {
     total: number;
@@ -75,6 +90,25 @@ export interface Order {
   dispute: Dispute | null;
 }
 
+export interface DisputePartyUser {
+  id: string;
+  name: string | null;
+  phone: string;
+  email: string | null;
+  tier: string;
+  trustScore: number;
+  status: string;
+  disputeCount: number;
+  totalSales: number;
+  createdAt: string;
+  payoutAccount?: { kycStatus: string; upiId: string | null } | null;
+}
+
+export interface DisputeOrder extends Omit<Order, 'buyer' | 'seller'> {
+  buyer: DisputePartyUser;
+  seller: DisputePartyUser;
+}
+
 export interface Dispute {
   id: string;
   orderId: string;
@@ -86,7 +120,7 @@ export interface Dispute {
   resolvedById: string | null;
   adminAlertedAt: string | null;
   createdAt: string;
-  order: Order;
+  order: DisputeOrder;
   raisedBy: { id: string; name: string | null };
 }
 
