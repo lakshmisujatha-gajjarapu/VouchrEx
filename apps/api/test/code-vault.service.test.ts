@@ -1,9 +1,7 @@
-const test = require('node:test');
-const assert = require('node:assert/strict');
+import test from 'node:test';
+import assert from 'node:assert/strict';
 
-require('ts-node/register/transpile-only');
-
-const { CodeVaultService } = require('../src/modules/listings/services/code-vault.service.ts');
+import { CodeVaultService } from '../src/modules/listings/services/code-vault.service';
 
 test('CodeVaultService encrypts and decrypts voucher codes', () => {
   const originalKey = process.env.CODE_ENCRYPTION_KEY;

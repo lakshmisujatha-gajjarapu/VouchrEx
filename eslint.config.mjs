@@ -10,7 +10,7 @@ export default tseslint.config(
       '**/.next/**',
       '.yarn/**',
       'eslint.config.mjs',
-      'apps/api/test/**/*.cjs'
+      'apps/api/test/**'
     ]
   },
   js.configs.recommended,

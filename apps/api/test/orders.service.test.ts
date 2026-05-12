@@ -1,15 +1,13 @@
-const test = require('node:test');
-const assert = require('node:assert/strict');
+import test from 'node:test';
+import assert from 'node:assert/strict';
 
-require('ts-node/register/transpile-only');
-
-const { OrdersService } = require('../src/modules/orders/orders.service.ts');
+import { OrdersService } from '../src/modules/orders/orders.service';
 
 test('OrdersService reveals a watermarked code and starts the verification timer', async () => {
-  const notifications = [];
-  const txCalls = [];
+  const notifications: any[] = [];
+  const txCalls: any[] = [];
 
-  const prisma = {
+  const prisma: any = {
     order: {
       findUnique: async () => ({
         id: 'order_1',
@@ -47,22 +45,22 @@ test('OrdersService reveals a watermarked code and starts the verification timer
         }
       })
     },
-    $transaction: async (callback) =>
+    $transaction: async (callback: any) =>
       callback({
         order: {
-          update: async ({ data }) => {
+          update: async ({ data }: any) => {
             txCalls.push(['order.update', data]);
             return data;
           }
         },
         codeVault: {
-          update: async ({ data }) => {
+          update: async ({ data }: any) => {
             txCalls.push(['codeVault.update', data]);
             return data;
           }
         },
         auditLog: {
-          create: async ({ data }) => {
+          create: async ({ data }: any) => {
             txCalls.push(['auditLog.create', data]);
             return data;
           }
@@ -70,20 +68,20 @@ test('OrdersService reveals a watermarked code and starts the verification timer
       })
   };
 
-  const codeVaultService = {
+  const codeVaultService: any = {
     decrypt: () => 'AMZN-9X2M-47QP',
     renderWatermarkedCodeCard: () => 'data:image/svg+xml;base64,watermarked'
   };
 
-  const notificationsService = {
-    createMany: async (items) => {
+  const notificationsService: any = {
+    createMany: async (items: any[]) => {
       notifications.push(...items);
       return items;
     }
   };
 
-  const paymentsService = {};
-  const eventEmitter = {
+  const paymentsService: any = {};
+  const eventEmitter: any = {
     emit: () => {}
   };
   const service = new OrdersService(

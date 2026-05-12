@@ -1,14 +1,12 @@
-const test = require('node:test');
-const assert = require('node:assert/strict');
+import test from 'node:test';
+import assert from 'node:assert/strict';
 
-require('ts-node/register/transpile-only');
-
-const {
+import {
   computeTier,
   STRIKE_TABLE,
   strikeRuleFor,
   INDEFINITE_HOLD_UNTIL
-} = require('../src/modules/users/trust-tier.ts');
+} from '../src/modules/users/trust-tier';
 
 test('computeTier: 100 is GOLD', () => {
   assert.equal(computeTier(100), 'GOLD');

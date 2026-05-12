@@ -1,18 +1,16 @@
-const test = require('node:test');
-const assert = require('node:assert/strict');
+import test from 'node:test';
+import assert from 'node:assert/strict';
 
-require('ts-node/register/transpile-only');
-
-const { RealtimeGateway } = require('../src/modules/realtime/realtime.gateway.ts');
+import { RealtimeGateway } from '../src/modules/realtime/realtime.gateway';
 
 function makeServer() {
-  const emissions = [];
+  const emissions: any[] = [];
   return {
     emissions,
     server: {
-      emit: (event, data) => { emissions.push({ scope: 'broadcast', event, data }); },
-      to: (room) => ({
-        emit: (event, data) => { emissions.push({ scope: room, event, data }); }
+      emit: (event: string, data: unknown) => { emissions.push({ scope: 'broadcast', event, data }); },
+      to: (room: string) => ({
+        emit: (event: string, data: unknown) => { emissions.push({ scope: room, event, data }); }
       })
     }
   };
@@ -20,10 +18,13 @@ function makeServer() {
 
 test('RealtimeGateway broadcasts listing.created to all sockets as listing:created', () => {
   const { emissions, server } = makeServer();
-  const gateway = new RealtimeGateway({ getSessionUser: async () => null }, { resolveIdentity: async () => null });
-  gateway.server = server;
+  const gateway = new RealtimeGateway(
+    { getSessionUser: async () => null } as any,
+    { resolveIdentity: async () => null } as any
+  );
+  (gateway as any).server = server;
 
-  gateway.handleListingCreated({ listingId: 'l1', sellerId: 's1', brandId: 'b1', status: 'ACTIVE' });
+  gateway.handleListingCreated({ listingId: 'l1', sellerId: 's1', brandId: 'b1', status: 'ACTIVE' } as any);
 
   assert.deepEqual(emissions, [{
     scope: 'broadcast',
@@ -34,10 +35,13 @@ test('RealtimeGateway broadcasts listing.created to all sockets as listing:creat
 
 test('RealtimeGateway broadcasts listing.updated as listing:updated', () => {
   const { emissions, server } = makeServer();
-  const gateway = new RealtimeGateway({ getSessionUser: async () => null }, { resolveIdentity: async () => null });
-  gateway.server = server;
+  const gateway = new RealtimeGateway(
+    { getSessionUser: async () => null } as any,
+    { resolveIdentity: async () => null } as any
+  );
+  (gateway as any).server = server;
 
-  gateway.handleListingUpdated({ listingId: 'l1', status: 'SOLD' });
+  gateway.handleListingUpdated({ listingId: 'l1', status: 'SOLD' } as any);
 
   assert.deepEqual(emissions, [{
     scope: 'broadcast',
@@ -47,9 +51,12 @@ test('RealtimeGateway broadcasts listing.updated as listing:updated', () => {
 });
 
 test('RealtimeGateway.isUserConnected returns true when sockets exist in user room', async () => {
-  const gateway = new RealtimeGateway({ getSessionUser: async () => null }, { resolveIdentity: async () => null });
-  gateway.server = {
-    in: (room) => ({
+  const gateway = new RealtimeGateway(
+    { getSessionUser: async () => null } as any,
+    { resolveIdentity: async () => null } as any
+  );
+  (gateway as any).server = {
+    in: (room: string) => ({
       fetchSockets: async () => (room === 'user:u1' ? [{}, {}] : [])
     })
   };
@@ -59,17 +66,17 @@ test('RealtimeGateway.isUserConnected returns true when sockets exist in user ro
 });
 
 test('RealtimeGateway joins admin room when token validates as admin', async () => {
-  const adminAccessService = {
-    resolveIdentity: async (t) => (t === 'admintok' ? { kind: 'session', adminId: 'a1', role: 'ADMIN' } : null)
+  const adminAccessService: any = {
+    resolveIdentity: async (t: string) => (t === 'admintok' ? { kind: 'session', adminId: 'a1', role: 'ADMIN' } : null)
   };
-  const authService = { getSessionUser: async () => null };
+  const authService: any = { getSessionUser: async () => null };
   const gateway = new RealtimeGateway(authService, adminAccessService);
 
-  const joinedRooms = [];
-  const socket = {
+  const joinedRooms: string[] = [];
+  const socket: any = {
     handshake: { auth: { token: 'admintok' } },
     data: {},
-    join: async (room) => { joinedRooms.push(room); },
+    join: async (room: string) => { joinedRooms.push(room); },
     disconnect: () => { joinedRooms.push('DISCONNECT'); }
   };
 
@@ -79,15 +86,15 @@ test('RealtimeGateway joins admin room when token validates as admin', async () 
 
 test('RealtimeGateway disconnects when token is neither user nor admin', async () => {
   const gateway = new RealtimeGateway(
-    { getSessionUser: async () => null },
-    { resolveIdentity: async () => null }
+    { getSessionUser: async () => null } as any,
+    { resolveIdentity: async () => null } as any
   );
 
-  const events = [];
-  const socket = {
+  const events: string[] = [];
+  const socket: any = {
     handshake: { auth: { token: 'bad' } },
     data: {},
-    join: async (room) => { events.push(`join:${room}`); },
+    join: async (room: string) => { events.push(`join:${room}`); },
     disconnect: () => { events.push('disconnect'); }
   };
 
@@ -98,12 +105,12 @@ test('RealtimeGateway disconnects when token is neither user nor admin', async (
 test('RealtimeGateway emits order:updated to admin room as well', () => {
   const { emissions, server } = makeServer();
   const gateway = new RealtimeGateway(
-    { getSessionUser: async () => null },
-    { resolveIdentity: async () => null }
+    { getSessionUser: async () => null } as any,
+    { resolveIdentity: async () => null } as any
   );
-  gateway.server = server;
+  (gateway as any).server = server;
 
-  gateway.handleOrderUpdated({ buyerId: 'b1', sellerId: 's1', orderId: 'o1', status: 'CONFIRMED' });
+  gateway.handleOrderUpdated({ buyerId: 'b1', sellerId: 's1', orderId: 'o1', status: 'CONFIRMED' } as any);
 
   const adminEmit = emissions.find(e => e.scope === 'admin');
   assert.ok(adminEmit, 'expected an admin-room emit');
@@ -114,14 +121,14 @@ test('RealtimeGateway emits order:updated to admin room as well', () => {
 test('RealtimeGateway forwards dispute.created to admin room as dispute:opened', () => {
   const { emissions, server } = makeServer();
   const gateway = new RealtimeGateway(
-    { getSessionUser: async () => null },
-    { resolveIdentity: async () => null }
+    { getSessionUser: async () => null } as any,
+    { resolveIdentity: async () => null } as any
   );
-  gateway.server = server;
+  (gateway as any).server = server;
 
   gateway.handleDisputeCreated({
     orderId: 'o1', listingId: 'l1', buyerId: 'b1', sellerId: 's1', raisedByUserId: 'b1'
-  });
+  } as any);
 
   assert.deepEqual(emissions, [{
     scope: 'admin',

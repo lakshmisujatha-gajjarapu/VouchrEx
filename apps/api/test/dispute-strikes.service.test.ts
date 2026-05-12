@@ -1,28 +1,26 @@
-const test = require('node:test');
-const assert = require('node:assert/strict');
+import test from 'node:test';
+import assert from 'node:assert/strict';
 
-require('ts-node/register/transpile-only');
+import { DisputeStrikesService } from '../src/modules/orders/dispute-strikes.service';
 
-const { DisputeStrikesService } = require('../src/modules/orders/dispute-strikes.service.ts');
-
-function makePrisma({ user, dispute }) {
-  const audit = [];
-  let updatedUser = null;
-  const prisma = {
+function makePrisma({ user, dispute }: { user: any; dispute: any }) {
+  const audit: any[] = [];
+  let updatedUser: any = null;
+  const prisma: any = {
     dispute: {
       findUniqueOrThrow: async () => dispute
     },
     user: {
       findUniqueOrThrow: async () => user,
-      update: async ({ data }) => {
+      update: async ({ data }: any) => {
         updatedUser = { ...user, ...data };
         return updatedUser;
       }
     },
     auditLog: {
-      create: async ({ data }) => { audit.push(data); return data; }
+      create: async ({ data }: any) => { audit.push(data); return data; }
     },
-    $transaction: async (fn) => fn(prisma)
+    $transaction: async (fn: any) => fn(prisma)
   };
   return { prisma, audit, getUpdatedUser: () => updatedUser };
 }

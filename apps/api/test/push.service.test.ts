@@ -1,24 +1,26 @@
-const test = require('node:test');
-const assert = require('node:assert/strict');
+import test from 'node:test';
+import assert from 'node:assert/strict';
 
-require('ts-node/register/transpile-only');
+import { PushService } from '../src/modules/push/push.service';
 
-const { PushService } = require('../src/modules/push/push.service.ts');
-
-function makeService({ pushTokens = [], realtimeConnected = false, sendResult = [] } = {}) {
-  const sentBatches = [];
-  const deletedIds = [];
-  const prisma = {
+function makeService({
+  pushTokens = [],
+  realtimeConnected = false,
+  sendResult = []
+}: { pushTokens?: any[]; realtimeConnected?: boolean; sendResult?: any[] } = {}) {
+  const sentBatches: any[] = [];
+  const deletedIds: string[] = [];
+  const prisma: any = {
     pushToken: {
       findMany: async () => pushTokens,
-      deleteMany: async ({ where }) => { deletedIds.push(...where.id.in); return { count: where.id.in.length }; }
+      deleteMany: async ({ where }: any) => { deletedIds.push(...where.id.in); return { count: where.id.in.length }; }
     }
   };
-  const expoClient = {
+  const expoClient: any = {
     isValidToken: () => true,
-    sendChunked: async (messages) => { sentBatches.push(messages); return sendResult; }
+    sendChunked: async (messages: any) => { sentBatches.push(messages); return sendResult; }
   };
-  const realtimeGateway = { isUserConnected: async () => realtimeConnected };
+  const realtimeGateway: any = { isUserConnected: async () => realtimeConnected };
   const service = new PushService(prisma, expoClient, realtimeGateway);
   return { service, sentBatches, deletedIds };
 }

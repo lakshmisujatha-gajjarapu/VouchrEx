@@ -40,7 +40,7 @@ Workspace names are `vouchrex-api`, `vouchrex-mobile`, `vouchrex-admin`, `vouchr
 ```bash
 # API
 yarn workspace vouchrex-api build         # Compile TS + Prisma generate
-yarn workspace vouchrex-api test          # Run *.test.cjs files
+yarn workspace vouchrex-api test          # Run *.test.ts files via tsx
 yarn workspace vouchrex-api typecheck
 
 # Mobile
@@ -157,13 +157,13 @@ Copy `.env.example` → `.env` at repo root. Required non-defaulted variables:
 ## Linting & TypeScript
 
 - ESLint flat config (`eslint.config.mjs`) — strict TypeScript rules including `no-floating-promises` and `consistent-type-imports`
-- `.cjs` test files are excluded from ESLint
+- `apps/api/test/**` is excluded from ESLint (test mocks rely on `any` typings)
 - NestJS `*.module.ts` files have `no-extraneous-class` disabled
 - Base `tsconfig.base.json` at root; each app extends it
 
 ## Testing
 
-API tests use Node.js built-in test runner. Test files are `apps/api/test/**/*.test.cjs`. There are no mobile or admin tests in Phase 1.
+API tests use Node.js built-in test runner via `tsx` (`node --import tsx --test`). Test files are `apps/api/test/**/*.test.ts` and import directly from `src/`. Tests are excluded from the main `tsc --noEmit` (mocks use `any`); their TS imports are resolved at runtime by tsx. There are no mobile or admin tests in Phase 1.
 
 ## File Naming Conventions
 

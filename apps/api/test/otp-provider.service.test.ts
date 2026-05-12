@@ -1,9 +1,7 @@
-const test = require('node:test');
-const assert = require('node:assert/strict');
+import test from 'node:test';
+import assert from 'node:assert/strict';
 
-require('ts-node/register/transpile-only');
-
-const { OtpProviderService } = require('../src/modules/auth/otp-provider.service.ts');
+import { OtpProviderService } from '../src/modules/auth/otp-provider.service';
 
 test('OtpProviderService uses a fixed dev OTP', async () => {
   const originalProvider = process.env.OTP_PROVIDER;

@@ -1,28 +1,26 @@
-const test = require('node:test');
-const assert = require('node:assert/strict');
-const { createHmac } = require('node:crypto');
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { createHmac } from 'node:crypto';
 
-require('ts-node/register/transpile-only');
-
-const { PaymentsService } = require('../src/modules/payments/payments.service.ts');
+import { PaymentsService } from '../src/modules/payments/payments.service';
 
 test('PaymentsService prepares checkout via Razorpay order and stores razorpayOrderId', async () => {
   process.env.RAZORPAY_KEY_ID = 'rzp_test_key';
   process.env.RAZORPAY_KEY_SECRET = 'test_key_secret';
 
-  const upserts = [];
-  const prisma = {
+  const upserts: any[] = [];
+  const prisma: any = {
     payment: {
       findUnique: async () => null,
-      upsert: async (args) => { upserts.push(args); return args; }
+      upsert: async (args: any) => { upserts.push(args); return args; }
     }
   };
 
   const originalFetch = global.fetch;
-  global.fetch = async () => ({
+  global.fetch = (async () => ({
     ok: true,
     json: async () => ({ id: 'order_testABC123', amount: 43000, currency: 'INR', status: 'created' })
-  });
+  })) as any;
 
   const service = new PaymentsService(prisma);
   const checkout = await service.prepareCheckout({
@@ -31,10 +29,10 @@ test('PaymentsService prepares checkout via Razorpay order and stores razorpayOr
     buyerId: 'buyer_1',
     amount: 420,
     platformFee: 10
-  });
+  } as any);
 
   assert.equal(checkout.razorpayOrderId, 'order_testABC123');
-  assert.equal(checkout.amountPaise, 43000); // (420 + 10) * 100
+  assert.equal(checkout.amountPaise, 43000);
   assert.equal(checkout.currency, 'INR');
   assert.equal(checkout.keyId, 'rzp_test_key');
   assert.equal(upserts[0].create.razorpayOrderId, 'order_testABC123');
@@ -50,19 +48,19 @@ test('PaymentsService returns existing razorpayOrderId without calling Razorpay'
 
   let fetchCalled = false;
   const originalFetch = global.fetch;
-  global.fetch = async () => { fetchCalled = true; return { ok: true, json: async () => ({}) }; };
+  global.fetch = (async () => { fetchCalled = true; return { ok: true, json: async () => ({}) }; }) as any;
 
-  const prisma = {
+  const prisma: any = {
     payment: {
       findUnique: async () => ({ razorpayOrderId: 'order_existing123' }),
-      upsert: async (args) => args
+      upsert: async (args: any) => args
     }
   };
 
   const service = new PaymentsService(prisma);
   const checkout = await service.prepareCheckout({
     id: 'order_1', listingId: 'l_1', buyerId: 'b_1', amount: 500, platformFee: 10
-  });
+  } as any);
 
   assert.equal(checkout.razorpayOrderId, 'order_existing123');
   assert.equal(fetchCalled, false);
@@ -77,16 +75,16 @@ test('PaymentsService checkRazorpayOrderPaymentStatus returns captured payment i
   process.env.RAZORPAY_KEY_SECRET = 'test_key_secret';
 
   const originalFetch = global.fetch;
-  global.fetch = async () => ({
+  global.fetch = (async () => ({
     ok: true,
     json: async () => ({
       entity: 'collection',
       count: 1,
       items: [{ id: 'pay_captured123', status: 'captured' }]
     })
-  });
+  })) as any;
 
-  const service = new PaymentsService({ payment: {} });
+  const service = new PaymentsService({ payment: {} } as any);
   const result = await service.checkRazorpayOrderPaymentStatus('order_testABC123');
 
   assert.equal(result.captured, true);
@@ -102,12 +100,12 @@ test('PaymentsService checkRazorpayOrderPaymentStatus returns not captured when 
   process.env.RAZORPAY_KEY_SECRET = 'test_key_secret';
 
   const originalFetch = global.fetch;
-  global.fetch = async () => ({
+  global.fetch = (async () => ({
     ok: true,
     json: async () => ({ entity: 'collection', count: 0, items: [] })
-  });
+  })) as any;
 
-  const service = new PaymentsService({ payment: {} });
+  const service = new PaymentsService({ payment: {} } as any);
   const result = await service.checkRazorpayOrderPaymentStatus('order_testABC123');
 
   assert.equal(result.captured, false);
@@ -121,7 +119,7 @@ test('PaymentsService checkRazorpayOrderPaymentStatus returns not captured when 
 test('PaymentsService verifies Razorpay signatures', () => {
   process.env.RAZORPAY_KEY_SECRET = 'test_secret';
 
-  const service = new PaymentsService({ payment: {} });
+  const service = new PaymentsService({ payment: {} } as any);
   const signature = createHmac('sha256', 'test_secret').update('order_1|pay_1').digest('hex');
 
   assert.equal(service.verifySignature({ orderId: 'order_1', paymentId: 'pay_1', signature }), true);

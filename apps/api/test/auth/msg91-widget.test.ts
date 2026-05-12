@@ -1,14 +1,9 @@
-// apps/api/test/auth/msg91-widget.test.cjs
-'use strict';
+import test from 'node:test';
+import assert from 'node:assert/strict';
 
-const test = require('node:test');
-const assert = require('node:assert/strict');
+import { OtpProviderService } from '../../src/modules/auth/otp-provider.service';
 
-require('ts-node/register/transpile-only');
-
-const { OtpProviderService } = require('../../src/modules/auth/otp-provider.service.ts');
-
-function makeService(t) {
+function makeService(t: any) {
   const saved = {
     OTP_PROVIDER: process.env.OTP_PROVIDER,
     OTP_TTL_MINUTES: process.env.OTP_TTL_MINUTES,
@@ -43,7 +38,7 @@ test('MSG91_WIDGET verifyOtp calls verifyAccessToken with JWT and returns true w
   t.mock.method(globalThis, 'fetch', async () => ({
     ok: true,
     json: async () => ({ type: 'success', message: '919876543210' })
-  }));
+  } as any));
 
   const result = await service.verifyOtp({
     phone: '+919876543210',
@@ -62,7 +57,7 @@ test('MSG91_WIDGET verifyOtp returns true when identifier has leading +', async 
   t.mock.method(globalThis, 'fetch', async () => ({
     ok: true,
     json: async () => ({ type: 'success', message: '+919876543210' })
-  }));
+  } as any));
 
   const result = await service.verifyOtp({
     phone: '+919876543210',
@@ -81,7 +76,7 @@ test('MSG91_WIDGET verifyOtp returns false when phone does not match', async (t)
   t.mock.method(globalThis, 'fetch', async () => ({
     ok: true,
     json: async () => ({ type: 'success', message: '911111111111' })
-  }));
+  } as any));
 
   const result = await service.verifyOtp({
     phone: '+919876543210',
@@ -101,7 +96,7 @@ test('MSG91_WIDGET verifyOtp throws ServiceUnavailableException when MSG91 retur
     ok: false,
     status: 200,
     json: async () => ({ type: 'error', message: 'Invalid token' })
-  }));
+  } as any));
 
   await assert.rejects(
     () => service.verifyOtp({

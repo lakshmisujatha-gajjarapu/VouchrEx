@@ -1,17 +1,15 @@
-const test = require('node:test');
-const assert = require('node:assert/strict');
+import test from 'node:test';
+import assert from 'node:assert/strict';
 
-require('ts-node/register/transpile-only');
-
-const { AuthService } = require('../src/modules/auth/auth.service.ts');
+import { AuthService } from '../src/modules/auth/auth.service';
 
 test('AuthService creates an OTP challenge using the provider response', async () => {
-  const createdChallenges = [];
-  const auditLogs = [];
+  const createdChallenges: any[] = [];
+  const auditLogs: any[] = [];
 
-  const prisma = {
+  const prisma: any = {
     otpChallenge: {
-      create: async ({ data }) => {
+      create: async ({ data }: any) => {
         createdChallenges.push(data);
         return data;
       }
@@ -20,14 +18,14 @@ test('AuthService creates an OTP challenge using the provider response', async (
       findUnique: async () => null
     },
     auditLog: {
-      create: async ({ data }) => {
+      create: async ({ data }: any) => {
         auditLogs.push(data);
         return data;
       }
     }
   };
 
-  const otpProviderService = {
+  const otpProviderService: any = {
     startVerification: () => ({
       provider: 'DEV',
       codeHash: 'hashed-code',
@@ -61,9 +59,9 @@ test('AuthService verifies OTP and creates a session for a new user', async () =
     attempts: 0,
     createdAt: new Date()
   };
-  const txCalls = [];
+  const txCalls: any[] = [];
 
-  const prisma = {
+  const prisma: any = {
     otpChallenge: {
       findFirst: async () => challenge,
       update: async () => ({})
@@ -73,16 +71,16 @@ test('AuthService verifies OTP and creates a session for a new user', async () =
     },
     userSession: {},
     auditLog: {},
-    $transaction: async (callback) =>
+    $transaction: async (callback: any) =>
       callback({
         otpChallenge: {
-          update: async ({ data }) => {
+          update: async ({ data }: any) => {
             txCalls.push(['otpChallenge.update', data]);
             return {};
           }
         },
         user: {
-          upsert: async ({ create }) => {
+          upsert: async ({ create }: any) => {
             txCalls.push(['user.upsert', create]);
             return {
               id: 'user_1',
@@ -96,13 +94,13 @@ test('AuthService verifies OTP and creates a session for a new user', async () =
           }
         },
         userSession: {
-          create: async ({ data }) => {
+          create: async ({ data }: any) => {
             txCalls.push(['userSession.create', data]);
             return data;
           }
         },
         auditLog: {
-          create: async ({ data }) => {
+          create: async ({ data }: any) => {
             txCalls.push(['auditLog.create', data]);
             return data;
           }
@@ -110,7 +108,7 @@ test('AuthService verifies OTP and creates a session for a new user', async () =
       })
   };
 
-  const otpProviderService = {
+  const otpProviderService: any = {
     verifyOtp: async () => true
   };
 
