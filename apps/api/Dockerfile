@@ -1,5 +1,5 @@
 # ── Stage 1: install deps + compile ──────────────────────────────────────────
-FROM node:22-alpine AS builder
+FROM node:24-alpine AS builder
 
 WORKDIR /app
 RUN corepack enable
@@ -19,7 +19,7 @@ COPY apps/api ./apps/api
 RUN yarn workspace vouchrex-api build
 
 # ── Stage 2: lean runtime image ───────────────────────────────────────────────
-FROM node:22-alpine AS runtime
+FROM node:24-alpine AS runtime
 
 # Non-root user — never run as root in production
 RUN addgroup -S app && adduser -S app -G app
