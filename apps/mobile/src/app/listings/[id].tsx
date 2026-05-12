@@ -52,7 +52,7 @@ export default function ListingDetailScreen() {
     setError(null);
     try {
       const result = await api.createOrder(sessionToken, listingId);
-      router.push({
+      router.replace({
         pathname: '/orders/[id]',
         params: {
           id: result.order.id,

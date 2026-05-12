@@ -23,9 +23,6 @@ services:
       OTP_TTL_MINUTES: ${OTP_TTL_MINUTES}
       OTP_MAX_ATTEMPTS: ${OTP_MAX_ATTEMPTS}
       SESSION_TTL_HOURS: ${SESSION_TTL_HOURS}
-      EXOTEL_ACCOUNT_SID: ${EXOTEL_ACCOUNT_SID}
-      EXOTEL_APP_ID: ${EXOTEL_APP_ID}
-      EXOTEL_APP_SECRET: ${EXOTEL_APP_SECRET}
     depends_on:
       db:
         condition: service_healthy

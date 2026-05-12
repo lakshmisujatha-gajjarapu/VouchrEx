@@ -3,15 +3,15 @@
 ## The problem
 
 `POST /auth/otp/request` is a **fully public HTTP endpoint**. Any bot, script, or
-fraudster can call it with random Indian phone numbers and rack up Exotel SMS costs.
+fraudster can call it with random Indian phone numbers and rack up MSG91 SMS/WhatsApp costs.
 Your existing per-phone rate limit (5 OTPs/hour) caps per-number cost, but an attacker
-with 1,000 numbers burns 5,000 SMS/hour before any block kicks in.
+with 1,000 numbers burns 5,000 OTPs/hour before any block kicks in.
 
 ## The solution: App Attestation
 
 Prove every OTP request came from **your signed app binary on a real device** before
-Exotel is ever called. Bots and scripts have no valid attestation token → 401 before
-any SMS fires.
+MSG91 is ever called. Bots and scripts have no valid attestation token → 401 before
+any OTP fires.
 
 ```
 User opens app
@@ -21,9 +21,9 @@ App Check SDK fetches attestation token from Google/Apple (~100ms, cached 1 hr)
 POST /auth/otp/request  { phone, ... }  +  x-firebase-appcheck: <token>
       ↓
 API verifies token with Firebase (~30ms round trip to Google)
-      ↓  token invalid → 401, no SMS
+      ↓  token invalid → 401, no OTP
       ↓  token valid
-Exotel fires → OTP sent
+MSG91 fires → OTP sent
 ```
 
 Platform coverage:
@@ -83,7 +83,7 @@ apps/api/
 
 Guard behaviour:
 - `NODE_ENV !== 'production'` → guard is bypassed entirely (local dev works without Firebase)
-- `NODE_ENV === 'production'`  → missing/invalid token → 401 before Exotel fires
+- `NODE_ENV === 'production'`  → missing/invalid token → 401 before MSG91 fires
 
 ### Mobile
 ```
@@ -118,4 +118,4 @@ At 10,000 OTP requests/day you are well within free limits.
 2. Deploy API with guard in **log-only** mode (warn but don't reject)
 3. Confirm >99% of real app traffic has valid tokens in Firebase console
 4. Switch Firebase to **Enforce** + make guard reject invalid tokens
-5. Watch Exotel costs drop
+5. Watch MSG91 costs drop

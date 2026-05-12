@@ -342,7 +342,12 @@ export class AdminController {
     return { data, total, page: p, pageSize: ps };
   }
 
-  /** Clear a seller's payout hold (set after dispute strikes). After clearing, future payouts proceed normally. */
+  /**
+   * Clear a seller's payout hold (set after dispute strikes). After clearing,
+   * future payouts proceed normally. Also restores trustScore to the Bronze
+   * floor (30) if the user was BLOCKED — otherwise their listings would remain
+   * hidden by the BLOCKED-tier filter, which contradicts the admin's intent.
+   */
   @ApiHeader({ name: adminHeaderName, required: true })
   @Post(ADMIN_ROUTES.USER_CLEAR_PAYOUT_HOLD)
   async clearPayoutHold(
@@ -351,10 +356,19 @@ export class AdminController {
   ) {
     await this.adminAccessService.requireAdminAccess(adminToken);
 
+    const before = await this.prisma.user.findUnique({
+      where: { id },
+      select: { trustScore: true }
+    });
+    const restoredScore = before && before.trustScore < 30 ? 30 : undefined;
+
     const updated = await this.prisma.user.update({
       where: { id },
-      data: { payoutHoldUntil: null },
-      select: { id: true, payoutHoldUntil: true }
+      data: {
+        payoutHoldUntil: null,
+        ...(restoredScore !== undefined ? { trustScore: restoredScore, tier: 'BRONZE' } : {})
+      },
+      select: { id: true, payoutHoldUntil: true, trustScore: true, tier: true }
     });
 
     await this.prisma.auditLog.create({
@@ -363,7 +377,11 @@ export class AdminController {
         entityId: id,
         action: 'user.payout_hold_cleared',
         actorId: null,
-        metadata: { clearedBy: 'admin' }
+        metadata: {
+          clearedBy: 'admin',
+          previousTrustScore: before?.trustScore ?? null,
+          restoredTrustScore: restoredScore ?? null
+        }
       }
     });
 

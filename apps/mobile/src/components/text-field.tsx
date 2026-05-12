@@ -14,6 +14,7 @@ export function TextField({
   secureTextEntry = false,
   helperText,
   errorText,
+  rightIcon,
 }: {
   readonly label: string;
   readonly value: string;
@@ -25,6 +26,7 @@ export function TextField({
   readonly secureTextEntry?: boolean;
   readonly helperText?: string;
   readonly errorText?: string;
+  readonly rightIcon?: React.ReactNode;
 }) {
   const theme = useTheme();
   const [isFocused, setIsFocused] = React.useState(false);
@@ -48,6 +50,8 @@ export function TextField({
       {/* Submerged input — Stitch style: surfaceHigh bg, no border, focus glow */}
       <View
         style={{
+          flexDirection: 'row',
+          alignItems: 'center',
           borderRadius: 14,
           backgroundColor: isFocused
             ? theme.colors.surface
@@ -79,6 +83,7 @@ export function TextField({
           secureTextEntry={secureTextEntry}
           style={[
             {
+              flex: 1,
               minHeight: multiline ? 112 : 56,
               paddingHorizontal: 16,
               paddingVertical: 12,
@@ -91,6 +96,7 @@ export function TextField({
           ]}
           value={value}
         />
+        {rightIcon ? <View style={{ paddingRight: 12 }}>{rightIcon}</View> : null}
       </View>
 
       {errorText ? (

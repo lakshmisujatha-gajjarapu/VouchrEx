@@ -9,6 +9,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
   ListingStatus,
   NotificationChannel,
+  OrderStatus,
   Prisma
 } from '@prisma/client';
 
@@ -28,6 +29,7 @@ import {
   SELLER_MAX_LISTINGS_PER_HOUR_DEFAULT
 } from './listings.constants';
 import { CodeVaultService } from './services/code-vault.service';
+import { computeTier } from '../users/trust-tier';
 
 const editableStatuses: readonly ListingStatus[] = [
   ListingStatus.ACTIVE,
@@ -61,6 +63,8 @@ export class ListingsService {
       where: {
         status: ListingStatus.ACTIVE,
         expiryDate: { gt: new Date() },
+        // Hide listings from BLOCKED-tier sellers (trustScore < 30) per HLD/07.
+        seller: { trustScore: { gte: 30 } },
         ...(query.brandId ? { brandId: query.brandId } : {}),
         ...(query.minDiscount ? { discountPercent: { gte: query.minDiscount } } : {}),
         ...(query.maxPrice ? { sellingPrice: { lte: query.maxPrice } } : {}),
@@ -142,7 +146,8 @@ export class ListingsService {
         seller: {
           select: {
             id: true,
-            name: true
+            name: true,
+            trustScore: true
           }
         }
       }
@@ -152,7 +157,14 @@ export class ListingsService {
       throw new NotFoundException(`Listing ${id} was not found.`);
     }
 
-    return listing;
+    // Hide listings from BLOCKED-tier sellers from public detail view. Sellers
+    // can still see their own via findMine; buyers get a 404 here.
+    if (computeTier(listing.seller.trustScore) === 'BLOCKED') {
+      throw new NotFoundException(`Listing ${id} was not found.`);
+    }
+
+    const { seller, ...rest } = listing;
+    return { ...rest, seller: { id: seller.id, name: seller.name } };
   }
 
   async create(
@@ -162,6 +174,17 @@ export class ListingsService {
       readonly name: string;
     }
   ) {
+    // Trust-tier gate: BLOCKED (trustScore < 30) cannot list. Per HLD/07 §Trust Tiers.
+    const sellerRow = await this.prisma.user.findUnique({
+      where: { id: seller.id },
+      select: { trustScore: true }
+    });
+    if (sellerRow && computeTier(sellerRow.trustScore) === 'BLOCKED') {
+      throw new ForbiddenException(
+        `Your trust score (${String(sellerRow.trustScore)}) is below the ${String(30)}-point Bronze threshold. Resolve your open disputes to regain listing access.`
+      );
+    }
+
     const minExpiryHours = Number(process.env.LISTING_MIN_EXPIRY_HOURS ?? LISTING_MIN_EXPIRY_HOURS_DEFAULT);
     const expiryDate = new Date(createListingDto.expiryDate);
     const minExpiryDate = new Date(Date.now() + minExpiryHours * ONE_HOUR_MS);
@@ -173,9 +196,9 @@ export class ListingsService {
       throw new BadRequestException('Selling price must be below face value for resale.');
     }
 
-    if (createListingDto.sellingPrice > LISTING_MAX_PRICE_INR) {
+    if (createListingDto.faceValue > LISTING_MAX_PRICE_INR) {
       throw new BadRequestException(
-        `Listings can't exceed ₹${String(LISTING_MAX_PRICE_INR)} right now. Higher limits unlock after extended verification.`
+        `Voucher face value can't exceed ₹${String(LISTING_MAX_PRICE_INR)} right now. Higher limits unlock after extended verification.`
       );
     }
 
@@ -293,9 +316,9 @@ export class ListingsService {
       throw new BadRequestException('Selling price must be below face value for resale.');
     }
 
-    if (nextSellingPrice > LISTING_MAX_PRICE_INR) {
+    if (nextFaceValue > LISTING_MAX_PRICE_INR) {
       throw new BadRequestException(
-        `Listings can't exceed ₹${String(LISTING_MAX_PRICE_INR)} right now. Higher limits unlock after extended verification.`
+        `Voucher face value can't exceed ₹${String(LISTING_MAX_PRICE_INR)} right now. Higher limits unlock after extended verification.`
       );
     }
 
@@ -328,7 +351,7 @@ export class ListingsService {
     const encrypted = nextCode ? this.codeVaultService.encrypt(nextCode) : null;
 
     try {
-      return await this.prisma.voucherListing.update({
+      const updated = await this.prisma.voucherListing.update({
         where: { id: listing.id },
         data: {
           brandId: nextBrand.id,
@@ -362,6 +385,13 @@ export class ListingsService {
           }
         }
       });
+
+      this.eventEmitter.emit('listing.updated', {
+        listingId: updated.id,
+        status: updated.status
+      });
+
+      return updated;
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -381,6 +411,23 @@ export class ListingsService {
     }
   ) {
     const listing = await this.getMutableOwnedListing(id, seller.id);
+
+    const activeOrders = await this.prisma.order.count({
+      where: {
+        listingId: id,
+        status: {
+          in: [
+            OrderStatus.PAYMENT_PENDING,
+            OrderStatus.ESCROW_ACTIVE,
+            OrderStatus.CODE_REVEALED,
+            OrderStatus.DISPUTED
+          ]
+        }
+      }
+    });
+    if (activeOrders > 0) {
+      throw new BadRequestException('Cannot delete a listing with an active order.');
+    }
 
     await this.prisma.voucherListing.delete({
       where: { id: listing.id }

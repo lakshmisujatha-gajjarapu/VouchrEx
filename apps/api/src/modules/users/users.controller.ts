@@ -35,4 +35,11 @@ export class UsersController {
     const user = await this.authService.requireSessionUser(sessionToken);
     return this.usersService.updateMe(user.id, updateUserDto);
   }
+
+  @ApiHeader({ name: sessionHeaderName, required: true })
+  @Get(USERS_ROUTES.ME_STATS)
+  async getMyStats(@Headers(sessionHeaderName) sessionToken?: string) {
+    const user = await this.authService.requireSessionUser(sessionToken);
+    return this.usersService.getMyStats(user.id);
+  }
 }

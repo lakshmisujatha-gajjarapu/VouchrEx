@@ -8,9 +8,6 @@
 #   export TF_VAR_razorpay_key_id=<rzp_live_...>
 #   export TF_VAR_razorpay_key_secret=<secret>
 #   export TF_VAR_razorpay_webhook_secret=<webhook-secret>
-#   export TF_VAR_exotel_account_sid=<sid>
-#   export TF_VAR_exotel_app_id=<app-id>
-#   export TF_VAR_exotel_app_secret=<secret>
 
 environment = "production"
 aws_region  = "ap-south-1"
@@ -29,7 +26,7 @@ container_scale = 1
 
 # Live providers
 payment_provider = "RAZORPAY"
-otp_provider     = "EXOTEL"
+otp_provider     = "MSG91_WIDGET"
 
 # Tunables
 otp_ttl_minutes         = 5

@@ -208,8 +208,8 @@ export default function DisputesView({ disputes }: DisputesViewProps) {
 
       {selected && (
         <Dialog open onOpenChange={() => { setSelected(null); }}>
-          <DialogContent className="sm:max-w-2xl">
-            <DialogHeader>
+          <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col gap-0 p-0">
+            <DialogHeader className="px-6 pt-6 pb-4 border-b" style={{ borderColor: 'var(--color-surface-high)' }}>
               <DialogTitle style={{ fontFamily: 'var(--font-headline)', fontWeight: 800 }}>
                 Dispute {formatShortId(selected.id)}
               </DialogTitle>
@@ -218,7 +218,7 @@ export default function DisputesView({ disputes }: DisputesViewProps) {
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-3 text-sm">
+            <div className="space-y-3 text-sm overflow-y-auto px-6 py-4 flex-1 min-h-0">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <PartyCard role="Buyer" user={selected.order.buyer} />
                 <PartyCard role="Seller" user={selected.order.seller} />
@@ -297,7 +297,7 @@ export default function DisputesView({ disputes }: DisputesViewProps) {
               )}
             </div>
 
-            <DialogFooter className="gap-2">
+            <DialogFooter className="gap-2 px-6 py-4 border-t" style={{ borderColor: 'var(--color-surface-high)' }}>
               <Button variant="outline" onClick={() => { setSelected(null); }} disabled={isPending}>
                 {selected.status === 'RESOLVED' ? 'Close' : 'Cancel'}
               </Button>

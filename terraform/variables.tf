@@ -91,7 +91,7 @@ variable "redis_password" {
 # ─── Payment / OTP providers ──────────────────────────────────────────────────
 
 variable "otp_provider" {
-  description = "OTP backend: DEV | EXOTEL"
+  description = "OTP backend: DEV | MSG91_WIDGET"
   type        = string
   default     = "DEV"
 }
@@ -112,27 +112,6 @@ variable "razorpay_key_secret" {
 
 variable "razorpay_webhook_secret" {
   description = "Razorpay webhook secret (leave empty for staging)"
-  type        = string
-  sensitive   = true
-  default     = ""
-}
-
-variable "exotel_account_sid" {
-  description = "Exotel account SID (leave empty for staging)"
-  type        = string
-  sensitive   = true
-  default     = ""
-}
-
-variable "exotel_app_id" {
-  description = "Exotel app ID (leave empty for staging)"
-  type        = string
-  sensitive   = true
-  default     = ""
-}
-
-variable "exotel_app_secret" {
-  description = "Exotel app secret (leave empty for staging)"
   type        = string
   sensitive   = true
   default     = ""

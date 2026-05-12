@@ -405,3 +405,16 @@ model AuditLog {
 
   @@index([entityType, entityId, createdAt])
 }
+
+model WebhookEvent {
+  id          String    @id @default(cuid())
+  eventId     String    @unique
+  eventType   String
+  payload     Json
+  receivedAt  DateTime  @default(now())
+  processedAt DateTime?
+  error       String?
+
+  @@index([eventType])
+  @@index([processedAt])
+}

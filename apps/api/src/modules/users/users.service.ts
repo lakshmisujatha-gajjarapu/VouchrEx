@@ -1,8 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { computeTier } from './trust-tier';
 
 const meSelect = {
   id: true,
@@ -44,5 +45,46 @@ export class UsersService {
       data,
       select: meSelect,
     });
+  }
+
+  async getMyStats(userId: string) {
+    const [user, disputesRaised, purchases] = await Promise.all([
+      this.prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          trustScore: true,
+          tier: true,
+          totalSales: true,
+          disputeCount: true,
+          sellerStrikes: true,
+          buyerStrikes: true,
+          payoutHoldUntil: true,
+        },
+      }),
+      this.prisma.dispute.count({ where: { raisedById: userId } }),
+      this.prisma.order.count({ where: { buyerId: userId } }),
+    ]);
+
+    if (!user) throw new NotFoundException('User not found.');
+
+    const tier = computeTier(user.trustScore);
+    const nextTierAt =
+      tier === 'BLOCKED' ? 30 :
+      tier === 'BRONZE' ? 50 :
+      tier === 'SILVER' ? 80 :
+      null;
+
+    return {
+      trustScore: user.trustScore,
+      tier,
+      nextTierAt,
+      totalSales: user.totalSales,
+      purchases,
+      disputesAgainst: user.disputeCount,
+      disputesRaised,
+      sellerStrikes: user.sellerStrikes,
+      buyerStrikes: user.buyerStrikes,
+      payoutHoldUntil: user.payoutHoldUntil ? user.payoutHoldUntil.toISOString() : null,
+    };
   }
 }

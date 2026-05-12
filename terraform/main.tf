@@ -78,9 +78,6 @@ module "api_instance" {
     RAZORPAY_WEBHOOK_SECRET = var.razorpay_webhook_secret
     OTP_PROVIDER            = var.otp_provider
     OTP_FIXED_CODE          = var.otp_fixed_code
-    EXOTEL_ACCOUNT_SID      = var.exotel_account_sid
-    EXOTEL_APP_ID           = var.exotel_app_id
-    EXOTEL_APP_SECRET       = var.exotel_app_secret
 
     # Tunables
     OTP_TTL_MINUTES         = tostring(var.otp_ttl_minutes)

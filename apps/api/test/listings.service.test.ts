@@ -22,6 +22,9 @@ test('ListingsService.create emits listing.created with full payload', async () 
         seller: { id: data.sellerId, name: 'Priya' }
       })
     },
+    user: {
+      findUnique: async () => ({ trustScore: 100 })
+    },
     codeVault: {
       findUnique: async () => null
     }
@@ -138,4 +141,124 @@ test('ListingsService.expire skips emit when concurrent transition makes per-id 
   const updates = emitted.filter((e) => e.eventType === 'listing.updated');
   assert.equal(updates.length, 1, 'expected exactly one listing.updated emit');
   assert.deepEqual(updates[0].payload, { listingId: 'listing_2', status: 'EXPIRED' });
+});
+
+function makeCapServiceMocks() {
+  const prisma: any = {
+    voucherListing: {
+      count: async () => 0,
+      create: async ({ data }: any) => ({
+        id: 'listing_1',
+        sellerId: data.sellerId,
+        brandId: data.brandId,
+        status: 'ACTIVE',
+        sellingPrice: data.sellingPrice,
+        faceValue: data.faceValue,
+        discountPercent: data.discountPercent,
+        expiryDate: data.expiryDate,
+        brand: { id: data.brandId, name: 'Amazon' },
+        seller: { id: data.sellerId, name: 'Priya' }
+      })
+    },
+    user: { findUnique: async () => ({ trustScore: 100 }) },
+    codeVault: { findUnique: async () => null }
+  };
+  const codeVault: any = {
+    hash: () => 'hash',
+    encrypt: () => ({ encryptedCode: 'c', encryptionIv: 'i', encryptionTag: 't' })
+  };
+  const notifications: any = { createNotification: async () => ({}) };
+  const brands: any = { resolveForListing: async () => ({ id: 'brand_1', name: 'Amazon' }) };
+  const payouts: any = { findByUserId: async () => ({ id: 'payout_1' }) };
+  const eventEmitter: any = { emit: () => true };
+  return new ListingsService(prisma, codeVault, notifications, brands, payouts, eventEmitter);
+}
+
+test('ListingsService.create rejects when faceValue exceeds the ₹1,000 cap', async () => {
+  const service = makeCapServiceMocks();
+  await assert.rejects(
+    () =>
+      service.create(
+        {
+          brandName: 'Amazon',
+          voucherType: 'GIFT_CARD',
+          faceValue: 1500,
+          sellingPrice: 800,
+          code: 'AMZ123',
+          expiryDate: new Date(Date.now() + 30 * 86_400_000).toISOString()
+        } as any,
+        { id: 'seller_1', name: 'Priya' } as any
+      ),
+    /face value/i
+  );
+});
+
+test('ListingsService.create accepts faceValue at the cap with sellingPrice below it', async () => {
+  const service = makeCapServiceMocks();
+  const result = await service.create(
+    {
+      brandName: 'Amazon',
+      voucherType: 'GIFT_CARD',
+      faceValue: 1000,
+      sellingPrice: 900,
+      code: 'AMZ123',
+      expiryDate: new Date(Date.now() + 30 * 86_400_000).toISOString()
+    } as any,
+    { id: 'seller_1', name: 'Priya' } as any
+  );
+  assert.equal(result.faceValue, 1000);
+  assert.equal(result.sellingPrice, 900);
+});
+
+test('ListingsService.create rejects when sellingPrice >= faceValue', async () => {
+  const service = makeCapServiceMocks();
+  await assert.rejects(
+    () =>
+      service.create(
+        {
+          brandName: 'Amazon',
+          voucherType: 'GIFT_CARD',
+          faceValue: 500,
+          sellingPrice: 600,
+          code: 'AMZ123',
+          expiryDate: new Date(Date.now() + 30 * 86_400_000).toISOString()
+        } as any,
+        { id: 'seller_1', name: 'Priya' } as any
+      ),
+    /below face value/i
+  );
+});
+
+test('ListingsService.remove rejects when listing has an active order', async () => {
+  const prisma: any = {
+    voucherListing: {
+      findUnique: async () => ({
+        id: 'listing_1',
+        sellerId: 'seller_1',
+        status: 'ACTIVE',
+        brand: { id: 'brand_1' },
+        order: null,
+        codeVault: {}
+      }),
+      delete: async () => {
+        throw new Error('must not be called');
+      }
+    },
+    order: {
+      count: async () => 1
+    }
+  };
+
+  const codeVault: any = {};
+  const notifications: any = {};
+  const brands: any = {};
+  const payouts: any = {};
+  const eventEmitter: any = {};
+
+  const service = new ListingsService(prisma, codeVault, notifications, brands, payouts, eventEmitter);
+
+  await assert.rejects(
+    () => service.remove('listing_1', { id: 'seller_1' }),
+    /active order/i
+  );
 });

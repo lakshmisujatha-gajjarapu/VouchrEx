@@ -315,6 +315,29 @@ export class PaymentsService {
     return payload.id;
   }
 
+  /**
+   * Fetch a RazorpayX payout by id. Used by reconciliation to recover from crashes
+   * between RazorpayX accepting the payout and us persisting the resulting status.
+   * @see https://razorpay.com/docs/x/payouts/api-reference/get-payout-by-id/
+   */
+  async fetchPayoutById(razorpayPayoutId: string): Promise<{
+    status: string;
+    failure_reason?: string;
+  }> {
+    const response = await fetch(`${razorpayBaseUrl}/payouts/${razorpayPayoutId}`, {
+      method: 'GET',
+      headers: { Authorization: this.razorpayXAuthHeader() }
+    });
+
+    if (!response.ok) {
+      throw new ServiceUnavailableException(
+        `Razorpay payout fetch ${razorpayPayoutId} failed: ${String(response.status)}`
+      );
+    }
+
+    return response.json() as Promise<{ status: string; failure_reason?: string }>;
+  }
+
   private buildCheckoutResult(razorpayOrderId: string, totalAmountInr: number): CheckoutResult {
     const keyId = process.env.RAZORPAY_KEY_ID;
     if (!keyId) {

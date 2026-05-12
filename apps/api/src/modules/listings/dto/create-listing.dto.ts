@@ -1,6 +1,8 @@
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
+import { LISTING_MAX_PRICE_INR } from '../listings.constants';
+
 const CreateListingSchema = z.object({
   brandId: z.string().optional().describe('Legacy brand ID. Optional if brandName is provided'),
   brandName: z
@@ -12,6 +14,7 @@ const CreateListingSchema = z.object({
     .number()
     .int()
     .min(1)
+    .max(LISTING_MAX_PRICE_INR)
     .describe('Original voucher face value in INR'),
   sellingPrice: z.coerce.number().int().min(1).describe('Resale price in INR'),
   expiryDate: z

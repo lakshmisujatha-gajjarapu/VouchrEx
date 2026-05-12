@@ -140,12 +140,24 @@ export default function SellScreen() {
       ? Math.max(0, Math.round(((Number(faceValue) - Number(sellingPrice)) / Number(faceValue)) * 100))
       : 0;
 
+  const handlePriceInput = (next: string, setter: (v: string) => void) => {
+    const digitsOnly = next.replace(/\D/g, '');
+    if (digitsOnly === '') { setter(''); return; }
+    if (Number(digitsOnly) > LISTING_MAX_PRICE_INR) return;
+    setter(digitsOnly);
+  };
+
+  const parsedFaceValue = Number(faceValue);
   const parsedSellingPrice = Number(sellingPrice);
-  const priceExceedsCap = parsedSellingPrice > LISTING_MAX_PRICE_INR;
+  const faceValueExceedsCap = parsedFaceValue > LISTING_MAX_PRICE_INR;
+  const sellingPriceInvalid =
+    parsedSellingPrice > 0 && parsedFaceValue > 0 && parsedSellingPrice >= parsedFaceValue;
   const canSubmit =
     Boolean(brandName.trim() && code.trim() && expiryDate) &&
+    parsedFaceValue > 0 &&
     parsedSellingPrice > 0 &&
-    !priceExceedsCap;
+    parsedSellingPrice < parsedFaceValue &&
+    !faceValueExceedsCap;
 
   async function handleCreateListing() {
     if (!sessionToken) return;
@@ -449,11 +461,21 @@ export default function SellScreen() {
                   </View>
                   <SubmergedInput
                     value={faceValue}
-                    onChangeText={setFaceValue}
+                    onChangeText={(v) => { handlePriceInput(v, setFaceValue); }}
                     placeholder="1000"
                     keyboardType="numeric"
                     prefix="₹"
                   />
+                  <Text style={{
+                    fontSize: 11,
+                    fontFamily: theme.fontFamily.body,
+                    color: faceValueExceedsCap ? theme.colors.danger : theme.colors.inkSecondary,
+                    marginTop: theme.spacing[1],
+                  }}>
+                    {faceValueExceedsCap
+                      ? `Voucher value can't exceed ₹${String(LISTING_MAX_PRICE_INR)} right now.`
+                      : `Max ₹${String(LISTING_MAX_PRICE_INR)} face value`}
+                  </Text>
                 </View>
                 <View style={{ flex: 1 }}>
                   <View style={{ minHeight: 18, justifyContent: 'center', marginBottom: theme.spacing[2] }}>
@@ -468,7 +490,7 @@ export default function SellScreen() {
                   </View>
                   <SubmergedInput
                     value={sellingPrice}
-                    onChangeText={setSellingPrice}
+                    onChangeText={(v) => { handlePriceInput(v, setSellingPrice); }}
                     placeholder="850"
                     keyboardType="numeric"
                     prefix="₹"
@@ -488,16 +510,16 @@ export default function SellScreen() {
                       </View>
                     ) : undefined}
                   />
-                  <Text style={{
-                    fontSize: 11,
-                    fontFamily: theme.fontFamily.body,
-                    color: priceExceedsCap ? theme.colors.danger : theme.colors.inkSecondary,
-                    marginTop: theme.spacing[1],
-                  }}>
-                    {priceExceedsCap
-                      ? `Listings can't exceed ₹${String(LISTING_MAX_PRICE_INR)} right now.`
-                      : `Max ₹${String(LISTING_MAX_PRICE_INR)} per listing`}
-                  </Text>
+                  {sellingPriceInvalid ? (
+                    <Text style={{
+                      fontSize: 11,
+                      fontFamily: theme.fontFamily.body,
+                      color: theme.colors.danger,
+                      marginTop: theme.spacing[1],
+                    }}>
+                      Selling price must be less than face value.
+                    </Text>
+                  ) : null}
                 </View>
               </View>
 

@@ -6,7 +6,7 @@
 - Phase 1 React Native app foundation is implemented in `apps/mobile` using Expo Router.
 - Core domain flows implemented: OTP auth + sessions, local brand index with optional bootstrap catalog, listings, browse/search, Razorpay-ready checkout, escrow activation, watermarked reveal, disputes, notifications, auto-confirm.
 - Mobile screens implemented: OTP auth, Bazaar browse/search, listing detail, Sell flow, dedicated Listings tab with create/edit/delete, Orders, Inbox, and order detail actions.
-- OTP now uses a fixed `123456` code in local dev and has an Exotel production path behind env config.
+- OTP now uses a fixed `123456` code in local dev and has an MSG91 WhatsApp Widget production path behind env config.
 - Order reads are now scoped to the signed-in buyer/seller, and manual dispute resolution uses `x-admin-token`.
 - Public user CRUD is no longer mounted in the API app.
 - Trust score/tier fields are no longer exposed in Phase 1 API/mobile flows.

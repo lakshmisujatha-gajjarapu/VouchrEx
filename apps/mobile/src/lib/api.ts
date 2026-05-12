@@ -13,6 +13,19 @@ export type SessionUser = {
   readonly totalSales: number;
 };
 
+export type UserStats = {
+  readonly trustScore: number;
+  readonly tier: 'GOLD' | 'SILVER' | 'BRONZE' | 'BLOCKED';
+  readonly nextTierAt: number | null;
+  readonly totalSales: number;
+  readonly purchases: number;
+  readonly disputesAgainst: number;
+  readonly disputesRaised: number;
+  readonly sellerStrikes: number;
+  readonly buyerStrikes: number;
+  readonly payoutHoldUntil: string | null;
+};
+
 export type OtpRequestResult = {
   readonly phone: string;
   readonly expiresAt: string;
@@ -452,6 +465,9 @@ export const api = {
       sessionToken,
       body: input,
     });
+  },
+  getMyStats(sessionToken: string) {
+    return apiRequest<UserStats>(USERS.ME_STATS, { sessionToken });
   },
   registerPushToken(
     sessionToken: string,

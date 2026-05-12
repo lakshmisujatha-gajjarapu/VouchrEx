@@ -1,13 +1,18 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { createHmac, timingSafeEqual } from 'node:crypto';
 
+import { PrismaService } from '../prisma/prisma.service';
 import { OrdersService } from '../orders/orders.service';
 
 @Injectable()
 export class WebhooksService {
   private readonly logger = new Logger(WebhooksService.name);
 
-  constructor(private readonly ordersService: OrdersService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly ordersService: OrdersService
+  ) {}
 
   verifySignature(rawBody: Buffer, signature: string): boolean {
     const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
@@ -35,17 +40,73 @@ export class WebhooksService {
 
     const event = (body as Record<string, unknown>).event as string;
 
-    if (event === 'payment.captured') {
-      await this.handlePaymentCaptured(body as Record<string, unknown>, eventId);
-      return;
+    // Inbound idempotency. Razorpay retries non-2xx responses; without this row,
+    // each replay re-runs all side effects (notifications, audit logs, state writes).
+    try {
+      await this.prisma.webhookEvent.create({
+        data: {
+          eventId,
+          eventType: event,
+          payload: body as Prisma.InputJsonValue
+        }
+      });
+    } catch (e: unknown) {
+      const code = (e as { code?: string } | null)?.code;
+      if (code === 'P2002') {
+        this.logger.log(`Webhook ${eventId} already received — skipping replay.`);
+        return;
+      }
+      throw e;
     }
 
-    if (event === 'payout.processed' || event === 'payout.failed' || event === 'payout.reversed') {
-      await this.handlePayoutEvent(body as Record<string, unknown>, event, eventId);
-      return;
-    }
+    try {
+      if (event === 'payment.captured') {
+        await this.handlePaymentCaptured(body as Record<string, unknown>, eventId);
+      } else if (
+        event === 'payout.processed' ||
+        event === 'payout.failed' ||
+        event === 'payout.reversed'
+      ) {
+        await this.handlePayoutEvent(body as Record<string, unknown>, event, eventId);
+      } else if (
+        event === 'refund.processed' ||
+        event === 'refund.failed' ||
+        event === 'refund.created'
+      ) {
+        const payload = (body as Record<string, unknown>).payload as Record<string, unknown> | undefined;
+        const refundEntity = (payload?.refund as Record<string, unknown> | undefined)?.entity as
+          | Record<string, unknown>
+          | undefined;
+        if (typeof refundEntity?.id !== 'string') {
+          this.logger.warn(`${event} missing refund.entity.id (eventId=${eventId}).`);
+        } else {
+          const notes = (refundEntity.notes as { orderId?: string } | null | undefined) ?? null;
+          await this.ordersService.handleRefundWebhook(notes, {
+            id: refundEntity.id,
+            status: typeof refundEntity.status === 'string' ? refundEntity.status : '',
+            ...(typeof refundEntity.error_code === 'string' ? { error_code: refundEntity.error_code } : {}),
+            ...(typeof refundEntity.error_description === 'string' ? { error_description: refundEntity.error_description } : {})
+          });
+        }
+      } else {
+        this.logger.log(`Ignoring Razorpay event: ${event} (eventId=${eventId}).`);
+      }
 
-    this.logger.log(`Ignoring Razorpay event: ${event} (eventId=${eventId}).`);
+      await this.prisma.webhookEvent.update({
+        where: { eventId },
+        data: { processedAt: new Date() }
+      });
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : String(err);
+      // Deliberately do NOT delete the row on failure. Razorpay will retry and
+      // the unique row will short-circuit the replay — preventing double-processing.
+      // A stuck event requires admin intervention (clear the row, then replay).
+      await this.prisma.webhookEvent.update({
+        where: { eventId },
+        data: { error: reason }
+      });
+      throw err;
+    }
   }
 
   private async handlePaymentCaptured(body: Record<string, unknown>, eventId: string): Promise<void> {

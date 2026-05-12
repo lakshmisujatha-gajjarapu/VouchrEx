@@ -147,6 +147,13 @@ export default function EditListingScreen() {
     [brandName, suggestionsResource.data]
   );
 
+  const handlePriceInput = (next: string, setter: (v: string) => void) => {
+    const digitsOnly = next.replace(/\D/g, '');
+    if (digitsOnly === '') { setter(''); return; }
+    if (Number(digitsOnly) > LISTING_MAX_PRICE_INR) return;
+    setter(digitsOnly);
+  };
+
   const parsedFaceValue = Number(faceValue);
   const parsedSellingPrice = Number(sellingPrice);
   const discount =
@@ -158,7 +165,9 @@ export default function EditListingScreen() {
     ? Boolean(listingResource.data.order) || !editableStatuses.has(listingResource.data.status)
     : false;
 
-  const priceExceedsCap = parsedSellingPrice > LISTING_MAX_PRICE_INR;
+  const faceValueExceedsCap = parsedFaceValue > LISTING_MAX_PRICE_INR;
+  const sellingPriceInvalid =
+    parsedSellingPrice > 0 && parsedFaceValue > 0 && parsedSellingPrice >= parsedFaceValue;
   const canSubmit = Boolean(
     listingResource.data &&
       !locked &&
@@ -167,7 +176,7 @@ export default function EditListingScreen() {
       parsedFaceValue > 0 &&
       parsedSellingPrice > 0 &&
       parsedSellingPrice < parsedFaceValue &&
-      !priceExceedsCap
+      !faceValueExceedsCap
   );
 
   async function handleSubmit() {
@@ -363,30 +372,57 @@ export default function EditListingScreen() {
                   <View className="flex-1">
                     <TextField
                       label="Face value (₹)"
-                      onChangeText={setFaceValue}
+                      onChangeText={(v) => { handlePriceInput(v, setFaceValue); }}
                       value={faceValue}
                       keyboardType="numeric"
                       placeholder="500"
                     />
+                    <Text style={{
+                      fontSize: 11,
+                      fontFamily: theme.fontFamily.body,
+                      color: faceValueExceedsCap ? theme.colors.danger : theme.colors.inkSecondary,
+                      marginTop: theme.spacing[1],
+                    }}>
+                      {faceValueExceedsCap
+                        ? `Voucher value can't exceed ₹${String(LISTING_MAX_PRICE_INR)} right now.`
+                        : `Max ₹${String(LISTING_MAX_PRICE_INR)} face value`}
+                    </Text>
                   </View>
                   <View className="flex-1">
                     <TextField
                       label="Sell price (₹)"
-                      onChangeText={setSellingPrice}
+                      onChangeText={(v) => { handlePriceInput(v, setSellingPrice); }}
                       value={sellingPrice}
                       keyboardType="numeric"
                       placeholder="420"
+                      rightIcon={discount > 0 ? (
+                        <View style={{
+                          paddingHorizontal: 6,
+                          paddingVertical: 3,
+                          borderRadius: 6,
+                          backgroundColor: theme.colors.actionSoft,
+                        }}>
+                          <Text style={{
+                            fontSize: 11,
+                            fontWeight: '700',
+                            fontFamily: theme.fontFamily.labelSemi,
+                            color: theme.colors.action,
+                          }}>
+                            {String(discount)}%
+                          </Text>
+                        </View>
+                      ) : undefined}
                     />
-                    <Text style={{
-                      fontSize: 11,
-                      fontFamily: theme.fontFamily.body,
-                      color: priceExceedsCap ? theme.colors.danger : theme.colors.inkSecondary,
-                      marginTop: theme.spacing[1],
-                    }}>
-                      {priceExceedsCap
-                        ? `Listings can't exceed ₹${String(LISTING_MAX_PRICE_INR)} right now.`
-                        : `Max ₹${String(LISTING_MAX_PRICE_INR)} per listing`}
-                    </Text>
+                    {sellingPriceInvalid ? (
+                      <Text style={{
+                        fontSize: 11,
+                        fontFamily: theme.fontFamily.body,
+                        color: theme.colors.danger,
+                        marginTop: theme.spacing[1],
+                      }}>
+                        Selling price must be less than face value.
+                      </Text>
+                    ) : null}
                   </View>
                 </View>
                 <View className="mb-2">

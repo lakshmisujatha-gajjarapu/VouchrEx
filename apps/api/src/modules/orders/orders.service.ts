@@ -16,7 +16,8 @@ import {
   PaymentProvider,
   PaymentStatus,
   PayoutStatus,
-  RefundStatus
+  RefundStatus,
+  Prisma
 } from '@prisma/client';
 
 import { ONE_HOUR_MS, ONE_MINUTE_MS } from '../../common/time.constants';
@@ -127,13 +128,19 @@ export class OrdersService {
           select: {
             id: true,
             name: true,
-            phone: true
+            phone: true,
+            trustScore: true
           }
         }
       }
     });
 
     if (!listing) {
+      throw new NotFoundException(`Listing ${createOrderDto.listingId} was not found.`);
+    }
+
+    // Block purchases from BLOCKED-tier sellers (trustScore < 30) per HLD/07.
+    if (listing.seller.trustScore < 30) {
       throw new NotFoundException(`Listing ${createOrderDto.listingId} was not found.`);
     }
 
@@ -174,58 +181,72 @@ export class OrdersService {
     const commission = Math.round(listing.sellingPrice * commissionRate);
     const sellerPayout = listing.sellingPrice - commission;
 
-    const order = await this.prisma.$transaction(async (tx) => {
-      // Remove stale terminal orders so the unique constraint on listingId
-      // doesn't block a fresh purchase attempt after a cancelled payment.
-      await tx.order.deleteMany({
-        where: {
-          listingId: listing.id,
-          status: { in: [OrderStatus.CANCELLED, OrderStatus.PAYMENT_FAILED] }
-        }
-      });
+    let order;
+    try {
+      order = await this.prisma.$transaction(async (tx) => {
+        // Remove stale terminal orders so the unique constraint on listingId
+        // doesn't block a fresh purchase attempt after a cancelled payment.
+        await tx.order.deleteMany({
+          where: {
+            listingId: listing.id,
+            status: { in: [OrderStatus.CANCELLED, OrderStatus.PAYMENT_FAILED] }
+          }
+        });
 
-      const createdOrder = await tx.order.create({
-        data: {
-          listingId: listing.id,
-          buyerId: buyer.id,
-          sellerId: listing.sellerId,
-          amount: listing.sellingPrice,
-          platformFee,
-          commission,
-          sellerPayout,
-          status: OrderStatus.PAYMENT_PENDING
-        },
-        include: {
-          listing: {
-            include: {
-              brand: true
+        const createdOrder = await tx.order.create({
+          data: {
+            listingId: listing.id,
+            buyerId: buyer.id,
+            sellerId: listing.sellerId,
+            amount: listing.sellingPrice,
+            platformFee,
+            commission,
+            sellerPayout,
+            status: OrderStatus.PAYMENT_PENDING
+          },
+          include: {
+            listing: {
+              include: {
+                brand: true
+              }
             }
           }
-        }
-      });
+        });
 
-      await tx.voucherListing.update({
-        where: { id: listing.id },
-        data: {
-          status: ListingStatus.RESERVED,
-          buyerId: buyer.id
-        }
-      });
-
-      await tx.auditLog.create({
-        data: {
-          entityType: 'order',
-          entityId: createdOrder.id,
-          action: 'order.initiated',
-          actorId: buyer.id,
-          metadata: {
-            listingId: listing.id
+        // Conditional reservation: only succeeds if listing is still ACTIVE.
+        // If a concurrent buyer already reserved it, count === 0 and we throw here,
+        // rolling back the order.create and auditLog writes above.
+        const reservation = await tx.voucherListing.updateMany({
+          where: { id: listing.id, status: ListingStatus.ACTIVE },
+          data: {
+            status: ListingStatus.RESERVED,
+            buyerId: buyer.id
           }
+        });
+        if (reservation.count === 0) {
+          throw new BadRequestException('Listing is no longer available.');
         }
-      });
 
-      return createdOrder;
-    });
+        await tx.auditLog.create({
+          data: {
+            entityType: 'order',
+            entityId: createdOrder.id,
+            action: 'order.initiated',
+            actorId: buyer.id,
+            metadata: {
+              listingId: listing.id
+            }
+          }
+        });
+
+        return createdOrder;
+      });
+    } catch (e: unknown) {
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+        throw new BadRequestException('Listing is no longer available.');
+      }
+      throw e;
+    }
 
     this.eventEmitter.emit('listing.updated', {
       listingId: listing.id,
@@ -488,6 +509,10 @@ export class OrdersService {
       throw new BadRequestException('Voucher code can only be revealed after escrow activation.');
     }
 
+    if (order.payment?.status !== PaymentStatus.CAPTURED) {
+      throw new BadRequestException('Payment has not been captured yet.');
+    }
+
     if (!order.listing.codeVault) {
       throw new NotFoundException('Encrypted voucher code is missing for this listing.');
     }
@@ -598,7 +623,11 @@ export class OrdersService {
       throw new BadRequestException('Only revealed or disputed orders can be confirmed.');
     }
 
-    return this.finalizeRelease(id, OrderStatus.CONFIRMED, new Date(), buyerUserId);
+    const result = await this.finalizeRelease(id, OrderStatus.CONFIRMED, new Date(), buyerUserId);
+    if (result === null) {
+      throw new BadRequestException('Order is not in a confirmable state.');
+    }
+    return result;
   }
 
   async createDispute(id: string, dto: CreateDisputeDto, raisedByUserId: string) {
@@ -638,6 +667,19 @@ export class OrdersService {
     }
 
     const { dispute, listingTransitioned } = await this.prisma.$transaction(async (tx) => {
+      // Atomically claim the CODE_REVEALED → DISPUTED transition first.
+      // If another concurrent request (e.g. confirm) already moved the order,
+      // count = 0 and we throw here — rolling back everything in this tx.
+      const orderUpdateResult = await tx.order.updateMany({
+        where: { id, status: OrderStatus.CODE_REVEALED },
+        data: {
+          status: OrderStatus.DISPUTED
+        }
+      });
+      if (orderUpdateResult.count === 0) {
+        throw new BadRequestException('Order is not in a disputable state.');
+      }
+
       const createdDispute = await tx.dispute.create({
         data: {
           orderId: id,
@@ -646,13 +688,6 @@ export class OrdersService {
           description: dto.description,
           evidenceUrls: dto.evidenceUrls ?? [],
           status: DisputeStatus.OPEN
-        }
-      });
-
-      await tx.order.update({
-        where: { id },
-        data: {
-          status: OrderStatus.DISPUTED
         }
       });
 
@@ -773,7 +808,17 @@ export class OrdersService {
       throw new NotFoundException(`Dispute ${id} was not found.`);
     }
 
-    if (dispute.status === DisputeStatus.RESOLVED) {
+    // Atomic claim: only the first concurrent call wins; the loser sees count === 0.
+    const claim = await this.prisma.dispute.updateMany({
+      where: { id, status: { not: DisputeStatus.RESOLVED } },
+      data: {
+        status: DisputeStatus.RESOLVED,
+        resolution,
+        resolvedAt: new Date(),
+        resolvedById: actorId
+      }
+    });
+    if (claim.count === 0) {
       throw new BadRequestException('Dispute is already resolved.');
     }
 
@@ -783,15 +828,11 @@ export class OrdersService {
       await this.initiateDisputeRefund(dispute.id, dispute.orderId, actorId);
     }
 
-    const resolvedDispute = await this.prisma.dispute.update({
-      where: { id },
-      data: {
-        status: DisputeStatus.RESOLVED,
-        resolution,
-        resolvedAt: new Date(),
-        resolvedById: actorId
-      }
-    });
+    const resolvedDispute = await this.prisma.dispute.findUnique({ where: { id } });
+
+    if (!resolvedDispute) {
+      throw new NotFoundException(`Dispute ${id} disappeared during resolution.`);
+    }
 
     const outcome = await this.disputeStrikes.applyDisputeStrike(id, resolution, actorId);
     const brandName = dispute.order.listing.brand.name;
@@ -856,14 +897,25 @@ export class OrdersService {
     actorId: string | null
   ): Promise<void> {
     const { order, listingTransitioned } = await this.prisma.$transaction(async (tx) => {
-      const updatedOrder = await tx.order.update({
-        where: { id: orderId },
+      const orderResult = await tx.order.updateMany({
+        where: {
+          id: orderId,
+          status: { in: [OrderStatus.DISPUTED, OrderStatus.CODE_REVEALED, OrderStatus.ESCROW_ACTIVE] }
+        },
         data: {
           status: OrderStatus.CANCELLED,
           confirmedAt: new Date()
-        },
-        include: { payment: true }
+        }
       });
+      if (orderResult.count === 0) {
+        throw new BadRequestException('Order is no longer eligible for refund.');
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      const updatedOrder = (await tx.order.findUnique({
+        where: { id: orderId },
+        include: { payment: true }
+      }))!;
 
       // Conditional: only flip listing if it's still DISPUTED. Skip the emit if
       // a concurrent transition already moved it.
@@ -952,6 +1004,39 @@ export class OrdersService {
       throw new BadRequestException('Payment has no razorpayPaymentId; cannot auto-refund.');
     }
 
+    // Defense in depth: ask Razorpay if a refund for this payment already exists.
+    // Covers the case where a previous attempt actually succeeded at Razorpay but our
+    // DB write failed (network blip), leaving us in FAILED locally. Adopting the
+    // remote state avoids a second POST and a potential double-refund.
+    const existingRefunds = await this.paymentsService.fetchRefundsForPayment(
+      order.payment.razorpayPaymentId
+    );
+    const ours = existingRefunds.find(
+      (r) => r.notes?.orderId === orderId && (r.status === 'processed' || r.status === 'pending')
+    );
+    if (ours) {
+      await this.prisma.payment.update({
+        where: { orderId },
+        data: {
+          status: ours.status === 'processed' ? PaymentStatus.REFUNDED : order.payment.status,
+          refundStatus: ours.status === 'processed' ? RefundStatus.COMPLETED : RefundStatus.PROCESSING,
+          refundCompletedAt: ours.status === 'processed' ? new Date() : null,
+          razorpayRefundId: ours.id,
+          refundFailureReason: null
+        }
+      });
+      await this.prisma.auditLog.create({
+        data: {
+          entityType: 'payment',
+          entityId: orderId,
+          action: 'payment.refund_recovered_from_razorpay',
+          actorId,
+          metadata: { orderId, razorpayRefundId: ours.id, razorpayStatus: ours.status }
+        }
+      });
+      return this.prisma.payment.findUnique({ where: { orderId } });
+    }
+
     await this.prisma.payment.update({
       where: { orderId },
       data: {
@@ -1015,17 +1100,11 @@ export class OrdersService {
     disputeId: string | null,
     actorId: string | null
   ): Promise<void> {
-    // Idempotency key is per-(order, attempt). refundAttempts has already been
-    // incremented in the DB before this method is called, so reading it here
-    // gives us a stable key for the *current* attempt — re-entry with the same
-    // attempt number (e.g. transient network retry inside fetch) collapses at
-    // Razorpay, while a fresh admin-initiated retry bumps the attempt counter
-    // and gets a new key.
-    const payment = await this.prisma.payment.findUnique({
-      where: { orderId },
-      select: { refundAttempts: true }
-    });
-    const idempotencyKey = `refund-${orderId}-${String(payment?.refundAttempts ?? 1)}`;
+    // Stable key per logical refund intent. Razorpay collapses duplicate POSTs with the
+    // same key + same body into the original refund — that's how retries survive a
+    // DB-write crash between Razorpay returning 200 and us persisting razorpayRefundId.
+    // Do NOT include refundAttempts here; that would defeat idempotency on retry.
+    const idempotencyKey = `refund-${orderId}`;
 
     try {
       const { razorpayRefundId } = await this.paymentsService.executeRefund(
@@ -1391,6 +1470,59 @@ export class OrdersService {
   }
 
   /**
+   * Handle a Razorpay refund webhook event. The refund entity is matched to one of
+   * our orders via notes.orderId (we set this when initiating the refund). State
+   * convergence: 'processed' → COMPLETED, 'failed' → FAILED, anything else is
+   * informational and only records the razorpayRefundId.
+   */
+  async handleRefundWebhook(
+    notes: { orderId?: string } | null,
+    refund: {
+      id: string;
+      status: string;
+      error_code?: string;
+      error_description?: string;
+    }
+  ): Promise<void> {
+    const orderId = notes?.orderId;
+    if (!orderId) {
+      this.logger.warn(`Refund webhook ${refund.id} has no notes.orderId — ignoring.`);
+      return;
+    }
+
+    const data: Record<string, unknown> = { razorpayRefundId: refund.id };
+    if (refund.status === 'processed') {
+      data.status = PaymentStatus.REFUNDED;
+      data.refundStatus = RefundStatus.COMPLETED;
+      data.refundCompletedAt = new Date();
+      data.refundFailureReason = null;
+    } else if (refund.status === 'failed') {
+      data.refundStatus = RefundStatus.FAILED;
+      data.refundFailureReason = refund.error_description ?? refund.error_code ?? 'refund failed';
+    }
+    // For 'pending' / 'created' / unknown: only persist the refund id, don't change state.
+
+    const updated = await this.prisma.payment.updateMany({
+      where: { orderId, refundStatus: { not: RefundStatus.COMPLETED } },
+      data
+    });
+    if (updated.count === 0) {
+      this.logger.warn(`Refund webhook ${refund.id} for orderId=${orderId} did not match any payment row.`);
+      return;
+    }
+
+    await this.prisma.auditLog.create({
+      data: {
+        entityType: 'payment',
+        entityId: orderId,
+        action: `payment.refund_webhook_${refund.status}`,
+        actorId: null,
+        metadata: { razorpayRefundId: refund.id, status: refund.status }
+      }
+    });
+  }
+
+  /**
    * Called by the webhook handler when RazorpayX fires payout.processed,
    * payout.failed, or payout.reversed.
    */
@@ -1471,9 +1603,10 @@ export class OrdersService {
             where: { orderId: order.id },
             data: {
               escrowStatus: EscrowStatus.REFUNDED,
-              refundStatus: RefundStatus.FAILED,
-              refundFailureReason: 'Voucher expired in escrow; manual refund required.',
-              refundInitiatedAt: new Date()
+              refundStatus: RefundStatus.PROCESSING,
+              refundInitiatedAt: new Date(),
+              refundFailureReason: null,
+              refundAttempts: { increment: 1 }
             }
           });
         }
@@ -1495,6 +1628,24 @@ export class OrdersService {
         this.eventEmitter.emit('listing.updated', {
           listingId: order.listingId,
           status: ListingStatus.REFUNDED
+        });
+      }
+
+      if (order.payment?.razorpayPaymentId) {
+        await this.executeAndRecordRefund(
+          order.id,
+          order.payment.razorpayPaymentId,
+          order.payment.amount,
+          null,
+          null
+        );
+      } else if (order.payment) {
+        await this.prisma.payment.update({
+          where: { orderId: order.id },
+          data: {
+            refundStatus: RefundStatus.FAILED,
+            refundFailureReason: 'No razorpayPaymentId on payment; manual refund required.'
+          }
         });
       }
 
@@ -1551,6 +1702,15 @@ export class OrdersService {
     const provider = order.payment?.provider ?? PaymentProvider.RAZORPAY;
 
     const updatedOrder = await this.prisma.$transaction(async (tx) => {
+      const { count } = await tx.order.updateMany({
+        where: { id: orderId, status: OrderStatus.PAYMENT_PENDING },
+        data: { status: OrderStatus.ESCROW_ACTIVE }
+      });
+
+      if (count === 0) {
+        return null;
+      }
+
       const paymentData = {
         amount: order.amount + order.platformFee,
         method: paymentDetails.method,
@@ -1563,11 +1723,6 @@ export class OrdersService {
         ...(paymentDetails.razorpayPaymentId ? { razorpayPaymentId: paymentDetails.razorpayPaymentId } : {}),
         ...(paymentDetails.razorpaySignature ? { razorpaySignature: paymentDetails.razorpaySignature } : {})
       };
-
-      await tx.order.update({
-        where: { id: orderId },
-        data: { status: OrderStatus.ESCROW_ACTIVE }
-      });
 
       if (order.payment) {
         await tx.payment.update({ where: { orderId }, data: paymentData });
@@ -1590,6 +1745,14 @@ export class OrdersService {
         include: { payment: true, listing: { include: { brand: true } } }
       });
     });
+
+    if (updatedOrder === null) {
+      this.logger.log(`activateEscrow no-op: order ${orderId} is already past PAYMENT_PENDING — skipping notifications and emit`);
+      return this.prisma.order.findUnique({
+        where: { id: orderId },
+        include: { payment: true, listing: { include: { brand: true } } }
+      });
+    }
 
     await this.notificationsService.createMany([
       {
@@ -1661,13 +1824,19 @@ export class OrdersService {
     }
 
     const updatedOrder = await this.prisma.$transaction(async (tx) => {
-      await tx.order.update({
-        where: { id },
+      const orderResult = await tx.order.updateMany({
+        where: {
+          id,
+          status: { in: [OrderStatus.ESCROW_ACTIVE, OrderStatus.CODE_REVEALED, OrderStatus.DISPUTED] }
+        },
         data: {
           status,
           confirmedAt
         }
       });
+      if (orderResult.count === 0) {
+        return null;
+      }
 
       await tx.voucherListing.update({
         where: { id: order.listingId },
@@ -1707,6 +1876,11 @@ export class OrdersService {
         }
       });
     });
+
+    if (updatedOrder === null) {
+      this.logger.log(`finalizeRelease no-op: order ${id} is already past eligible release states (target: ${status}) — skipping side-effects`);
+      return null;
+    }
 
     this.eventEmitter.emit('listing.updated', {
       listingId: order.listingId,
@@ -1757,8 +1931,10 @@ export class OrdersService {
         });
       } catch (err) {
         this.logger.error(`Auto-payout failed for order ${id}: ${String(err)}`);
-        await this.prisma.payment.update({
-          where: { orderId: id },
+        // Only flip to FAILED if we don't already have a razorpayPayoutId persisted —
+        // protects against a duplicate call returning 4xx after the first succeeded.
+        await this.prisma.payment.updateMany({
+          where: { orderId: id, razorpayPayoutId: null },
           data: {
             payoutStatus: PayoutStatus.FAILED,
             payoutFailureReason: String(err)

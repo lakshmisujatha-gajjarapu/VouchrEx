@@ -18,6 +18,10 @@ export const PAYMENT_TIMEOUT_MINUTES_DEFAULT = 30;
 export const DISPUTE_ADMIN_ALERT_HOURS_DEFAULT = 24;
 export const STALE_PAYMENT_SYNC_MINUTES_DEFAULT = 1;
 export const STUCK_REFUND_RECONCILE_MINUTES_DEFAULT = 2;
+export const STUCK_PAYOUT_RECONCILE_MINUTES_DEFAULT = 5;
+
+// Auto-refund retry cap — prevent permanent failures from looping forever.
+export const MAX_AUTO_REFUND_RETRY_ATTEMPTS = 5;
 
 // Verification deadline reminder windows (minutes before deadline).
 // Each entry sends a push at ~minutesBefore; the worker fires every 2 minutes,
