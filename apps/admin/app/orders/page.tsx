@@ -117,10 +117,10 @@ export default async function OrdersPage({ searchParams }: PageProps) {
               {orders.map((o) => {
                 const s = statusStyle(o.status);
                 return (
-                  <tr key={o.id} className="transition-opacity hover:opacity-90"
+                  <tr key={o.id} className="transition-opacity hover:opacity-90 cursor-pointer"
                     style={{ borderTop: '1px solid var(--color-surface-high)' }}>
                     <td className="px-5 py-3.5 text-xs" style={{ fontFamily: 'var(--font-mono)', color: 'var(--color-muted-foreground)' }}>
-                      {formatShortId(o.id)}
+                      <a href={`/orders/${o.id}`} className="hover:underline">{formatShortId(o.id)}</a>
                     </td>
                     <td className="px-5 py-3.5 font-medium" style={{ fontFamily: 'var(--font-body)', color: 'var(--color-foreground)' }}>
                       {o.listing.brand.name}

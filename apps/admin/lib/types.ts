@@ -133,6 +133,137 @@ export interface Dispute {
   raisedBy: { id: string; name: string | null };
 }
 
+export interface OrderDetailParty {
+  id: string;
+  name: string | null;
+  phone: string;
+  email: string | null;
+  tier: string;
+  trustScore: number;
+  status: string;
+  disputeCount: number;
+  buyerStrikes: number;
+  sellerStrikes: number;
+  payoutHoldUntil?: string | null;
+  totalSales?: number;
+  createdAt: string;
+  payoutAccount?: {
+    id: string;
+    type: string;
+    upiId: string | null;
+    accountHolderName: string | null;
+    kycStatus: string;
+    verifiedAt: string | null;
+    razorpayContactId: string | null;
+    razorpayFundAccountId: string | null;
+  } | null;
+}
+
+export interface OrderDetailListing {
+  id: string;
+  sellerId: string;
+  brandId: string;
+  voucherType: string;
+  faceValue: number;
+  sellingPrice: number;
+  discountPercent: number;
+  status: string;
+  verificationStatus: string;
+  expiryDate: string;
+  proofUrl: string | null;
+  buyerId: string | null;
+  soldAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  brand: { id: string; name: string; category: string; logoUrl: string | null };
+  codeVault: {
+    id: string;
+    codeHash: string;
+    viewCount: number;
+    firstViewedAt: string | null;
+    lastViewedAt: string | null;
+    createdAt: string;
+  } | null;
+}
+
+export interface OrderDetailPayment extends Payment {
+  method: string;
+  provider: string;
+  currency: string;
+  razorpayOrderId: string | null;
+  razorpaySignature: string | null;
+  capturedAt: string | null;
+  payoutInitiatedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OrderDetailDispute {
+  id: string;
+  orderId: string;
+  raisedById: string;
+  reason: string;
+  description: string;
+  evidenceUrls: string[];
+  sellerResponse: string | null;
+  resolution: string | null;
+  status: string;
+  resolvedAt: string | null;
+  resolvedById: string | null;
+  adminAlertedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  raisedBy: { id: string; name: string | null; phone: string };
+}
+
+export interface OrderDetailNotification {
+  id: string;
+  eventType: string;
+  title: string;
+  message: string;
+  channel: string;
+  status: string;
+  userId: string | null;
+  readAt: string | null;
+  sentAt: string | null;
+  createdAt: string;
+  metadata: unknown;
+}
+
+export interface OrderDetailAuditLog {
+  id: string;
+  entityType: string;
+  entityId: string;
+  action: string;
+  actorId: string | null;
+  metadata: unknown;
+  createdAt: string;
+}
+
+export interface OrderDetail {
+  id: string;
+  listingId: string;
+  buyerId: string;
+  sellerId: string;
+  amount: number;
+  platformFee: number;
+  commission: number;
+  sellerPayout: number;
+  status: string;
+  codeRevealedAt: string | null;
+  verificationDeadline: string | null;
+  confirmedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  listing: OrderDetailListing;
+  buyer: OrderDetailParty;
+  seller: OrderDetailParty;
+  payment: OrderDetailPayment | null;
+  dispute: OrderDetailDispute | null;
+  notifications: OrderDetailNotification[];
+  auditLog: OrderDetailAuditLog[];
+}
+
 export interface AdminUser {
   id: string;
   phone: string;

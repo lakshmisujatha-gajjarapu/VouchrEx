@@ -243,6 +243,57 @@ export class AdminController {
     return { data, total, page: p, pageSize: ps };
   }
 
+  /** Single order with every related entity for the admin detail page. */
+  @ApiHeader({ name: adminHeaderName, required: true })
+  @Get(ADMIN_ROUTES.ORDER_DETAIL)
+  async getOrderDetail(
+    @Param('id') id: string,
+    @Headers(adminHeaderName) adminToken?: string
+  ) {
+    await this.adminAccessService.requireAdminAccess(adminToken);
+
+    const order = await this.prisma.order.findUnique({
+      where: { id },
+      include: {
+        listing: {
+          include: {
+            brand: true,
+            codeVault: {
+              select: {
+                id: true,
+                codeHash: true,
+                viewCount: true,
+                firstViewedAt: true,
+                lastViewedAt: true,
+                createdAt: true
+              }
+            }
+          }
+        },
+        buyer:  { select: { id: true, name: true, phone: true, email: true, tier: true, trustScore: true, status: true, disputeCount: true, buyerStrikes: true, sellerStrikes: true, createdAt: true } },
+        seller: { select: { id: true, name: true, phone: true, email: true, tier: true, trustScore: true, status: true, disputeCount: true, buyerStrikes: true, sellerStrikes: true, payoutHoldUntil: true, totalSales: true, createdAt: true, payoutAccount: { select: { id: true, type: true, upiId: true, accountHolderName: true, kycStatus: true, verifiedAt: true, razorpayContactId: true, razorpayFundAccountId: true } } } },
+        payment: true,
+        dispute: { include: { raisedBy: { select: { id: true, name: true, phone: true } } } },
+        notifications: { orderBy: { createdAt: 'asc' } }
+      }
+    });
+    if (!order) throw new BadRequestException(`Order ${id} not found`);
+
+    const auditLog = await this.prisma.auditLog.findMany({
+      where: {
+        OR: [
+          { entityType: 'order',   entityId: order.id },
+          { entityType: 'payment', entityId: order.payment?.id ?? '__none__' },
+          { entityType: 'dispute', entityId: order.dispute?.id ?? '__none__' },
+          { entityType: 'listing', entityId: order.listingId }
+        ]
+      },
+      orderBy: { createdAt: 'asc' }
+    });
+
+    return { ...order, auditLog };
+  }
+
   /** List users. Paginated + searchable. */
   @ApiHeader({ name: adminHeaderName, required: true })
   @Get(ADMIN_ROUTES.USERS)

@@ -3,6 +3,7 @@ export const ADMIN_ROUTES = {
   METRICS:                  'metrics',
   DISPUTES:                 'disputes',
   ORDERS:                   'orders',
+  ORDER_DETAIL:             'orders/:id',
   USERS:                    'users',
   USER_APPROVE_KYC:         'users/:id/approve-kyc',
   USER_REJECT_KYC:          'users/:id/reject-kyc',

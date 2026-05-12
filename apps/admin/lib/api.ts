@@ -8,6 +8,7 @@ import type {
   Dispute,
   ListQuery,
   Order,
+  OrderDetail,
   PaginatedResult,
   PendingPayout,
   PendingRefund,
@@ -65,6 +66,10 @@ export async function getDisputes(query: ListQuery = {}): Promise<PaginatedResul
 
 export async function getOrders(query: ListQuery = {}): Promise<PaginatedResult<Order>> {
   return apiFetch<PaginatedResult<Order>>(`/admin/orders${buildListQuery(query)}`);
+}
+
+export async function getOrder(id: string): Promise<OrderDetail> {
+  return apiFetch<OrderDetail>(`/admin/orders/${id}`);
 }
 
 export async function getUsers(query: ListQuery = {}): Promise<PaginatedResult<AdminUser>> {
