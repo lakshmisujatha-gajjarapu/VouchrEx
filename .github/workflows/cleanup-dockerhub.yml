@@ -10,29 +10,34 @@ permissions:
 
 jobs:
   cleanup:
-    name: Delete unversioned tags
+    name: Delete unversioned tags (${{ matrix.repo }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        repo: [vouchrex-api, vouchrex-admin]
     steps:
       - name: Delete non-semver, non-latest tags
         env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          REPO: ${{ matrix.repo }}
         run: |
           TOKEN=$(curl -s -X POST "https://hub.docker.com/v2/users/login" \
             -H "Content-Type: application/json" \
             -d "{\"username\":\"$DOCKERHUB_USERNAME\",\"password\":\"$DOCKERHUB_TOKEN\"}" \
             | jq -r .token)
 
-          TAGS=$(curl -s "https://hub.docker.com/v2/repositories/$DOCKERHUB_USERNAME/vouchrex-api/tags/?page_size=100" \
+          TAGS=$(curl -s "https://hub.docker.com/v2/repositories/$DOCKERHUB_USERNAME/$REPO/tags/?page_size=100" \
             -H "Authorization: Bearer $TOKEN" | jq -r '.results[].name')
 
           for tag in $TAGS; do
             if [[ "$tag" == "latest" ]] || [[ "$tag" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]; then
-              echo "Keeping $tag"
+              echo "[$REPO] Keeping $tag"
             else
-              echo "Deleting $tag..."
+              echo "[$REPO] Deleting $tag..."
               curl -s -X DELETE \
-                "https://hub.docker.com/v2/repositories/$DOCKERHUB_USERNAME/vouchrex-api/tags/$tag/" \
+                "https://hub.docker.com/v2/repositories/$DOCKERHUB_USERNAME/$REPO/tags/$tag/" \
                 -H "Authorization: Bearer $TOKEN"
             fi
           done

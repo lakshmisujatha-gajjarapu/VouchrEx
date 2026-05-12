@@ -1,0 +1,53 @@
+name: Mobile · EAS Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: Target platform
+        type: choice
+        required: true
+        default: android
+        options: [android, ios, all]
+      profile:
+        description: EAS build profile
+        type: choice
+        required: true
+        default: preview
+        options: [preview, production]
+      auto_submit:
+        description: Submit to store after build (production only)
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: EAS build (${{ inputs.platform }} / ${{ inputs.profile }})
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Trigger EAS build
+        working-directory: apps/mobile
+        run: |
+          args="--non-interactive --no-wait --platform ${{ inputs.platform }} --profile ${{ inputs.profile }}"
+          if [ "${{ inputs.auto_submit }}" = "true" ] && [ "${{ inputs.profile }}" = "production" ]; then
+            args="$args --auto-submit"
+          fi
+          eas build $args

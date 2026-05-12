@@ -23,24 +23,31 @@ export class PayoutAccountsService {
       select: { id: true, name: true, phone: true }
     });
 
-    // Reuse existing Razorpay Contact if already created for this seller
     const existing = await this.prisma.sellerPayoutAccount.findUnique({
       where: { userId }
     });
 
-    const contactId = existing?.razorpayContactId
-      ? existing.razorpayContactId
-      : await this.paymentsService.createRazorpayContact(user.name, user.phone);
+    // RazorpayX (Contact + FundAccount) is Phase 2. When the keys are not
+    // configured, we still let sellers register their payout details locally
+    // so they can list vouchers; the Razorpay linkage is backfilled lazily
+    // the first time an actual payout fires.
+    const razorpayXEnabled = this.paymentsService.isRazorpayXEnabled();
 
-    let fundAccountId: string;
+    const contactId = razorpayXEnabled
+      ? existing?.razorpayContactId
+        ? existing.razorpayContactId
+        : await this.paymentsService.createRazorpayContact(user.name, user.phone)
+      : null;
 
     if (dto.type === 'UPI') {
       if (!dto.upiId) throw new Error('upiId is required for UPI accounts');
       const upiId = dto.upiId;
-      fundAccountId = await this.paymentsService.createRazorpayFundAccountUpi(
-        contactId,
-        upiId
-      );
+      const fundAccountId = razorpayXEnabled && contactId
+        ? await this.paymentsService.createRazorpayFundAccountUpi(contactId, upiId)
+        : null;
+
+      const kycStatus = razorpayXEnabled ? 'VERIFIED' : 'PENDING';
+      const verifiedAt = razorpayXEnabled ? new Date() : null;
 
       const account = await this.prisma.sellerPayoutAccount.upsert({
         where: { userId },
@@ -49,8 +56,8 @@ export class PayoutAccountsService {
           upiId,
           razorpayContactId: contactId,
           razorpayFundAccountId: fundAccountId,
-          kycStatus: 'VERIFIED',
-          verifiedAt: new Date(),
+          kycStatus,
+          verifiedAt,
           accountHolderName: null,
           bankAccountEncrypted: null
         },
@@ -60,13 +67,13 @@ export class PayoutAccountsService {
           upiId,
           razorpayContactId: contactId,
           razorpayFundAccountId: fundAccountId,
-          kycStatus: 'VERIFIED',
-          verifiedAt: new Date()
+          kycStatus,
+          verifiedAt
         }
       });
 
       this.logger.log(
-        `UPI payout account registered: userId=${userId} upiId=${upiId} fundAccountId=${fundAccountId}`
+        `UPI payout account registered: userId=${userId} upiId=${upiId} fundAccountId=${fundAccountId ?? 'deferred'}`
       );
       return account;
     }
@@ -79,12 +86,17 @@ export class PayoutAccountsService {
     const ifsc = dto.ifsc;
     const accountHolderName = dto.accountHolderName;
     const encrypted = this.encryptBankDetails(accountNumber, ifsc);
-    fundAccountId = await this.paymentsService.createRazorpayFundAccountBank(
-      contactId,
-      accountHolderName,
-      accountNumber,
-      ifsc
-    );
+    const fundAccountId = razorpayXEnabled && contactId
+      ? await this.paymentsService.createRazorpayFundAccountBank(
+          contactId,
+          accountHolderName,
+          accountNumber,
+          ifsc
+        )
+      : null;
+
+    const kycStatus = razorpayXEnabled ? 'VERIFIED' : 'PENDING';
+    const verifiedAt = razorpayXEnabled ? new Date() : null;
 
     const account = await this.prisma.sellerPayoutAccount.upsert({
       where: { userId },
@@ -94,8 +106,8 @@ export class PayoutAccountsService {
         bankAccountEncrypted: encrypted,
         razorpayContactId: contactId,
         razorpayFundAccountId: fundAccountId,
-        kycStatus: 'VERIFIED',
-        verifiedAt: new Date(),
+        kycStatus,
+        verifiedAt,
         upiId: null
       },
       create: {
@@ -105,13 +117,13 @@ export class PayoutAccountsService {
         bankAccountEncrypted: encrypted,
         razorpayContactId: contactId,
         razorpayFundAccountId: fundAccountId,
-        kycStatus: 'VERIFIED',
-        verifiedAt: new Date()
+        kycStatus,
+        verifiedAt
       }
     });
 
     this.logger.log(
-      `Bank payout account registered: userId=${userId} holder=${accountHolderName} fundAccountId=${fundAccountId}`
+      `Bank payout account registered: userId=${userId} holder=${accountHolderName} fundAccountId=${fundAccountId ?? 'deferred'}`
     );
     return account;
   }

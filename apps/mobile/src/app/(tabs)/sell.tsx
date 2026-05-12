@@ -336,7 +336,7 @@ export default function SellScreen() {
                 <StatusBanner
                   tone="warning"
                   icon="time-outline"
-                  message="Your payout account is under review. You can list vouchers, but your first payout will be held until our team verifies your account (usually within 24h)."
+                  message="Your UPI is saved. Our team credits sellers manually to this UPI ID after each successful sale."
                 />
               )}
               {payoutAccount.kycStatus === 'REJECTED' && (
