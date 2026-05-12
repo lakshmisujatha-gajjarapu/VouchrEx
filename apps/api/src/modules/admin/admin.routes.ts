@@ -8,6 +8,7 @@ export const ADMIN_ROUTES = {
   USER_REJECT_KYC:          'users/:id/reject-kyc',
   USER_SUSPEND:             'users/:id/suspend',
   USER_REACTIVATE:          'users/:id/reactivate',
+  USER_CLEAR_PAYOUT_HOLD:   'users/:id/clear-payout-hold',
   PAYOUTS_PENDING:          'payouts/pending',
   REFUNDS_PENDING:          'refunds/pending',
   ORDER_RETRY_PAYOUT:       'orders/:orderId/retry-payout',

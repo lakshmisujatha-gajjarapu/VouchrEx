@@ -16,8 +16,7 @@ import {
   PaymentProvider,
   PaymentStatus,
   PayoutStatus,
-  RefundStatus,
-  UserStatus
+  RefundStatus
 } from '@prisma/client';
 
 import { ONE_HOUR_MS, ONE_MINUTE_MS } from '../../common/time.constants';
@@ -31,8 +30,6 @@ import { CreateOrderDto } from './dto/create-order.dto';
 import {
   BUYER_MAX_ORDERS_PER_HOUR_DEFAULT,
   DEFAULT_CURRENCY,
-  SELLER_DISPUTE_RATE_THRESHOLD_DEFAULT,
-  SELLER_MIN_SALES_FOR_RATE_CHECK_DEFAULT,
   VERIFICATION_REMINDER_MATCH_WINDOW_MINUTES,
   VERIFICATION_REMINDER_WINDOWS,
   commissionRate,
@@ -40,6 +37,7 @@ import {
   highValueWindowHours,
   platformFeeInr
 } from './orders.constants';
+import { DisputeStrikesService } from './dispute-strikes.service';
 import { VerifyPaymentDto } from './dto/verify-payment.dto';
 
 @Injectable()
@@ -51,7 +49,8 @@ export class OrdersService {
     private readonly codeVaultService: CodeVaultService,
     private readonly notificationsService: NotificationsService,
     private readonly paymentsService: PaymentsService,
-    private readonly eventEmitter: EventEmitter2
+    private readonly eventEmitter: EventEmitter2,
+    private readonly disputeStrikes: DisputeStrikesService
   ) {}
 
   findAllForUser(userId: string) {
@@ -629,7 +628,13 @@ export class OrdersService {
     }
 
     if (raisedByUserId !== order.buyerId) {
-      throw new BadRequestException('Only the buyer can raise the Phase 1 dispute.');
+      throw new BadRequestException('Only the buyer can raise a dispute on this order.');
+    }
+
+    if (!dto.evidenceUrls || dto.evidenceUrls.length === 0) {
+      throw new BadRequestException(
+        'Please attach a screenshot showing the redemption failure. Disputes without evidence cannot be processed.'
+      );
     }
 
     const { dispute, listingTransitioned } = await this.prisma.$transaction(async (tx) => {
@@ -725,8 +730,12 @@ export class OrdersService {
       });
     }
 
-    // Update seller dispute stats — may auto-suspend if dispute rate exceeds threshold
-    await this.updateSellerDisputeStats(order.sellerId);
+    // Increment disputeCount as a fraud signal (raised against this seller, outcome-independent).
+    // Strike application happens later at resolution time, not here.
+    await this.prisma.user.update({
+      where: { id: order.sellerId },
+      data: { disputeCount: { increment: 1 } }
+    });
 
     return dispute;
   }
@@ -784,6 +793,23 @@ export class OrdersService {
       }
     });
 
+    const outcome = await this.disputeStrikes.applyDisputeStrike(id, resolution, actorId);
+    const brandName = dispute.order.listing.brand.name;
+
+    const buyerMessage =
+      resolution === DisputeResolution.REFUND_BUYER
+        ? `Refund approved for ${brandName}.`
+        : outcome.role === 'buyer'
+          ? `Your dispute was not upheld. Strike ${String(outcome.strikeNumber)}/3. Your account score is now ${String(outcome.newTrustScore)}.`
+          : `Escrow was released to the seller for ${brandName}.`;
+
+    const sellerMessage =
+      resolution === DisputeResolution.RELEASE_TO_SELLER
+        ? `Payout released for ${brandName}.`
+        : outcome.role === 'seller'
+          ? `Buyer refund approved for ${brandName}. Strike ${String(outcome.strikeNumber)}/3. Your seller score is now ${String(outcome.newTrustScore)}.`
+          : `Buyer refund approved for ${brandName}.`;
+
     await this.notificationsService.createMany([
       {
         userId: dispute.order.buyer.id,
@@ -795,13 +821,8 @@ export class OrdersService {
           resolution === DisputeResolution.REFUND_BUYER
             ? 'Refund approved'
             : 'Dispute closed',
-        message:
-          resolution === DisputeResolution.REFUND_BUYER
-            ? `Refund approved for ${dispute.order.listing.brand.name}.`
-            : `Escrow was released to the seller for ${dispute.order.listing.brand.name}.`,
-        metadata: {
-          resolution
-        }
+        message: buyerMessage,
+        metadata: { resolution }
       },
       {
         userId: dispute.order.seller.id,
@@ -813,13 +834,8 @@ export class OrdersService {
           resolution === DisputeResolution.RELEASE_TO_SELLER
             ? 'Escrow released'
             : 'Dispute refunded',
-        message:
-          resolution === DisputeResolution.RELEASE_TO_SELLER
-            ? `Payout released for ${dispute.order.listing.brand.name}.`
-            : `Buyer refund approved for ${dispute.order.listing.brand.name}.`,
-        metadata: {
-          resolution
-        }
+        message: sellerMessage,
+        metadata: { resolution }
       }
     ]);
 
@@ -1633,6 +1649,7 @@ export class OrdersService {
           select: {
             id: true,
             name: true,
+            payoutHoldUntil: true,
             payoutAccount: true
           }
         }
@@ -1706,7 +1723,23 @@ export class OrdersService {
     const payoutAccount = order.seller.payoutAccount;
     const fundAccountId = payoutAccount?.razorpayFundAccountId;
     const kycVerified = payoutAccount?.kycStatus === 'VERIFIED';
-    if (order.payment && payoutAccount && fundAccountId && kycVerified && this.paymentsService.isRazorpayXEnabled()) {
+    const sellerPayoutHoldUntil = order.seller.payoutHoldUntil;
+    const heldUntil =
+      sellerPayoutHoldUntil && sellerPayoutHoldUntil > new Date() ? sellerPayoutHoldUntil : null;
+    if (heldUntil) {
+      this.logger.log(
+        `Payout for order ${id} skipped: seller ${order.sellerId} on hold until ${heldUntil.toISOString()}`
+      );
+      await this.prisma.auditLog.create({
+        data: {
+          entityType: 'order',
+          entityId: id,
+          action: 'payout.skipped_held',
+          actorId: null,
+          metadata: { sellerId: order.sellerId, payoutHoldUntil: heldUntil.toISOString() }
+        }
+      });
+    } else if (order.payment && payoutAccount && fundAccountId && kycVerified && this.paymentsService.isRazorpayXEnabled()) {
       try {
         const razorpayPayoutId = await this.paymentsService.executePayout(
           fundAccountId,
@@ -1807,42 +1840,4 @@ export class OrdersService {
     return order;
   }
 
-  private async updateSellerDisputeStats(sellerId: string) {
-    const disputeRateThreshold = Number(process.env.SELLER_DISPUTE_RATE_THRESHOLD ?? SELLER_DISPUTE_RATE_THRESHOLD_DEFAULT);
-    const minSalesForCheck = Number(process.env.SELLER_MIN_SALES_FOR_RATE_CHECK ?? SELLER_MIN_SALES_FOR_RATE_CHECK_DEFAULT);
-
-    const seller = await this.prisma.user.update({
-      where: { id: sellerId },
-      data: { disputeCount: { increment: 1 } },
-      select: { id: true, disputeCount: true, totalSales: true, status: true }
-    });
-
-    if (
-      seller.status === UserStatus.ACTIVE &&
-      seller.totalSales >= minSalesForCheck &&
-      seller.disputeCount / seller.totalSales > disputeRateThreshold
-    ) {
-      await this.prisma.user.update({
-        where: { id: sellerId },
-        data: { status: UserStatus.SUSPENDED }
-      });
-      await this.prisma.auditLog.create({
-        data: {
-          entityType: 'user',
-          entityId: sellerId,
-          action: 'user.auto_suspended',
-          actorId: null,
-          metadata: {
-            reason: 'dispute_rate_exceeded',
-            disputeCount: seller.disputeCount,
-            totalSales: seller.totalSales,
-            rate: seller.disputeCount / seller.totalSales
-          }
-        }
-      });
-      this.logger.warn(
-        `Seller ${sellerId} auto-suspended: ${String(seller.disputeCount)}/${String(seller.totalSales)} dispute rate`
-      );
-    }
-  }
 }

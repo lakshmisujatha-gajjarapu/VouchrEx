@@ -21,6 +21,7 @@ import { SubmergedInput } from '@/components/submerged-input';
 import { ProfileAvatar } from '@/components/profile-avatar';
 import { useAuth } from '@/hooks/use-auth';
 import { useAsyncResource } from '@/hooks/use-async-resource';
+import { LISTING_MAX_PRICE_INR } from '@/constants';
 import { api, type PayoutAccount } from '@/lib/api';
 import { searchBrandfetchBrands } from '@/lib/brandfetch';
 import { useTheme } from '@/theme/theme-context';
@@ -139,7 +140,12 @@ export default function SellScreen() {
       ? Math.max(0, Math.round(((Number(faceValue) - Number(sellingPrice)) / Number(faceValue)) * 100))
       : 0;
 
-  const canSubmit = Boolean(brandName.trim() && code.trim() && expiryDate);
+  const parsedSellingPrice = Number(sellingPrice);
+  const priceExceedsCap = parsedSellingPrice > LISTING_MAX_PRICE_INR;
+  const canSubmit =
+    Boolean(brandName.trim() && code.trim() && expiryDate) &&
+    parsedSellingPrice > 0 &&
+    !priceExceedsCap;
 
   async function handleCreateListing() {
     if (!sessionToken) return;
@@ -482,6 +488,16 @@ export default function SellScreen() {
                       </View>
                     ) : undefined}
                   />
+                  <Text style={{
+                    fontSize: 11,
+                    fontFamily: theme.fontFamily.body,
+                    color: priceExceedsCap ? theme.colors.danger : theme.colors.inkSecondary,
+                    marginTop: theme.spacing[1],
+                  }}>
+                    {priceExceedsCap
+                      ? `Listings can't exceed ₹${String(LISTING_MAX_PRICE_INR)} right now.`
+                      : `Max ₹${String(LISTING_MAX_PRICE_INR)} per listing`}
+                  </Text>
                 </View>
               </View>
 

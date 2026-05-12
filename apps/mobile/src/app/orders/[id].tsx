@@ -65,6 +65,7 @@ export default function OrderDetailScreen() {
   const [disputeOpen, setDisputeOpen] = useState(false);
   const [reason, setReason] = useState('voucher-invalid');
   const [description, setDescription] = useState('');
+  const [evidenceUrl, setEvidenceUrl] = useState('');
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -181,7 +182,11 @@ export default function OrderDetailScreen() {
     if (!sessionToken || !orderId) return;
     setBusyAction('dispute');
     try {
-      await api.createDispute(sessionToken, orderId, { reason, description, evidenceUrls: [] });
+      await api.createDispute(sessionToken, orderId, {
+        reason,
+        description,
+        evidenceUrls: evidenceUrl.trim() ? [evidenceUrl.trim()] : [],
+      });
       setDisputeOpen(false);
       await reloadOrder();
       setFeedback('Dispute raised. Your payment is held until this is resolved.');
@@ -725,8 +730,17 @@ export default function OrderDetailScreen() {
               value={description}
             />
 
+            {/* Evidence — required */}
+            <TextField
+              helperText="Required: paste a public link to a screenshot of the failed redemption (image upload coming soon)."
+              label="Screenshot link"
+              onChangeText={setEvidenceUrl}
+              placeholder="https://…"
+              value={evidenceUrl}
+            />
+
             <PrimaryButton
-              disabled={description.trim().length < 10}
+              disabled={description.trim().length < 10 || evidenceUrl.trim().length === 0}
               label="Submit dispute"
               loading={busyAction === 'dispute'}
               onPress={() => { void handleDispute(); }}

@@ -13,6 +13,20 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { formatShortId, getRelativeTime, formatPhone } from '@/lib/utils';
+import { DisputeTimeline } from '@/components/dispute-timeline';
+import { BuyerHistoryPanel } from '@/components/buyer-history-panel';
+
+function strikeDelta(strikeNumber: number): number {
+  if (strikeNumber === 1) return 15;
+  if (strikeNumber === 2) return 25;
+  return 40;
+}
+
+function strikeHoldLabel(strikeNumber: number): string {
+  if (strikeNumber === 1) return 'held 7 days';
+  if (strikeNumber === 2) return 'held 14 days';
+  return 'held indefinitely';
+}
 
 function PartyCard({ role, user }: { readonly role: 'Buyer' | 'Seller'; readonly user: DisputePartyUser }) {
   return (
@@ -33,7 +47,7 @@ function PartyCard({ role, user }: { readonly role: 'Buyer' | 'Seller'; readonly
         <p>{formatPhone(user.phone)}</p>
         {user.email && <p style={{ color: 'var(--color-muted-foreground)' }}>{user.email}</p>}
       </div>
-      <div className="grid grid-cols-3 gap-2 pt-1 text-xs" style={{ fontFamily: 'var(--font-body)' }}>
+      <div className="grid grid-cols-4 gap-2 pt-1 text-xs" style={{ fontFamily: 'var(--font-body)' }}>
         <div>
           <p style={{ color: 'var(--color-muted-foreground)' }}>Trust</p>
           <p style={{ color: 'var(--color-foreground)' }}>{user.trustScore}</p>
@@ -45,6 +59,12 @@ function PartyCard({ role, user }: { readonly role: 'Buyer' | 'Seller'; readonly
         <div>
           <p style={{ color: 'var(--color-muted-foreground)' }}>Sales</p>
           <p style={{ color: 'var(--color-foreground)' }}>{user.totalSales}</p>
+        </div>
+        <div>
+          <p style={{ color: 'var(--color-muted-foreground)' }}>Strikes</p>
+          <p style={{ color: ((role === 'Seller' ? user.sellerStrikes : user.buyerStrikes) ?? 0) >= 1 ? 'var(--color-destructive)' : 'var(--color-foreground)' }}>
+            {(role === 'Seller' ? user.sellerStrikes : user.buyerStrikes) ?? 0}
+          </p>
         </div>
       </div>
       <div className="flex items-center justify-between text-xs pt-1" style={{ fontFamily: 'var(--font-body)', color: 'var(--color-muted-foreground)' }}>
@@ -204,6 +224,19 @@ export default function DisputesView({ disputes }: DisputesViewProps) {
                 <PartyCard role="Seller" user={selected.order.seller} />
               </div>
 
+              <BuyerHistoryPanel
+                purchases={selected.order.buyer._count?.purchases ?? 0}
+                disputesRaised={selected.order.buyer._count?.disputes ?? 0}
+                buyerStrikes={selected.order.buyer.buyerStrikes ?? 0}
+              />
+
+              <DisputeTimeline
+                orderCreatedAt={selected.order.createdAt}
+                codeRevealedAt={selected.order.codeRevealedAt}
+                disputeRaisedAt={selected.createdAt}
+                verificationDeadline={selected.order.verificationDeadline}
+              />
+
               <div className="rounded-xl p-3" style={{ backgroundColor: 'var(--color-surface-raised)' }}>
                 <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}>Brand &amp; Order</p>
                 <p className="font-medium" style={{ fontFamily: 'var(--font-body)', color: 'var(--color-foreground)' }}>{selected.order.listing.brand.name}</p>
@@ -242,11 +275,20 @@ export default function DisputesView({ disputes }: DisputesViewProps) {
                 </span>
               </div>
 
-              {selected.status !== 'RESOLVED' && (
-                <p className="rounded-xl px-4 py-3 text-xs" style={{ backgroundColor: 'var(--color-surface-raised)', color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}>
-                  <strong style={{ color: 'var(--color-foreground)' }}>Refund Buyer</strong> initiates a Razorpay refund to the original payment method. Buyer typically sees funds in 5–7 working days. If Razorpay fails, the order will appear on the Refunds page for retry.
-                </p>
-              )}
+              {selected.status !== 'RESOLVED' && (() => {
+                const nextSellerStrike = (selected.order.seller.sellerStrikes ?? 0) + 1;
+                const nextBuyerStrike = (selected.order.buyer.buyerStrikes ?? 0) + 1;
+                return (
+                  <div className="rounded-xl px-4 py-3 text-xs space-y-1.5" style={{ backgroundColor: 'var(--color-surface-raised)', color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}>
+                    <p>
+                      <strong style={{ color: 'var(--color-destructive)' }}>Refund Buyer</strong> → seller strike {nextSellerStrike}: -{strikeDelta(nextSellerStrike)} score, payout {strikeHoldLabel(nextSellerStrike)}. Buyer is refunded via Razorpay (5–7 working days).
+                    </p>
+                    <p>
+                      <strong style={{ color: 'var(--color-success)' }}>Release to Seller</strong> → buyer strike {nextBuyerStrike}: -{strikeDelta(nextBuyerStrike)} score. Seller receives ₹{selected.order.sellerPayout}.
+                    </p>
+                  </div>
+                );
+              })()}
 
               {error && (
                 <p className="rounded-xl px-4 py-3 text-sm" style={{ backgroundColor: 'var(--color-destructive-soft)', color: 'var(--color-destructive)', fontFamily: 'var(--font-body)' }}>

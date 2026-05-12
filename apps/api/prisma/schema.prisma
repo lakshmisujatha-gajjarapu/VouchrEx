@@ -122,25 +122,28 @@ enum Platform {
 }
 
 model User {
-  id             String           @id @default(cuid())
-  phone          String           @unique
-  name           String
-  email          String?          @unique
-  trustScore     Int              @default(30)
-  tier           String           @default("BRONZE")
-  status         UserStatus       @default(ACTIVE)
-  disputeCount   Int              @default(0)  // incremented on each dispute raised against this user as seller
-  totalSales     Int              @default(0)  // incremented on each confirmed/auto-confirmed sale
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
-  listings      VoucherListing[]    @relation("SellerListings")
-  purchases     Order[]             @relation("BuyerOrders")
-  sales         Order[]             @relation("SellerOrders")
-  disputes      Dispute[]           @relation("RaisedDisputes")
-  sessions      UserSession[]
-  notifications Notification[]
-  payoutAccount SellerPayoutAccount?
-  pushTokens    PushToken[]
+  id              String               @id @default(cuid())
+  phone           String               @unique
+  name            String
+  email           String?              @unique
+  trustScore      Int                  @default(30)
+  tier            String               @default("BRONZE")
+  status          UserStatus           @default(ACTIVE)
+  disputeCount    Int                  @default(0) // incremented on each dispute raised against this user as seller
+  sellerStrikes   Int                  @default(0)
+  buyerStrikes    Int                  @default(0)
+  payoutHoldUntil DateTime?
+  totalSales      Int                  @default(0) // incremented on each confirmed/auto-confirmed sale
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  listings        VoucherListing[]     @relation("SellerListings")
+  purchases       Order[]              @relation("BuyerOrders")
+  sales           Order[]              @relation("SellerOrders")
+  disputes        Dispute[]            @relation("RaisedDisputes")
+  sessions        UserSession[]
+  notifications   Notification[]
+  payoutAccount   SellerPayoutAccount?
+  pushTokens      PushToken[]
 }
 
 model Brand {
@@ -185,34 +188,34 @@ model VoucherListing {
 }
 
 model CodeVault {
-  id             String         @id @default(cuid())
-  listingId      String         @unique
-  encryptedCode  String
-  encryptionIv   String
-  encryptionTag  String
-  codeHash       String         @unique
-  viewCount      Int            @default(0)
-  firstViewedAt  DateTime?
-  lastViewedAt   DateTime?
-  createdAt      DateTime       @default(now())
-  listing        VoucherListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  id            String         @id @default(cuid())
+  listingId     String         @unique
+  encryptedCode String
+  encryptionIv  String
+  encryptionTag String
+  codeHash      String         @unique
+  viewCount     Int            @default(0)
+  firstViewedAt DateTime?
+  lastViewedAt  DateTime?
+  createdAt     DateTime       @default(now())
+  listing       VoucherListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
 }
 
 model Order {
-  id                   String       @id @default(cuid())
-  listingId            String       @unique
+  id                   String         @id @default(cuid())
+  listingId            String         @unique
   buyerId              String
   sellerId             String
   amount               Int
   platformFee          Int
   commission           Int
   sellerPayout         Int
-  status               OrderStatus  @default(PAYMENT_PENDING)
+  status               OrderStatus    @default(PAYMENT_PENDING)
   codeRevealedAt       DateTime?
   verificationDeadline DateTime?
   confirmedAt          DateTime?
-  createdAt            DateTime     @default(now())
-  updatedAt            DateTime     @updatedAt
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
   listing              VoucherListing @relation(fields: [listingId], references: [id])
   buyer                User           @relation("BuyerOrders", fields: [buyerId], references: [id])
   seller               User           @relation("SellerOrders", fields: [sellerId], references: [id])
@@ -226,32 +229,32 @@ model Order {
 }
 
 model Payment {
-  id                    String          @id @default(cuid())
-  orderId               String          @unique
-  razorpayPaymentId     String?
-  amount                Int
-  method                String
-  status                PaymentStatus   @default(PENDING)
-  escrowStatus          EscrowStatus    @default(PENDING)
-  payoutStatus          PayoutStatus    @default(PENDING)
-  razorpayPayoutId      String?
-  payoutInitiatedAt     DateTime?
-  payoutCompletedAt     DateTime?
-  payoutFailureReason   String?
-  refundStatus          RefundStatus    @default(NOT_APPLICABLE)
-  razorpayRefundId      String?
-  refundInitiatedAt     DateTime?
-  refundCompletedAt     DateTime?
-  refundFailureReason   String?
-  refundAttempts        Int             @default(0)
-  provider              PaymentProvider @default(RAZORPAY)
-  currency              String          @default("INR")
-  razorpayOrderId       String?
-  razorpaySignature     String?
-  capturedAt            DateTime?
-  createdAt             DateTime        @default(now())
-  updatedAt             DateTime        @updatedAt
-  order                 Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  id                  String          @id @default(cuid())
+  orderId             String          @unique
+  razorpayPaymentId   String?
+  amount              Int
+  method              String
+  status              PaymentStatus   @default(PENDING)
+  escrowStatus        EscrowStatus    @default(PENDING)
+  payoutStatus        PayoutStatus    @default(PENDING)
+  razorpayPayoutId    String?
+  payoutInitiatedAt   DateTime?
+  payoutCompletedAt   DateTime?
+  payoutFailureReason String?
+  refundStatus        RefundStatus    @default(NOT_APPLICABLE)
+  razorpayRefundId    String?
+  refundInitiatedAt   DateTime?
+  refundCompletedAt   DateTime?
+  refundFailureReason String?
+  refundAttempts      Int             @default(0)
+  provider            PaymentProvider @default(RAZORPAY)
+  currency            String          @default("INR")
+  razorpayOrderId     String?
+  razorpaySignature   String?
+  capturedAt          DateTime?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+  order               Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
 }
 
 model SellerPayoutAccount {
@@ -271,22 +274,22 @@ model SellerPayoutAccount {
 }
 
 model Dispute {
-  id            String             @id @default(cuid())
-  orderId       String             @unique
-  raisedById    String
-  reason        String
-  description   String
-  evidenceUrls  String[]
+  id             String             @id @default(cuid())
+  orderId        String             @unique
+  raisedById     String
+  reason         String
+  description    String
+  evidenceUrls   String[]
   sellerResponse String?
-  resolution    DisputeResolution?
-  status        DisputeStatus      @default(OPEN)
-  resolvedAt    DateTime?
-  resolvedById  String?            // adminId of the admin who resolved this dispute (null for bootstrap token)
-  adminAlertedAt DateTime?         // set by scheduler when stale-dispute admin alert is sent; prevents repeat alerts
-  createdAt     DateTime           @default(now())
-  updatedAt     DateTime           @updatedAt
-  order         Order              @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  raisedBy      User               @relation("RaisedDisputes", fields: [raisedById], references: [id])
+  resolution     DisputeResolution?
+  status         DisputeStatus      @default(OPEN)
+  resolvedAt     DateTime?
+  resolvedById   String? // adminId of the admin who resolved this dispute (null for bootstrap token)
+  adminAlertedAt DateTime? // set by scheduler when stale-dispute admin alert is sent; prevents repeat alerts
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  order          Order              @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  raisedBy       User               @relation("RaisedDisputes", fields: [raisedById], references: [id])
 }
 
 model OtpChallenge {
@@ -299,8 +302,8 @@ model OtpChallenge {
   expiresAt         DateTime
   consumedAt        DateTime?
   attempts          Int        @default(0)
-  deviceId          String?    // soft fingerprint from expo-device, for fraud detection
-  clientIp          String?    // real IP (CF-Connecting-IP / X-Real-IP)
+  deviceId          String? // soft fingerprint from expo-device, for fraud detection
+  clientIp          String? // real IP (CF-Connecting-IP / X-Real-IP)
   createdAt         DateTime   @default(now())
 
   @@index([phone, createdAt])

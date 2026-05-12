@@ -22,6 +22,7 @@ import { CreateListingDto } from './dto/create-listing.dto';
 import { QueryListingsDto } from './dto/query-listings.dto';
 import { UpdateListingDto } from './dto/update-listing.dto';
 import {
+  LISTING_MAX_PRICE_INR,
   LISTING_MIN_EXPIRY_HOURS_DEFAULT,
   LISTINGS_PAGE_SIZE_DEFAULT,
   SELLER_MAX_LISTINGS_PER_HOUR_DEFAULT
@@ -172,6 +173,12 @@ export class ListingsService {
       throw new BadRequestException('Selling price must be below face value for resale.');
     }
 
+    if (createListingDto.sellingPrice > LISTING_MAX_PRICE_INR) {
+      throw new BadRequestException(
+        `Listings can't exceed ₹${String(LISTING_MAX_PRICE_INR)} right now. Higher limits unlock after extended verification.`
+      );
+    }
+
     // Seller must have a registered payout account to receive payments
     const payoutAccount = await this.payoutAccountsService.findByUserId(seller.id);
     if (!payoutAccount) {
@@ -284,6 +291,12 @@ export class ListingsService {
 
     if (nextSellingPrice >= nextFaceValue) {
       throw new BadRequestException('Selling price must be below face value for resale.');
+    }
+
+    if (nextSellingPrice > LISTING_MAX_PRICE_INR) {
+      throw new BadRequestException(
+        `Listings can't exceed ₹${String(LISTING_MAX_PRICE_INR)} right now. Higher limits unlock after extended verification.`
+      );
     }
 
     const nextExpiryDate = updateListingDto.expiryDate

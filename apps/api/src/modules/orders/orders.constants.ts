@@ -19,10 +19,6 @@ export const DISPUTE_ADMIN_ALERT_HOURS_DEFAULT = 24;
 export const STALE_PAYMENT_SYNC_MINUTES_DEFAULT = 1;
 export const STUCK_REFUND_RECONCILE_MINUTES_DEFAULT = 2;
 
-// Auto-suspend thresholds.
-export const SELLER_DISPUTE_RATE_THRESHOLD_DEFAULT = 0.3;
-export const SELLER_MIN_SALES_FOR_RATE_CHECK_DEFAULT = 3;
-
 // Verification deadline reminder windows (minutes before deadline).
 // Each entry sends a push at ~minutesBefore; the worker fires every 2 minutes,
 // so we widen the match window by ±3 minutes either side.

@@ -170,7 +170,14 @@ export class AdminController {
               select: {
                 id: true, name: true, phone: true, email: true,
                 tier: true, trustScore: true, status: true,
-                disputeCount: true, totalSales: true, createdAt: true
+                disputeCount: true, totalSales: true, createdAt: true,
+                buyerStrikes: true,
+                _count: {
+                  select: {
+                    purchases: { where: { status: { not: OrderStatus.CANCELLED } } },
+                    disputes: true
+                  }
+                }
               }
             },
             seller: {
@@ -178,6 +185,7 @@ export class AdminController {
                 id: true, name: true, phone: true, email: true,
                 tier: true, trustScore: true, status: true,
                 disputeCount: true, totalSales: true, createdAt: true,
+                sellerStrikes: true, payoutHoldUntil: true,
                 payoutAccount: { select: { kycStatus: true, upiId: true } }
               }
             },
@@ -269,6 +277,9 @@ export class AdminController {
         disputeCount: true,
         totalSales: true,
         createdAt: true,
+        sellerStrikes: true,
+        buyerStrikes: true,
+        payoutHoldUntil: true,
         payoutAccount: { select: { kycStatus: true, upiId: true } }
       },
       orderBy: { createdAt: 'desc' },
@@ -278,6 +289,34 @@ export class AdminController {
     const total = await this.prisma.user.count({ where });
 
     return { data, total, page: p, pageSize: ps };
+  }
+
+  /** Clear a seller's payout hold (set after dispute strikes). After clearing, future payouts proceed normally. */
+  @ApiHeader({ name: adminHeaderName, required: true })
+  @Post(ADMIN_ROUTES.USER_CLEAR_PAYOUT_HOLD)
+  async clearPayoutHold(
+    @Param('id') id: string,
+    @Headers(adminHeaderName) adminToken?: string
+  ) {
+    await this.adminAccessService.requireAdminAccess(adminToken);
+
+    const updated = await this.prisma.user.update({
+      where: { id },
+      data: { payoutHoldUntil: null },
+      select: { id: true, payoutHoldUntil: true }
+    });
+
+    await this.prisma.auditLog.create({
+      data: {
+        entityType: 'user',
+        entityId: id,
+        action: 'user.payout_hold_cleared',
+        actorId: null,
+        metadata: { clearedBy: 'admin' }
+      }
+    });
+
+    return updated;
   }
 
   /** Manually approve KYC for a seller (accounts are auto-verified on registration; use this to re-approve after a rejection). */

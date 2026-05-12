@@ -101,12 +101,21 @@ export interface DisputePartyUser {
   disputeCount: number;
   totalSales: number;
   createdAt: string;
+  sellerStrikes?: number;
+  buyerStrikes?: number;
+  payoutHoldUntil?: string | null;
   payoutAccount?: { kycStatus: string; upiId: string | null } | null;
+  _count?: {
+    purchases: number;
+    disputes: number;
+  };
 }
 
 export interface DisputeOrder extends Omit<Order, 'buyer' | 'seller'> {
   buyer: DisputePartyUser;
   seller: DisputePartyUser;
+  codeRevealedAt: string | null;
+  verificationDeadline: string | null;
 }
 
 export interface Dispute {
@@ -135,6 +144,9 @@ export interface AdminUser {
   disputeCount: number;
   totalSales: number;
   createdAt: string;
+  sellerStrikes: number;
+  buyerStrikes: number;
+  payoutHoldUntil: string | null;
   payoutAccount: { kycStatus: string; upiId: string | null } | null;
 }
 

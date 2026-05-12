@@ -62,3 +62,15 @@ Post-timeout dispute possible for 24hrs but with HIGHER burden of proof.
 | 🥈 Silver | 50-79 | ₹5,000 | 10 | T+1 | UPI+Cards |
 | 🥉 Bronze | 30-49 | ₹500 | 2 | T+3 | UPI only |
 | 🚫 Blocked | 0-29 | N/A | 0 | Frozen | N/A |
+
+### Phase 1 Platform-Wide Cap
+
+**No listing in Phase 1 may exceed ₹1,000 sellingPrice**, regardless of tier. This clamp keeps the blast radius of any single fraud incident small while the platform is unproven. Tier benefits (listing count, payout speed, payment methods) still apply; only the per-listing max value is overridden.
+
+To raise this cap, a seller will need to complete an extended verification flow (e.g. PAN + selfie + UPI account verification + admin review) — that doc-submission pipeline is **Phase 2** and not in scope of the current strike-system work.
+
+Enforcement points:
+
+- **API** — listing creation/update validates `sellingPrice <= 1000` and rejects with a clear error.
+- **Mobile (sell flow)** — price input shows the ₹1,000 cap as helper text, validates on blur and on submit, surfaces a friendly error.
+- **Admin** — admin listing views display the cap so ops can identify legacy / out-of-band listings if any sneak in.

@@ -18,6 +18,7 @@ import { PrimaryButton } from '@/components/primary-button';
 import { TextField } from '@/components/text-field';
 import { useAuth } from '@/hooks/use-auth';
 import { useAsyncResource } from '@/hooks/use-async-resource';
+import { LISTING_MAX_PRICE_INR } from '@/constants';
 import { api } from '@/lib/api';
 import { searchBrandfetchBrands } from '@/lib/brandfetch';
 import { formatStatus } from '@/lib/format';
@@ -157,6 +158,7 @@ export default function EditListingScreen() {
     ? Boolean(listingResource.data.order) || !editableStatuses.has(listingResource.data.status)
     : false;
 
+  const priceExceedsCap = parsedSellingPrice > LISTING_MAX_PRICE_INR;
   const canSubmit = Boolean(
     listingResource.data &&
       !locked &&
@@ -164,7 +166,8 @@ export default function EditListingScreen() {
       expiryDate &&
       parsedFaceValue > 0 &&
       parsedSellingPrice > 0 &&
-      parsedSellingPrice < parsedFaceValue
+      parsedSellingPrice < parsedFaceValue &&
+      !priceExceedsCap
   );
 
   async function handleSubmit() {
@@ -374,6 +377,16 @@ export default function EditListingScreen() {
                       keyboardType="numeric"
                       placeholder="420"
                     />
+                    <Text style={{
+                      fontSize: 11,
+                      fontFamily: theme.fontFamily.body,
+                      color: priceExceedsCap ? theme.colors.danger : theme.colors.inkSecondary,
+                      marginTop: theme.spacing[1],
+                    }}>
+                      {priceExceedsCap
+                        ? `Listings can't exceed ₹${String(LISTING_MAX_PRICE_INR)} right now.`
+                        : `Max ₹${String(LISTING_MAX_PRICE_INR)} per listing`}
+                    </Text>
                   </View>
                 </View>
                 <View className="mb-2">

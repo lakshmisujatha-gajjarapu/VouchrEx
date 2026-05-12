@@ -18,7 +18,18 @@ interface UsersViewProps {
   users: AdminUser[];
 }
 
-type ActionType = 'suspend' | 'reactivate' | 'approve-kyc' | 'reject-kyc';
+type ActionType = 'suspend' | 'reactivate' | 'approve-kyc' | 'reject-kyc' | 'clear-payout-hold';
+
+function formatPayoutHold(iso: string | null): { label: string; color: string } {
+  if (!iso) return { label: '—', color: 'var(--color-muted-foreground)' };
+  const date = new Date(iso);
+  if (date.getUTCFullYear() >= 9999) return { label: 'Indefinite', color: 'var(--color-destructive)' };
+  if (date.getTime() <= Date.now()) return { label: 'Expired', color: 'var(--color-muted-foreground)' };
+  return {
+    label: date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+    color: 'var(--color-warning, #b45309)',
+  };
+}
 
 function statusStyle(status: string): { bg: string; color: string } {
   if (status === 'ACTIVE')    return { bg: 'var(--color-success-soft)',     color: 'var(--color-success)' };
@@ -84,7 +95,7 @@ export default function UsersView({ users }: UsersViewProps) {
           <table className="w-full text-sm">
             <thead>
               <tr style={{ backgroundColor: 'var(--color-surface-raised)' }}>
-                {['Name', 'Phone', 'Tier', 'Sales', 'Disputes', 'Status', 'KYC', 'Joined', ''].map((h) => (
+                {['Name', 'Phone', 'Tier', 'Sales', 'Disputes', 'Strikes', 'Payout Hold', 'Status', 'KYC', 'Joined', ''].map((h) => (
                   <th key={h} className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-widest whitespace-nowrap"
                     style={{ color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}>
                     {h}
@@ -127,6 +138,21 @@ export default function UsersView({ users }: UsersViewProps) {
                           </span>
                         )}
                       </span>
+                    </td>
+                    <td className="px-5 py-3.5 tabular-nums" style={{ fontFamily: 'var(--font-mono)' }}>
+                      <span style={{ color: u.sellerStrikes >= 1 ? 'var(--color-destructive)' : 'var(--color-foreground)' }}>
+                        {u.sellerStrikes}S
+                      </span>
+                      {' / '}
+                      <span style={{ color: u.buyerStrikes >= 1 ? 'var(--color-destructive)' : 'var(--color-foreground)' }}>
+                        {u.buyerStrikes}B
+                      </span>
+                    </td>
+                    <td className="px-5 py-3.5 whitespace-nowrap" style={{ fontFamily: 'var(--font-body)' }}>
+                      {(() => {
+                        const h = formatPayoutHold(u.payoutHoldUntil);
+                        return <span style={{ color: h.color, fontSize: '0.85rem' }}>{h.label}</span>;
+                      })()}
                     </td>
                     <td className="px-5 py-3.5">
                       <span className="status-badge" style={{ backgroundColor: s.bg, color: s.color }}>
@@ -194,6 +220,16 @@ export default function UsersView({ users }: UsersViewProps) {
                             Re-approve KYC
                           </button>
                         )}
+
+                        {u.payoutHoldUntil && new Date(u.payoutHoldUntil).getTime() > Date.now() && (
+                          <button
+                            onClick={() => { setConfirm({ user: u, action: 'clear-payout-hold' }); }}
+                            className="rounded-xl px-3 py-1.5 text-xs font-semibold transition-colors"
+                            style={{ backgroundColor: 'var(--color-warning-soft, #fef3c7)', color: 'var(--color-warning, #b45309)', fontFamily: 'var(--font-body)' }}
+                          >
+                            Clear hold
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -209,10 +245,11 @@ export default function UsersView({ users }: UsersViewProps) {
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle style={{ fontFamily: 'var(--font-headline)', fontWeight: 800 }}>
-                {confirm.action === 'suspend'      ? 'Suspend User'
-                : confirm.action === 'reactivate'  ? 'Reactivate User'
-                : confirm.action === 'approve-kyc' ? 'Approve KYC'
-                :                                    'Reject KYC'}
+                {confirm.action === 'suspend'           ? 'Suspend User'
+                : confirm.action === 'reactivate'       ? 'Reactivate User'
+                : confirm.action === 'approve-kyc'      ? 'Approve KYC'
+                : confirm.action === 'clear-payout-hold'? 'Clear Payout Hold'
+                :                                         'Reject KYC'}
               </DialogTitle>
               <DialogDescription style={{ fontFamily: 'var(--font-body)' }}>
                 {confirm.action === 'suspend'
@@ -221,6 +258,8 @@ export default function UsersView({ users }: UsersViewProps) {
                   ? `Reactivate ${formatPhone(confirm.user.phone)}?`
                 : confirm.action === 'approve-kyc'
                   ? `Approve KYC for ${formatPhone(confirm.user.phone)}? They will receive automatic payouts after confirmed sales.`
+                : confirm.action === 'clear-payout-hold'
+                  ? `Clear payout hold for ${formatPhone(confirm.user.phone)}? They will be eligible for payouts immediately on their next confirmed sale.`
                   : `Reject KYC for ${formatPhone(confirm.user.phone)}? Their payouts will remain blocked until re-approved.`}
               </DialogDescription>
             </DialogHeader>
@@ -243,10 +282,11 @@ export default function UsersView({ users }: UsersViewProps) {
                 disabled={isPending}
               >
                 {isPending ? 'Processing…'
-                  : confirm.action === 'suspend'      ? 'Suspend'
-                  : confirm.action === 'reactivate'   ? 'Reactivate'
-                  : confirm.action === 'approve-kyc'  ? 'Approve KYC'
-                  :                                     'Reject KYC'}
+                  : confirm.action === 'suspend'           ? 'Suspend'
+                  : confirm.action === 'reactivate'        ? 'Reactivate'
+                  : confirm.action === 'approve-kyc'       ? 'Approve KYC'
+                  : confirm.action === 'clear-payout-hold' ? 'Clear hold'
+                  :                                          'Reject KYC'}
               </Button>
             </DialogFooter>
           </DialogContent>

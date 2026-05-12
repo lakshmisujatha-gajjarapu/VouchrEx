@@ -10,11 +10,12 @@ import { OrdersController } from './orders.controller';
 import { OrdersService } from './orders.service';
 import { OrdersScheduler } from './orders.scheduler';
 import { ReconciliationService } from './reconciliation.service';
+import { DisputeStrikesService } from './dispute-strikes.service';
 
 @Module({
   imports: [AdminModule, ListingsModule, AuthModule, NotificationsModule, PaymentsModule, EventEmitterModule],
   controllers: [OrdersController],
-  providers: [OrdersService, OrdersScheduler, ReconciliationService],
+  providers: [OrdersService, OrdersScheduler, ReconciliationService, DisputeStrikesService],
   exports: [OrdersService]
 })
 export class OrdersModule {}
