@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, Headers, Param, Post, Query } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Headers, Param, Post, Put, Query } from '@nestjs/common';
 import { ApiHeader, ApiTags } from '@nestjs/swagger';
 import {
   AdminRole,
@@ -12,6 +12,7 @@ import {
 } from '@prisma/client';
 
 import { parsePagination, normalizeSearch, normalizeQBy, containsCi, startsWithCi } from '../../common/pagination';
+import { AppConfigService } from '../app-config/app-config.service';
 import { PaymentsService } from '../payments/payments.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AdminAccessService } from './admin-access.service';
@@ -86,7 +87,8 @@ export class AdminController {
   constructor(
     private readonly adminAccessService: AdminAccessService,
     private readonly prisma: PrismaService,
-    private readonly paymentsService: PaymentsService
+    private readonly paymentsService: PaymentsService,
+    private readonly appConfigService: AppConfigService
   ) {}
 
   /** Platform-wide operational metrics. */
@@ -811,5 +813,43 @@ export class AdminController {
     await this.adminAccessService.requireSuperAdmin(adminToken);
     await this.adminAccessService.setPassword(id, body.password);
     return { success: true };
+  }
+
+  // ─── App Config (marketplace-wide runtime settings) ──────────────────────────
+
+  /** List all runtime config values (fees, caps, etc). */
+  @ApiHeader({ name: adminHeaderName, required: true })
+  @Get(ADMIN_ROUTES.CONFIG)
+  async getAppConfig(@Headers(adminHeaderName) adminToken?: string) {
+    await this.adminAccessService.requireAdminAccess(adminToken);
+    return this.appConfigService.getAll();
+  }
+
+  /** Update a single runtime config value. Body: { value, notify?: { title, message } }. */
+  @ApiHeader({ name: adminHeaderName, required: true })
+  @Put(ADMIN_ROUTES.CONFIG_KEY)
+  async setAppConfig(
+    @Param('key') key: string,
+    @Body() body: { value: string; notify?: { title?: unknown; message?: unknown } },
+    @Headers(adminHeaderName) adminToken?: string
+  ) {
+    const identity = await this.adminAccessService.requireAdminAccess(adminToken);
+    if (typeof body.value !== 'string') {
+      throw new BadRequestException('Request body must include a string `value`.');
+    }
+    const actorId = identity.kind === 'session' ? identity.adminId : null;
+
+    let notify: { readonly title: string; readonly message: string } | undefined;
+    if (body.notify) {
+      if (typeof body.notify.title !== 'string' || !body.notify.title.trim()) {
+        throw new BadRequestException('notify.title must be a non-empty string.');
+      }
+      if (typeof body.notify.message !== 'string' || !body.notify.message.trim()) {
+        throw new BadRequestException('notify.message must be a non-empty string.');
+      }
+      notify = { title: body.notify.title.trim(), message: body.notify.message.trim() };
+    }
+
+    return this.appConfigService.set(key, body.value, actorId, notify ? { notify } : undefined);
   }
 }

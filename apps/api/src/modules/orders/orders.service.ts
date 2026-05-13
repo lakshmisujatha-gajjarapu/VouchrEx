@@ -21,6 +21,7 @@ import {
 } from '@prisma/client';
 
 import { ONE_HOUR_MS, ONE_MINUTE_MS } from '../../common/time.constants';
+import { AppConfigService } from '../app-config/app-config.service';
 import { CodeVaultService } from '../listings/services/code-vault.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PaymentsService } from '../payments/payments.service';
@@ -33,10 +34,8 @@ import {
   DEFAULT_CURRENCY,
   VERIFICATION_REMINDER_MATCH_WINDOW_MINUTES,
   VERIFICATION_REMINDER_WINDOWS,
-  commissionRate,
   highValueThresholdInr,
-  highValueWindowHours,
-  platformFeeInr
+  highValueWindowHours
 } from './orders.constants';
 import { DisputeStrikesService } from './dispute-strikes.service';
 import { VerifyPaymentDto } from './dto/verify-payment.dto';
@@ -51,7 +50,8 @@ export class OrdersService {
     private readonly notificationsService: NotificationsService,
     private readonly paymentsService: PaymentsService,
     private readonly eventEmitter: EventEmitter2,
-    private readonly disputeStrikes: DisputeStrikesService
+    private readonly disputeStrikes: DisputeStrikesService,
+    private readonly appConfigService: AppConfigService
   ) {}
 
   findAllForUser(userId: string) {
@@ -177,8 +177,10 @@ export class OrdersService {
       );
     }
 
-    const platformFee = platformFeeInr;
-    const commission = Math.round(listing.sellingPrice * commissionRate);
+    const buyerFeeRate = await this.appConfigService.getNumber('buyer_fee_rate', 0.10);
+    const sellerCommissionRate = await this.appConfigService.getNumber('seller_commission_rate', 0.10);
+    const platformFee = Math.round(listing.sellingPrice * buyerFeeRate);
+    const commission = Math.round(listing.sellingPrice * sellerCommissionRate);
     const sellerPayout = listing.sellingPrice - commission;
 
     let order;

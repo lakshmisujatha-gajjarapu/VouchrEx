@@ -318,7 +318,7 @@ function WebDateField({
   // Lazy-load createPortal so non-web builds don't pull react-dom.
   let portal: React.ReactNode = null;
   if (popover && typeof document !== 'undefined') {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const reactDom = require('react-dom') as { createPortal: (n: React.ReactNode, c: Element) => React.ReactNode };
     portal = reactDom.createPortal(popover, document.body);
   }

@@ -406,6 +406,16 @@ model AuditLog {
   @@index([entityType, entityId, createdAt])
 }
 
+model AppConfig {
+  key         String   @id
+  value       String
+  valueType   String // "number" | "string" | "boolean" | "json"
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  updatedBy   String?
+}
+
 model WebhookEvent {
   id          String    @id @default(cuid())
   eventId     String    @unique

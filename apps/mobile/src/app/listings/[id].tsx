@@ -15,6 +15,7 @@ import { useColorScheme } from 'nativewind';
 import { PrimaryButton } from '@/components/primary-button';
 import { useAuth } from '@/hooks/use-auth';
 import { useAsyncResource } from '@/hooks/use-async-resource';
+import { useConfig } from '@/hooks/use-config';
 import { useListingsSocket } from '@/hooks/use-listings-socket';
 import { api } from '@/lib/api';
 import { formatCurrency, formatDate } from '@/lib/format';
@@ -28,6 +29,7 @@ export default function ListingDetailScreen() {
   const { id } = useLocalSearchParams<{ readonly id?: string | string[] }>();
   const listingId = useMemo(() => (Array.isArray(id) ? id[0] : id), [id]);
   const { sessionToken, user } = useAuth();
+  const { buyerFeeRate } = useConfig();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -100,6 +102,8 @@ export default function ListingDetailScreen() {
   const listing = listingResource.data;
   const isOwnListing = listing.seller.id === user?.id;
   const savings = Math.round(listing.discountPercent);
+  const buyerFee = Math.round(listing.sellingPrice * buyerFeeRate);
+  const totalDue = listing.sellingPrice + buyerFee;
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
@@ -330,10 +334,13 @@ export default function ListingDetailScreen() {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[4] }}>
             <View style={{ flex: 1 }}>
               <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 10, fontWeight: '700', color: theme.colors.inkMuted, textTransform: 'uppercase', letterSpacing: 1 }}>
-                Final Price
+                You pay
               </Text>
               <Text style={{ fontFamily: theme.fontFamily.mono, fontSize: 24, fontWeight: '700', color: theme.colors.ink }}>
-                {formatCurrency(listing.sellingPrice)}
+                {formatCurrency(totalDue)}
+              </Text>
+              <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 11, color: theme.colors.inkMuted, marginTop: 2 }}>
+                {formatCurrency(listing.sellingPrice)} + {formatCurrency(buyerFee)} fee
               </Text>
             </View>
             {error ? (

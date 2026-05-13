@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ConfigChangeBanner } from '@/components/config-change-banner';
 import { DateField } from '@/components/date-field';
 import { FieldLabel } from '@/components/field-label';
 import { FilterChip } from '@/components/filter-chip';
@@ -21,7 +22,7 @@ import { SubmergedInput } from '@/components/submerged-input';
 import { ProfileAvatar } from '@/components/profile-avatar';
 import { useAuth } from '@/hooks/use-auth';
 import { useAsyncResource } from '@/hooks/use-async-resource';
-import { LISTING_MAX_PRICE_INR } from '@/constants';
+import { useConfig } from '@/hooks/use-config';
 import { api, type PayoutAccount } from '@/lib/api';
 import { searchBrandfetchBrands } from '@/lib/brandfetch';
 import { useTheme } from '@/theme/theme-context';
@@ -48,6 +49,7 @@ export default function SellScreen() {
   const { sessionToken } = useAuth();
   const theme = useTheme();
   const router = useRouter();
+  const { listingMaxPriceInr } = useConfig();
 
   // ── Payout account gate ──────────────────────────────────────────
   const [payoutAccount, setPayoutAccount]   = useState<PayoutAccount | null>(null);
@@ -143,13 +145,13 @@ export default function SellScreen() {
   const handlePriceInput = (next: string, setter: (v: string) => void) => {
     const digitsOnly = next.replace(/\D/g, '');
     if (digitsOnly === '') { setter(''); return; }
-    if (Number(digitsOnly) > LISTING_MAX_PRICE_INR) return;
+    if (Number(digitsOnly) > listingMaxPriceInr) return;
     setter(digitsOnly);
   };
 
   const parsedFaceValue = Number(faceValue);
   const parsedSellingPrice = Number(sellingPrice);
-  const faceValueExceedsCap = parsedFaceValue > LISTING_MAX_PRICE_INR;
+  const faceValueExceedsCap = parsedFaceValue > listingMaxPriceInr;
   const sellingPriceInvalid =
     parsedSellingPrice > 0 && parsedFaceValue > 0 && parsedSellingPrice >= parsedFaceValue;
   const canSubmit =
@@ -210,6 +212,8 @@ export default function SellScreen() {
             </View>
             <ProfileAvatar />
           </View>
+
+          <ConfigChangeBanner />
 
           {/* ── Payout gate: loading ── */}
           {payoutLoading ? (
@@ -473,8 +477,8 @@ export default function SellScreen() {
                     marginTop: theme.spacing[1],
                   }}>
                     {faceValueExceedsCap
-                      ? `Voucher value can't exceed ₹${String(LISTING_MAX_PRICE_INR)} right now.`
-                      : `Max ₹${String(LISTING_MAX_PRICE_INR)} face value`}
+                      ? `Voucher value can't exceed ₹${String(listingMaxPriceInr)} right now.`
+                      : `Max ₹${String(listingMaxPriceInr)} face value`}
                   </Text>
                 </View>
                 <View style={{ flex: 1 }}>

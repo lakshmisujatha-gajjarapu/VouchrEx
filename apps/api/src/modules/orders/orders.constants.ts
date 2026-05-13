@@ -1,12 +1,15 @@
 // Phase 1 marketplace economics and reveal policy come directly from HLD 07/11.
-// All values are configurable via environment variables with sensible defaults.
-export const PLATFORM_FEE_INR_DEFAULT = 10;
-export const COMMISSION_RATE_DEFAULT = 0.12;
+// Buyer fee + seller commission rates are managed at runtime via AppConfig
+// (keys: `buyer_fee_rate`, `seller_commission_rate`). See AppConfigService.
+//
+// HIGH_VALUE_THRESHOLD_INR / HIGH_VALUE_WINDOW_HOURS deliberately remain env-only:
+// they're fraud-control parameters that should not be tunable by every admin in
+// the console — tightening them retroactively risks blocking pending orders, and
+// loosening them widens fraud exposure. Promote to AppConfig only with an
+// audit/approval workflow.
 export const HIGH_VALUE_THRESHOLD_INR_DEFAULT = 2000;
 export const HIGH_VALUE_WINDOW_HOURS_DEFAULT = 4;
 
-export const platformFeeInr = Number(process.env.PLATFORM_FEE_INR ?? PLATFORM_FEE_INR_DEFAULT);
-export const commissionRate = Number(process.env.COMMISSION_RATE ?? COMMISSION_RATE_DEFAULT);
 export const highValueThresholdInr = Number(process.env.HIGH_VALUE_THRESHOLD_INR ?? HIGH_VALUE_THRESHOLD_INR_DEFAULT);
 export const highValueWindowHours = Number(process.env.HIGH_VALUE_WINDOW_HOURS ?? HIGH_VALUE_WINDOW_HOURS_DEFAULT);
 

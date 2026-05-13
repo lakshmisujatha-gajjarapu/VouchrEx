@@ -5,6 +5,7 @@ import type {
   AdminMetrics,
   AdminTeamMember,
   AdminUser,
+  AppConfigRow,
   Dispute,
   ListQuery,
   Order,
@@ -104,4 +105,8 @@ export async function getMe(): Promise<AdminMe> {
 
 export async function getTeam(query: ListQuery = {}): Promise<PaginatedResult<AdminTeamMember>> {
   return apiFetch<PaginatedResult<AdminTeamMember>>(`/admin/team${buildListQuery(query)}`);
+}
+
+export async function getAppConfig(): Promise<AppConfigRow[]> {
+  return apiFetch<AppConfigRow[]>('/admin/config');
 }

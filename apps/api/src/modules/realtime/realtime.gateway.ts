@@ -43,6 +43,12 @@ export type DisputeCreatedEvent = {
   readonly raisedByUserId: string;
 };
 
+export type ConfigUpdatedEvent = {
+  readonly buyerFeeRate: number;
+  readonly sellerCommissionRate: number;
+  readonly listingMaxPriceInr: number;
+};
+
 @WebSocketGateway({
   cors: { origin: '*' },
   transports: ['websocket']
@@ -118,5 +124,11 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
   @OnEvent('listing.updated')
   handleListingUpdated(payload: ListingUpdatedEvent) {
     this.server.emit(SOCKET_EVENTS.LISTING_UPDATED, payload);
+  }
+
+  @OnEvent('config.updated')
+  handleConfigUpdated(payload: ConfigUpdatedEvent) {
+    // Broadcast to every connected socket — config is global, no per-user routing.
+    this.server.emit(SOCKET_EVENTS.CONFIG_UPDATED, payload);
   }
 }

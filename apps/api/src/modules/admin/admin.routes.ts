@@ -21,4 +21,6 @@ export const ADMIN_ROUTES = {
   TEAM_MEMBER_DEACTIVATE:   'team/:id/deactivate',
   TEAM_MEMBER_ACTIVATE:     'team/:id/activate',
   TEAM_MEMBER_SET_PASSWORD: 'team/:id/set-password',
+  CONFIG:                   'config',
+  CONFIG_KEY:               'config/:key',
 } as const;

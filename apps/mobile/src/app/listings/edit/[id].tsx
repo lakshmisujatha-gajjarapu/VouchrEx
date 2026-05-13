@@ -12,13 +12,14 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ConfigChangeBanner } from '@/components/config-change-banner';
 import { DateField } from '@/components/date-field';
 import { FilterChip } from '@/components/filter-chip';
 import { PrimaryButton } from '@/components/primary-button';
 import { TextField } from '@/components/text-field';
 import { useAuth } from '@/hooks/use-auth';
 import { useAsyncResource } from '@/hooks/use-async-resource';
-import { LISTING_MAX_PRICE_INR } from '@/constants';
+import { useConfig } from '@/hooks/use-config';
 import { api } from '@/lib/api';
 import { searchBrandfetchBrands } from '@/lib/brandfetch';
 import { formatStatus } from '@/lib/format';
@@ -47,6 +48,7 @@ export default function EditListingScreen() {
   const router = useRouter();
   const theme = useTheme();
   const { sessionToken } = useAuth();
+  const { listingMaxPriceInr } = useConfig();
   const { id } = useLocalSearchParams<{ readonly id?: string | string[] }>();
   const listingId = useMemo(() => (Array.isArray(id) ? id[0] : id), [id]);
 
@@ -150,7 +152,7 @@ export default function EditListingScreen() {
   const handlePriceInput = (next: string, setter: (v: string) => void) => {
     const digitsOnly = next.replace(/\D/g, '');
     if (digitsOnly === '') { setter(''); return; }
-    if (Number(digitsOnly) > LISTING_MAX_PRICE_INR) return;
+    if (Number(digitsOnly) > listingMaxPriceInr) return;
     setter(digitsOnly);
   };
 
@@ -165,7 +167,7 @@ export default function EditListingScreen() {
     ? Boolean(listingResource.data.order) || !editableStatuses.has(listingResource.data.status)
     : false;
 
-  const faceValueExceedsCap = parsedFaceValue > LISTING_MAX_PRICE_INR;
+  const faceValueExceedsCap = parsedFaceValue > listingMaxPriceInr;
   const sellingPriceInvalid =
     parsedSellingPrice > 0 && parsedFaceValue > 0 && parsedSellingPrice >= parsedFaceValue;
   const canSubmit = Boolean(
@@ -257,6 +259,7 @@ export default function EditListingScreen() {
     <View className="flex-1" style={{ backgroundColor: theme.colors.background }}>
       <SafeAreaView className="flex-1" edges={['top', 'left', 'right']}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+          <ConfigChangeBanner />
           <ScrollView
             contentContainerStyle={{ flexGrow: 1 }}
             keyboardShouldPersistTaps="handled"
@@ -384,8 +387,8 @@ export default function EditListingScreen() {
                       marginTop: theme.spacing[1],
                     }}>
                       {faceValueExceedsCap
-                        ? `Voucher value can't exceed ₹${String(LISTING_MAX_PRICE_INR)} right now.`
-                        : `Max ₹${String(LISTING_MAX_PRICE_INR)} face value`}
+                        ? `Voucher value can't exceed ₹${String(listingMaxPriceInr)} right now.`
+                        : `Max ₹${String(listingMaxPriceInr)} face value`}
                     </Text>
                   </View>
                   <View className="flex-1">

@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 
 import { AdminModule } from '../admin/admin.module';
+import { AppConfigModule } from '../app-config/app-config.module';
 import { AuthModule } from '../auth/auth.module';
 import { ListingsModule } from '../listings/listings.module';
 import { NotificationsModule } from '../notifications/notifications.module';
@@ -13,7 +14,7 @@ import { ReconciliationService } from './reconciliation.service';
 import { DisputeStrikesService } from './dispute-strikes.service';
 
 @Module({
-  imports: [AdminModule, ListingsModule, AuthModule, NotificationsModule, PaymentsModule, EventEmitterModule],
+  imports: [AdminModule, AppConfigModule, ListingsModule, AuthModule, NotificationsModule, PaymentsModule, EventEmitterModule],
   controllers: [OrdersController],
   providers: [OrdersService, OrdersScheduler, ReconciliationService, DisputeStrikesService],
   exports: [OrdersService]

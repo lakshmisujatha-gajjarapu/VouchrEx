@@ -25,6 +25,7 @@ import Toast from 'react-native-toast-message';
 
 import { LoadingScreen } from '@/components/loading-screen';
 import { AuthProvider, useAuth } from '@/hooks/use-auth';
+import { ConfigProvider } from '@/hooks/use-config';
 import { NotificationCenterProvider } from '@/hooks/use-notification-center';
 import { PushRegistrar } from '@/hooks/use-push-registrar';
 import { SocketProvider } from '@/hooks/use-socket';
@@ -57,12 +58,14 @@ function InnerApp() {
     <ThemeProvider preference={preference}>
       <AuthProvider>
         <SocketProvider>
-          <PushRegistrar>
-            <NotificationCenterProvider>
-              <AppStack />
-              <Toast />
-            </NotificationCenterProvider>
-          </PushRegistrar>
+          <ConfigProvider>
+            <PushRegistrar>
+              <NotificationCenterProvider>
+                <AppStack />
+                <Toast />
+              </NotificationCenterProvider>
+            </PushRegistrar>
+          </ConfigProvider>
         </SocketProvider>
       </AuthProvider>
     </ThemeProvider>

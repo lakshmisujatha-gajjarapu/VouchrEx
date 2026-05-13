@@ -307,3 +307,12 @@ export interface AdminTeamMember {
   active: boolean;
   createdAt: string;
 }
+
+export interface AppConfigRow {
+  key: string;
+  value: string;
+  valueType: 'number' | 'string' | 'boolean' | 'json';
+  description: string | null;
+  updatedAt: string;
+  updatedBy: string | null;
+}

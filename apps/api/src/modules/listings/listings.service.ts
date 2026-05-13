@@ -15,6 +15,7 @@ import {
 
 import { DEFAULT_CURRENCY } from '../../common/marketplace.constants';
 import { ONE_HOUR_MS } from '../../common/time.constants';
+import { AppConfigService } from '../app-config/app-config.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PayoutAccountsService } from '../payouts/payout-accounts.service';
 import { BrandsService } from '../brands/brands.service';
@@ -23,7 +24,6 @@ import { CreateListingDto } from './dto/create-listing.dto';
 import { QueryListingsDto } from './dto/query-listings.dto';
 import { UpdateListingDto } from './dto/update-listing.dto';
 import {
-  LISTING_MAX_PRICE_INR,
   LISTING_MIN_EXPIRY_HOURS_DEFAULT,
   LISTINGS_PAGE_SIZE_DEFAULT,
   SELLER_MAX_LISTINGS_PER_HOUR_DEFAULT
@@ -45,7 +45,8 @@ export class ListingsService {
     private readonly notificationsService: NotificationsService,
     private readonly brandsService: BrandsService,
     private readonly payoutAccountsService: PayoutAccountsService,
-    private readonly eventEmitter: EventEmitter2
+    private readonly eventEmitter: EventEmitter2,
+    private readonly appConfigService: AppConfigService
   ) {}
 
   findActive(query: QueryListingsDto) {
@@ -196,9 +197,10 @@ export class ListingsService {
       throw new BadRequestException('Selling price must be below face value for resale.');
     }
 
-    if (createListingDto.faceValue > LISTING_MAX_PRICE_INR) {
+    const maxPriceInr = await this.appConfigService.getNumber('listing_max_price_inr', 1000);
+    if (createListingDto.faceValue > maxPriceInr) {
       throw new BadRequestException(
-        `Voucher face value can't exceed ₹${String(LISTING_MAX_PRICE_INR)} right now. Higher limits unlock after extended verification.`
+        `Voucher face value can't exceed ₹${String(maxPriceInr)} right now. Higher limits unlock after extended verification.`
       );
     }
 
@@ -316,9 +318,10 @@ export class ListingsService {
       throw new BadRequestException('Selling price must be below face value for resale.');
     }
 
-    if (nextFaceValue > LISTING_MAX_PRICE_INR) {
+    const maxPriceInr = await this.appConfigService.getNumber('listing_max_price_inr', 1000);
+    if (nextFaceValue > maxPriceInr) {
       throw new BadRequestException(
-        `Voucher face value can't exceed ₹${String(LISTING_MAX_PRICE_INR)} right now. Higher limits unlock after extended verification.`
+        `Voucher face value can't exceed ₹${String(maxPriceInr)} right now. Higher limits unlock after extended verification.`
       );
     }
 

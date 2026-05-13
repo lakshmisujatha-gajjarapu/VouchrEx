@@ -8,7 +8,8 @@ export const SOCKET_EVENTS = {
   ORDER_UPDATED: 'order:updated',
   LISTING_CREATED: 'listing:created',
   LISTING_UPDATED: 'listing:updated',
-  DISPUTE_OPENED: 'dispute:opened'
+  DISPUTE_OPENED: 'dispute:opened',
+  CONFIG_UPDATED: 'config:updated'
 } as const;
 
 export const SOCKET_ROOMS = {

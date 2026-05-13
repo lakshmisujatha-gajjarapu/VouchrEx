@@ -14,6 +14,7 @@ import {
   THROTTLE_SHORT_TTL_MS_DEFAULT
 } from '../common/throttle.constants';
 import { AdminModule } from './admin/admin.module';
+import { AppConfigModule } from './app-config/app-config.module';
 import { AuthModule } from './auth/auth.module';
 import { BrandsModule } from './brands/brands.module';
 import { HealthModule } from './health/health.module';
@@ -49,6 +50,7 @@ import { WebhooksModule } from './webhooks/webhooks.module';
     HealthModule,
     AuthModule,
     AdminModule,
+    AppConfigModule,
     BrandsModule,
     ListingsModule,
     OrdersModule,

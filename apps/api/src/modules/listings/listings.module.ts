@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 
+import { AppConfigModule } from '../app-config/app-config.module';
 import { AuthModule } from '../auth/auth.module';
 import { BrandsModule } from '../brands/brands.module';
 import { NotificationsModule } from '../notifications/notifications.module';
@@ -10,7 +11,7 @@ import { ListingsService } from './listings.service';
 import { CodeVaultService } from './services/code-vault.service';
 
 @Module({
-  imports: [BrandsModule, AuthModule, NotificationsModule, PayoutsModule],
+  imports: [BrandsModule, AuthModule, NotificationsModule, PayoutsModule, AppConfigModule],
   controllers: [ListingsController],
   providers: [ListingsService, CodeVaultService, ListingsScheduler],
   exports: [ListingsService, CodeVaultService]

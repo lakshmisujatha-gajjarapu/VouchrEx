@@ -1,5 +1,5 @@
 import { Platform } from 'react-native';
-import { AUTH, BRANDS, LISTINGS, NOTIFICATIONS, ORDERS, PAYOUTS, USERS } from './routes';
+import { AUTH, BRANDS, CONFIG, LISTINGS, NOTIFICATIONS, ORDERS, PAYOUTS, USERS } from './routes';
 
 const sessionHeaderName = 'x-session-token';
 
@@ -293,6 +293,13 @@ export const api = {
     return apiRequest<readonly Brand[]>(BRANDS.LIST, {
       query: input
     });
+  },
+  getPublicConfig() {
+    return apiRequest<{
+      readonly buyerFeeRate: number;
+      readonly sellerCommissionRate: number;
+      readonly listingMaxPriceInr: number;
+    }>(CONFIG.PUBLIC);
   },
   listListings(input: {
     readonly q?: string;

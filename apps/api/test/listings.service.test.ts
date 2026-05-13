@@ -46,7 +46,7 @@ test('ListingsService.create emits listing.created with full payload', async () 
     }
   };
 
-  const service = new ListingsService(prisma, codeVault, notifications, brands, payouts, eventEmitter);
+  const service = new ListingsService(prisma, codeVault, notifications, brands, payouts, eventEmitter, { getNumber: async (_k: string, f: number) => f } as any);
 
   await service.create(
     {
@@ -91,7 +91,7 @@ test('ListingsService.expire emits listing.updated with EXPIRED status', async (
     }
   };
 
-  const service = new ListingsService(prisma, codeVault, notifications, brands, payouts, eventEmitter);
+  const service = new ListingsService(prisma, codeVault, notifications, brands, payouts, eventEmitter, { getNumber: async (_k: string, f: number) => f } as any);
 
   const count = await service.expireStaleListings();
 
@@ -133,7 +133,7 @@ test('ListingsService.expire skips emit when concurrent transition makes per-id 
     }
   };
 
-  const service = new ListingsService(prisma, codeVault, notifications, brands, payouts, eventEmitter);
+  const service = new ListingsService(prisma, codeVault, notifications, brands, payouts, eventEmitter, { getNumber: async (_k: string, f: number) => f } as any);
 
   const count = await service.expireStaleListings();
 
@@ -171,10 +171,13 @@ function makeCapServiceMocks() {
   const brands: any = { resolveForListing: async () => ({ id: 'brand_1', name: 'Amazon' }) };
   const payouts: any = { findByUserId: async () => ({ id: 'payout_1' }) };
   const eventEmitter: any = { emit: () => true };
-  return new ListingsService(prisma, codeVault, notifications, brands, payouts, eventEmitter);
+  return new ListingsService(prisma, codeVault, notifications, brands, payouts, eventEmitter, { getNumber: async (_k: string, f: number) => f } as any);
 }
 
-test('ListingsService.create rejects when faceValue exceeds the ₹1,000 cap', async () => {
+// The cap value itself lives in AppConfig now; the mock returns the fallback (1000)
+// passed to ConfigService.getNumber(), so the assertion below exercises that
+// fallback behaviour, not a hardcoded constant.
+test('ListingsService.create rejects when faceValue exceeds the configured cap (default ₹1,000)', async () => {
   const service = makeCapServiceMocks();
   await assert.rejects(
     () =>
@@ -193,7 +196,7 @@ test('ListingsService.create rejects when faceValue exceeds the ₹1,000 cap', a
   );
 });
 
-test('ListingsService.create accepts faceValue at the cap with sellingPrice below it', async () => {
+test('ListingsService.create accepts faceValue at the configured cap with sellingPrice below it', async () => {
   const service = makeCapServiceMocks();
   const result = await service.create(
     {
@@ -255,7 +258,7 @@ test('ListingsService.remove rejects when listing has an active order', async ()
   const payouts: any = {};
   const eventEmitter: any = {};
 
-  const service = new ListingsService(prisma, codeVault, notifications, brands, payouts, eventEmitter);
+  const service = new ListingsService(prisma, codeVault, notifications, brands, payouts, eventEmitter, { getNumber: async (_k: string, f: number) => f } as any);
 
   await assert.rejects(
     () => service.remove('listing_1', { id: 'seller_1' }),

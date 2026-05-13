@@ -29,9 +29,8 @@ const envSchema = z.object({
   // ── Optional with defaults ────────────────────────────────────────────────
   PORT:                         z.coerce.number().default(DEFAULT_API_PORT),
   RAZORPAY_PAYMENT_CALLBACK_URL: z.string().default('vouchrex://payment-callback'),
-  // Marketplace economics
-  PLATFORM_FEE_INR:             z.coerce.number().default(10),
-  COMMISSION_RATE:              z.coerce.number().default(0.12),
+  // Marketplace economics — buyer fee + seller commission rates are managed at
+  // runtime via AppConfig (see /admin/config). Only static caps remain here.
   HIGH_VALUE_THRESHOLD_INR:     z.coerce.number().default(2000),
   HIGH_VALUE_WINDOW_HOURS:      z.coerce.number().default(4),
   // Fraud / velocity limits

@@ -24,6 +24,7 @@ import {
   Undo2,
   LogOut,
   ShieldCheck,
+  Settings,
 } from 'lucide-react';
 
 const baseNavItems = [
@@ -33,6 +34,7 @@ const baseNavItems = [
   { name: 'Users',     href: ROUTES.USERS,     icon: Users },
   { name: 'Payouts',   href: ROUTES.PAYOUTS,   icon: Wallet },
   { name: 'Refunds',   href: ROUTES.REFUNDS,   icon: Undo2 },
+  { name: 'Settings',  href: ROUTES.SETTINGS,  icon: Settings },
 ];
 
 interface NavigationProps {

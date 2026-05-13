@@ -767,7 +767,8 @@ test('orders.create rejects with friendly error when listing is no longer ACTIVE
     { createMany: async () => {} },
     { prepareCheckout: async () => ({ razorpayOrderId: 'rzp_1' }) },
     { emit: () => {} },
-    null
+    null,
+    { getNumber: async (_k: string, f: number) => f }
   );
   await assert.rejects(
     () => svc.create({ listingId: 'l' }, buyer),
@@ -804,7 +805,8 @@ test('orders.create translates Prisma P2002 to a friendly error', async () => {
     { createMany: async () => {} },
     { prepareCheckout: async () => ({}) },
     { emit: () => {} },
-    null
+    null,
+    { getNumber: async (_k: string, f: number) => f }
   );
   await assert.rejects(
     () => svc.create({ listingId: 'l' }, buyer),

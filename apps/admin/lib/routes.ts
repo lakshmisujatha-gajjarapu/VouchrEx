@@ -8,4 +8,5 @@ export const ROUTES = {
   PAYOUTS: '/payouts',
   REFUNDS: '/refunds',
   TEAM: '/team',
+  SETTINGS: '/settings',
 };
