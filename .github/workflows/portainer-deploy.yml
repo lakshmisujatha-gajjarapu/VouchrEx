@@ -1,0 +1,155 @@
+name: Deploy · Portainer (homelab)
+
+# Per-service redeploy using the Docker API proxied through Portainer CE.
+# Steps for each selected service:
+#   1. Resolve container id by name (vouchrex-<service>)
+#   2. Inspect container to capture image ref + host/network config
+#   3. Pull the latest image
+#   4. Stop + remove the container
+#   5. Recreate the container with the saved config under the same name
+#   6. Start it
+#
+# Required GitHub secrets:
+#   PORTAINER_URL          e.g. https://portainer.chandrashekar.uk
+#   PORTAINER_TOKEN        Portainer access token
+#   PORTAINER_ENDPOINT_ID  Numeric environment id (usually 1 or 2)
+
+on:
+  workflow_dispatch:
+    inputs:
+      service:
+        description: Which service to redeploy
+        type: choice
+        required: true
+        default: api
+        options: [api, admin, both]
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Redeploy ${{ matrix.target }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [api, admin]
+    env:
+      PORTAINER_URL: ${{ secrets.PORTAINER_URL }}
+      PORTAINER_TOKEN: ${{ secrets.PORTAINER_TOKEN }}
+      PORTAINER_ENDPOINT_ID: ${{ secrets.PORTAINER_ENDPOINT_ID }}
+      CONTAINER_NAME: vouchrex-${{ matrix.target }}
+    steps:
+      - name: Skip unselected target
+        if: inputs.service != matrix.target && inputs.service != 'both'
+        run: |
+          echo "Skipping ${{ matrix.target }} — user selected '${{ inputs.service }}'."
+
+      - name: Redeploy ${{ matrix.target }}
+        if: inputs.service == matrix.target || inputs.service == 'both'
+        run: |
+          set -euo pipefail
+          BASE="$PORTAINER_URL/api/endpoints/$PORTAINER_ENDPOINT_ID/docker"
+          CURL=(curl -sS -H "X-API-Key: $PORTAINER_TOKEN")
+
+          step() { echo ""; echo "── $* ──"; }
+
+          step "Resolve container $CONTAINER_NAME"
+          containers=$("${CURL[@]}" -f "$BASE/containers/json?all=true")
+          container_id=$(echo "$containers" | jq -r --arg name "/$CONTAINER_NAME" \
+            '.[] | select(.Names[] == $name) | .Id' | head -n1)
+          if [ -z "$container_id" ]; then
+            echo "Container $CONTAINER_NAME not found." >&2
+            exit 1
+          fi
+          echo "container_id=$container_id"
+
+          step "Inspect container"
+          inspect=$("${CURL[@]}" -f "$BASE/containers/$container_id/json")
+          image_ref=$(echo "$inspect" | jq -r '.Config.Image')
+          echo "image_ref=$image_ref"
+
+          step "Pull image $image_ref"
+          # Docker image pull: separate fromImage + optional tag.
+          # Splits "repo:tag" into fromImage=repo & tag=tag; "repo@sha256:..." uses fromImage as-is.
+          if echo "$image_ref" | grep -q '@'; then
+            from_image="$image_ref"; tag=""
+          elif echo "$image_ref" | grep -q ':'; then
+            from_image="${image_ref%:*}"; tag="${image_ref##*:}"
+          else
+            from_image="$image_ref"; tag="latest"
+          fi
+          pull_url="$BASE/images/create?fromImage=$(jq -rn --arg v "$from_image" '$v|@uri')"
+          [ -n "$tag" ] && pull_url="$pull_url&tag=$(jq -rn --arg v "$tag" '$v|@uri')"
+          "${CURL[@]}" -f -X POST "$pull_url" | tail -c 500
+          echo ""
+
+          step "Stop container"
+          "${CURL[@]}" -f -X POST "$BASE/containers/$container_id/stop?t=30" -o /dev/null
+
+          step "Remove container"
+          "${CURL[@]}" -f -X DELETE "$BASE/containers/$container_id?force=true" -o /dev/null
+
+          step "Build create payload"
+          create_body=$(echo "$inspect" | jq '{
+            Image: .Config.Image,
+            Hostname: .Config.Hostname,
+            Domainname: .Config.Domainname,
+            User: .Config.User,
+            AttachStdin: false,
+            AttachStdout: false,
+            AttachStderr: false,
+            Tty: .Config.Tty,
+            OpenStdin: .Config.OpenStdin,
+            StdinOnce: .Config.StdinOnce,
+            Env: .Config.Env,
+            Cmd: .Config.Cmd,
+            Entrypoint: .Config.Entrypoint,
+            Labels: .Config.Labels,
+            WorkingDir: .Config.WorkingDir,
+            ExposedPorts: .Config.ExposedPorts,
+            Volumes: .Config.Volumes,
+            Healthcheck: .Config.Healthcheck,
+            HostConfig: .HostConfig,
+            NetworkingConfig: { EndpointsConfig: (.NetworkSettings.Networks | with_entries(.value |= { Aliases: .Aliases, IPAMConfig: .IPAMConfig })) }
+          }')
+
+          step "Create new container as $CONTAINER_NAME"
+          create_url="$BASE/containers/create?name=$(jq -rn --arg v "$CONTAINER_NAME" '$v|@uri')"
+          new_id=$("${CURL[@]}" -f -X POST -H "Content-Type: application/json" \
+            -d "$create_body" "$create_url" | jq -r '.Id')
+          echo "new_id=$new_id"
+
+          step "Start new container"
+          "${CURL[@]}" -f -X POST "$BASE/containers/$new_id/start" -o /dev/null
+
+          step "Wait for healthy (max 5m)"
+          start_ts=$(date +%s)
+          max_wait=300
+          while :; do
+            now=$(date +%s)
+            elapsed=$(( now - start_ts ))
+            status=$("${CURL[@]}" -f "$BASE/containers/$new_id/json" | jq -r '.State.Health.Status // "no-healthcheck"')
+            echo "[${elapsed}s] $CONTAINER_NAME health: $status"
+            if [ "$status" = "healthy" ]; then
+              echo "✓ healthy after ${elapsed}s"
+              break
+            fi
+            if [ "$status" = "unhealthy" ]; then
+              echo "Container reported unhealthy." >&2
+              exit 1
+            fi
+            if [ "$status" = "no-healthcheck" ]; then
+              echo "Container has no healthcheck — assuming healthy."
+              break
+            fi
+            if [ "$elapsed" -ge "$max_wait" ]; then
+              echo "Timed out waiting for healthy after ${elapsed}s." >&2
+              exit 1
+            fi
+            sleep 5
+          done
+
+          echo ""
+          echo "✓ Redeployed $CONTAINER_NAME ($new_id) from $image_ref"
