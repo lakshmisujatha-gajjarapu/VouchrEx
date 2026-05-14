@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { useFocusEffect, useRouter } from 'expo-router';
-import React, { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useDeferredValue, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -128,13 +128,6 @@ export default function SellScreen() {
       return suggestions.slice(0, 8);
     }, [deferredBrandName]),
     { enabled: deferredBrandName.length >= 2 }
-  );
-
-  const selectedLocalSuggestion = useMemo(
-    () => suggestionsResource.data?.find(
-      (s) => s.source === 'local' && normalizeBrandName(s.name) === normalizeBrandName(brandName)
-    ) ?? null,
-    [brandName, suggestionsResource.data]
   );
 
   const discount =
@@ -396,11 +389,6 @@ export default function SellScreen() {
                       />
                     ))}
                   </View>
-                ) : null}
-                {selectedLocalSuggestion ? (
-                  <Text style={{ fontSize: 12, fontFamily: theme.fontFamily.label, color: theme.colors.inkMuted, marginTop: 6, fontStyle: 'italic' }}>
-                    Existing marketplace brand: {selectedLocalSuggestion.meta}
-                  </Text>
                 ) : null}
               </View>
 

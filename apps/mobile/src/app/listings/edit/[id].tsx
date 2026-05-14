@@ -139,16 +139,6 @@ export default function EditListingScreen() {
     setFeedback(null);
   }, [listingResource.data]);
 
-  const selectedLocalSuggestion = useMemo(
-    () =>
-      suggestionsResource.data?.find(
-        (suggestion) =>
-          suggestion.source === 'local' &&
-          normalizeBrandName(suggestion.name) === normalizeBrandName(brandName)
-      ) ?? null,
-    [brandName, suggestionsResource.data]
-  );
-
   const handlePriceInput = (next: string, setter: (v: string) => void) => {
     const digitsOnly = next.replace(/\D/g, '');
     if (digitsOnly === '') { setter(''); return; }
@@ -317,15 +307,7 @@ export default function EditListingScreen() {
                   ) : null}
                 </View>
 
-                {selectedLocalSuggestion ? (
-                  <Text className="mt-2 text-caption" style={{ color: theme.colors.inkMuted }}>
-                    Existing marketplace brand: {selectedLocalSuggestion.meta}
-                  </Text>
-                ) : deferredBrandName.length >= 2 ? (
-                  <Text className="mt-2 text-caption" style={{ color: theme.colors.inkMuted }}>
-                    No exact local match required. You can still rename this brand.
-                  </Text>
-                ) : (
+                {deferredBrandName.length >= 2 ? null : (
                   <Text className="mt-2 text-caption" style={{ color: theme.colors.inkMuted }}>
                     Start typing to see local matches and Brandfetch suggestions.
                   </Text>
