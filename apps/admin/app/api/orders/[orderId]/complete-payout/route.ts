@@ -4,7 +4,7 @@ import { cookies } from 'next/headers';
 import { API_CONFIG, ADMIN_HEADER, AUTH_CONFIG } from '@/lib/constants';
 
 export async function POST(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ orderId: string }> }
 ) {
   const cookieStore = await cookies();
@@ -12,9 +12,11 @@ export async function POST(
   if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { orderId } = await params;
+  const body = await request.text().catch(() => '');
   const res = await fetch(`${API_CONFIG.BASE_URL}/admin/orders/${orderId}/complete-payout`, {
     method: 'POST',
-    headers: { [ADMIN_HEADER]: token },
+    headers: { [ADMIN_HEADER]: token, 'Content-Type': 'application/json' },
+    body: body || undefined,
   });
 
   if (!res.ok) {

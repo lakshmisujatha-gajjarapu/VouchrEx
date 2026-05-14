@@ -4,6 +4,7 @@ import {
   AdminRole,
   DisputeStatus,
   EscrowStatus,
+  NotificationChannel,
   OrderStatus,
   PaymentStatus,
   PayoutStatus,
@@ -13,6 +14,7 @@ import {
 
 import { parsePagination, normalizeSearch, normalizeQBy, containsCi, startsWithCi } from '../../common/pagination';
 import { AppConfigService } from '../app-config/app-config.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { PaymentsService } from '../payments/payments.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AdminAccessService } from './admin-access.service';
@@ -88,7 +90,8 @@ export class AdminController {
     private readonly adminAccessService: AdminAccessService,
     private readonly prisma: PrismaService,
     private readonly paymentsService: PaymentsService,
-    private readonly appConfigService: AppConfigService
+    private readonly appConfigService: AppConfigService,
+    private readonly notificationsService: NotificationsService
   ) {}
 
   /** Platform-wide operational metrics. */
@@ -659,24 +662,35 @@ export class AdminController {
   }
 
   /**
-   * Manually mark a payout as completed — fallback for edge cases where
-   * funds were transferred outside Razorpay (e.g., IMPS from bank directly).
+   * Manually mark a payout as completed — used when funds are transferred
+   * out-of-band (e.g. employee sends via UPI). Accepts an optional utrRef
+   * so the transaction reference is recorded in the audit trail.
    */
   @ApiHeader({ name: adminHeaderName, required: true })
   @Post(ADMIN_ROUTES.ORDER_COMPLETE_PAYOUT)
   async completePayout(
     @Param('orderId') orderId: string,
+    @Body() body: { utrRef?: string },
     @Headers(adminHeaderName) adminToken?: string
   ) {
     await this.adminAccessService.requireAdminAccess(adminToken);
 
-    const payment = await this.prisma.payment.findUnique({ where: { orderId } });
-    if (!payment) {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        payment: true,
+        seller: { select: { id: true } },
+        listing: { include: { brand: true } }
+      }
+    });
+    if (!order?.payment) {
       return { success: false, message: 'No payment found for this order.' };
     }
-    if (payment.payoutStatus === PayoutStatus.COMPLETED) {
+    if (order.payment.payoutStatus === PayoutStatus.COMPLETED) {
       return { success: false, message: 'Payout already completed.' };
     }
+
+    const utrRef = typeof body.utrRef === 'string' && body.utrRef.trim() ? body.utrRef.trim() : null;
 
     const updated = await this.prisma.payment.update({
       where: { orderId },
@@ -689,11 +703,22 @@ export class AdminController {
     await this.prisma.auditLog.create({
       data: {
         entityType: 'payment',
-        entityId: payment.id,
+        entityId: order.payment.id,
         action: 'payment.payout_completed_manually',
         actorId: null,
-        metadata: { orderId }
+        metadata: { orderId, ...(utrRef ? { utrRef } : {}) }
       }
+    });
+
+    await this.notificationsService.createNotification({
+      userId: order.seller.id,
+      orderId: order.id,
+      listingId: order.listingId,
+      channel: NotificationChannel.PUSH,
+      eventType: 'payout.completed',
+      title: 'Payout sent',
+      message: `₹${String(order.sellerPayout)} has been transferred for your ${order.listing.brand.name} voucher.${utrRef ? ` Ref: ${utrRef}` : ''}`,
+      metadata: { orderId, sellerPayoutInr: order.sellerPayout, ...(utrRef ? { utrRef } : {}) }
     });
 
     return { success: true, payment: updated };

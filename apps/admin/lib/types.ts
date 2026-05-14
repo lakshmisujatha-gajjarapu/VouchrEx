@@ -281,9 +281,14 @@ export interface AdminUser {
   payoutAccount: { kycStatus: string; upiId: string | null } | null;
 }
 
+export interface PayoutsSellerSummary extends UserSummary {
+  payoutAccount: { kycStatus: string; upiId: string | null } | null;
+}
+
 // PendingPayout is an Order with a non-null payment (sellerPayout lives on Order)
-export interface PendingPayout extends Order {
+export interface PendingPayout extends Omit<Order, 'seller'> {
   payment: Payment;
+  seller: PayoutsSellerSummary;
 }
 
 // PendingRefund is an Order whose payment is in PROCESSING/FAILED refundStatus.
