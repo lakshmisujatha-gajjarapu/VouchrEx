@@ -1,5 +1,6 @@
-import { Body, Controller, Get, Headers, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Headers, Param, Post, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { ApiHeader, ApiTags } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 import { AdminAccessService } from '../admin/admin-access.service';
 import { adminHeaderName } from '../admin/admin.constants';
@@ -136,6 +137,22 @@ export class OrdersController {
   ) {
     const buyer = await this.authService.requireSessionUser(sessionToken);
     return this.ordersService.createDispute(id, createDisputeDto, buyer.id);
+  }
+
+  @ApiHeader({
+    name: sessionHeaderName,
+    required: true,
+    description: 'Session token of the buyer uploading evidence.'
+  })
+  @Post(ORDERS_ROUTES.DISPUTE_EVIDENCE)
+  @UseInterceptors(FileInterceptor('file'))
+  async addDisputeEvidence(
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+    @Headers(sessionHeaderName) sessionToken?: string
+  ) {
+    const buyer = await this.authService.requireSessionUser(sessionToken);
+    return this.ordersService.addDisputeEvidence(id, buyer.id, file);
   }
 
   @ApiHeader({

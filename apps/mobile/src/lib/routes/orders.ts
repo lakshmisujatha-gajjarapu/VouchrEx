@@ -8,6 +8,7 @@ export const ORDERS = {
   REVEAL:              (id: string) => `/orders/${id}/reveal`,
   CONFIRM:             (id: string) => `/orders/${id}/confirm`,
   DISPUTES:            (id: string) => `/orders/${id}/disputes`,
+  DISPUTE_EVIDENCE:    (id: string) => `/orders/${id}/dispute-evidence`,
   DISPUTE_SELLER_RESPONSE: (id: string) => `/orders/disputes/${id}/seller-response`,
   DISPUTE_RESOLVE:     (id: string) => `/orders/disputes/${id}/resolve`,
 } as const;

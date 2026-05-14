@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, Headers, Param, Post, Put, Query } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Headers, NotFoundException, Param, Post, Put, Query } from '@nestjs/common';
 import { ApiHeader, ApiTags } from '@nestjs/swagger';
 import {
   AdminRole,
@@ -17,6 +17,7 @@ import { AppConfigService } from '../app-config/app-config.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PaymentsService } from '../payments/payments.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { StorageService } from '../storage/storage.service';
 import { AdminAccessService } from './admin-access.service';
 import { adminHeaderName } from './admin.constants';
 import { ADMIN_ROUTES } from './admin.routes';
@@ -87,11 +88,12 @@ function buildTeamSearchWhere(search: string | undefined, key: string | undefine
 @Controller(ADMIN_ROUTES.BASE)
 export class AdminController {
   constructor(
-    private readonly adminAccessService: AdminAccessService,
     private readonly prisma: PrismaService,
     private readonly paymentsService: PaymentsService,
     private readonly appConfigService: AppConfigService,
-    private readonly notificationsService: NotificationsService
+    private readonly notificationsService: NotificationsService,
+    private readonly adminAccessService: AdminAccessService,
+    private readonly storageService: StorageService
   ) {}
 
   /** Platform-wide operational metrics. */
@@ -208,6 +210,29 @@ export class AdminController {
     return { data, total, page: p, pageSize: ps };
   }
 
+  @ApiHeader({ name: adminHeaderName, required: true })
+  @Get(ADMIN_ROUTES.DISPUTE_EVIDENCE_URL)
+  async getDisputeEvidenceUrls(
+    @Param('id') id: string,
+    @Headers(adminHeaderName) adminToken?: string
+  ) {
+    await this.adminAccessService.requireAdminAccess(adminToken);
+
+    const dispute = await this.prisma.dispute.findUnique({
+      where: { id },
+      select: { evidenceUrls: true }
+    });
+
+    if (!dispute) {
+      throw new NotFoundException(`Dispute ${id} not found.`);
+    }
+
+    const signedUrls = await Promise.all(
+      dispute.evidenceUrls.map((key) => this.storageService.getSignedUrl(key, 900))
+    );
+
+    return { signedUrls };
+  }
 
   /** List orders. Paginated + searchable. */
   @ApiHeader({ name: adminHeaderName, required: true })

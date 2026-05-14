@@ -108,6 +108,7 @@ export type Dispute = {
   readonly reason: string;
   readonly description: string;
   readonly evidenceUrls: readonly string[];
+  readonly evidenceDeadline: string | null;
   readonly status: string;
   readonly resolution?: string | null;
 };
@@ -430,7 +431,6 @@ export const api = {
     input: {
       readonly reason: string;
       readonly description: string;
-      readonly evidenceUrls?: readonly string[];
     }
   ) {
     return apiRequest<Dispute>(ORDERS.DISPUTES(orderId), {
@@ -438,6 +438,45 @@ export const api = {
       sessionToken,
       body: input
     });
+  },
+  async uploadDisputeEvidence(
+    sessionToken: string,
+    orderId: string,
+    localUri: string,
+    mimeType: string
+  ): Promise<{ key: string; totalCount: number; deadlineAt: string | null }> {
+    const filename = localUri.split('/').pop() ?? 'evidence.jpg';
+    const formData = new FormData();
+    formData.append('file', { uri: localUri, name: filename, type: mimeType } as unknown as Blob);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => { controller.abort(); }, 30_000);
+    let response: Response;
+    try {
+      response = await fetch(`${apiBaseUrl}/orders/${orderId}/dispute-evidence`, {
+        method: 'POST',
+        headers: { 'x-session-token': sessionToken },
+        body: formData,
+        signal: controller.signal,
+      });
+    } catch (e) {
+      if (e instanceof Error && e.name === 'AbortError') {
+        throw new ApiError('Upload timed out. Check your connection.', 408);
+      }
+      throw new ApiError('Could not reach the server.', 0);
+    } finally {
+      clearTimeout(timeoutId);
+    }
+
+    const payload = (await response.json().catch(() => null)) as
+      | { key: string; totalCount: number; deadlineAt: string | null; message?: string }
+      | null;
+
+    if (!response.ok) {
+      throw new ApiError(payload?.message ?? 'Upload failed.', response.status);
+    }
+
+    return payload as { key: string; totalCount: number; deadlineAt: string | null };
   },
   getPayoutAccount(sessionToken: string) {
     return apiRequest<PayoutAccount>(PAYOUTS.ME, { sessionToken });

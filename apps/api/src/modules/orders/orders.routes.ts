@@ -7,6 +7,7 @@ export const ORDERS_ROUTES = {
   REVEAL:              ':id/reveal',
   CONFIRM:             ':id/confirm',
   DISPUTES:            ':id/disputes',
+  DISPUTE_EVIDENCE:    ':id/dispute-evidence',
   DISPUTE_SELLER_RESP: 'disputes/:id/seller-response',
   DISPUTE_RESOLVE:     'disputes/:id/resolve',
   RETRY_REFUND:        ':id/retry-refund',

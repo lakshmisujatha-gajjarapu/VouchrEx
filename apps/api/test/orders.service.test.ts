@@ -586,11 +586,13 @@ test('createDispute throws BadRequest when order is no longer CODE_REVEALED', as
     { createMany: async () => {} },
     null,
     { emit: () => {} },
-    null
+    null,
+    null,
+    null  // storageService
   );
 
   await assert.rejects(
-    () => svc.createDispute('o', { reason: 'INVALID_CODE', description: 'test', evidenceUrls: ['https://example.com/ev.png'] }, 'b'),
+    () => svc.createDispute('o', { reason: 'INVALID_CODE', description: 'test desc here' }, 'b'),
     (err: any) => err.message && /disputable/i.test(err.message)
   );
 });
@@ -603,8 +605,10 @@ test('createDispute happy path: writes dispute row when order is CODE_REVEALED',
       updateMany: async () => ({ count: 1 })
     },
     dispute: {
-      create: async () => {
+      create: async ({ data }: any) => {
         disputeCreated = true;
+        assert.ok(data.evidenceDeadline instanceof Date, 'evidenceDeadline must be set');
+        assert.equal(data.evidenceUrls.length, 0, 'evidenceUrls must start empty');
         return { id: 'd', orderId: 'o' };
       }
     },
@@ -635,10 +639,12 @@ test('createDispute happy path: writes dispute row when order is CODE_REVEALED',
     { createMany: async () => {} },
     null,
     { emit: () => {} },
-    null
+    null,
+    null,
+    null  // storageService
   );
 
-  await svc.createDispute('o', { reason: 'INVALID_CODE', description: 'test', evidenceUrls: ['https://example.com/ev.png'] }, 'b');
+  await svc.createDispute('o', { reason: 'INVALID_CODE', description: 'test desc here' }, 'b');
   assert.equal(disputeCreated, true);
 });
 
@@ -896,4 +902,75 @@ test('handleRefundWebhook does not downgrade an already-COMPLETED refund', async
   const svc: any = new OrdersService(prisma, null, { createMany: async () => {} }, null, { emit: () => {} }, null);
   await svc.handleRefundWebhook({ orderId: 'order_1' }, { id: 'rfnd_x', status: 'failed', error_description: 'late_webhook' });
   assert.ok(whereSeen?.refundStatus?.not === 'COMPLETED', 'where clause must guard against downgrading COMPLETED');
+});
+
+test('addDisputeEvidence throws when evidence window has closed', async () => {
+  const past = new Date(Date.now() - 1000);
+
+  const prisma: any = {
+    dispute: {
+      findUnique: async () => ({
+        id: 'd',
+        orderId: 'o',
+        status: 'OPEN',
+        evidenceUrls: [],
+        evidenceDeadline: past,
+        order: { buyerId: 'b' }
+      })
+    }
+  };
+
+  const { OrdersService } = require('../src/modules/orders/orders.service');
+  const svc: any = new OrdersService(
+    prisma, null, { createMany: async () => {} }, null,
+    { emit: () => {} }, null, null, null
+  );
+
+  const file: any = { mimetype: 'image/jpeg', size: 100, buffer: Buffer.from('x') };
+  await assert.rejects(
+    () => svc.addDisputeEvidence('o', 'b', file),
+    (err: any) => /window/i.test(err.message)
+  );
+});
+
+test('addDisputeEvidence uploads file and appends key to dispute.evidenceUrls', async () => {
+  const future = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  let uploadedKey = '';
+
+  const prisma: any = {
+    dispute: {
+      findUnique: async () => ({
+        id: 'd',
+        orderId: 'o',
+        status: 'OPEN',
+        evidenceUrls: [],
+        evidenceDeadline: future,
+        order: { buyerId: 'b' }
+      }),
+      update: async () => ({
+        evidenceUrls: ['dispute-evidence/o/uuid.jpg'],
+        evidenceDeadline: future
+      })
+    }
+  };
+
+  const storageService: any = {
+    uploadFile: async (key: string) => {
+      uploadedKey = key;
+    }
+  };
+
+  const { OrdersService } = require('../src/modules/orders/orders.service');
+  const svc: any = new OrdersService(
+    prisma, null, { createMany: async () => {} }, null,
+    { emit: () => {} }, null, null, storageService
+  );
+
+  const file: any = { mimetype: 'image/jpeg', size: 100, buffer: Buffer.from('x') };
+  const result = await svc.addDisputeEvidence('o', 'b', file);
+
+  assert.ok(uploadedKey.startsWith('dispute-evidence/o/'), 'key has correct prefix');
+  assert.ok(uploadedKey.endsWith('.jpg'), 'key ends with .jpg');
+  assert.equal(result.totalCount, 1);
+  assert.equal(typeof result.deadlineAt, 'string');
 });

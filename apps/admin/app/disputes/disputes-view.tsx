@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Dispute, DisputePartyUser } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -97,6 +97,19 @@ export default function DisputesView({ disputes }: DisputesViewProps) {
   const [selected, setSelected] = useState<Dispute | null>(null);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState('');
+  const [evidenceUrls, setEvidenceUrls] = useState<string[] | null>(null);
+  const [loadingEvidence, setLoadingEvidence] = useState(false);
+
+  useEffect(() => {
+    setEvidenceUrls(null);
+    if (!selected || selected.evidenceUrls.length === 0) return;
+    setLoadingEvidence(true);
+    void fetch(`/api/disputes/${selected.id}/evidence-url`)
+      .then((r) => r.json())
+      .then((data: { signedUrls: string[] }) => { setEvidenceUrls(data.signedUrls); })
+      .catch(() => { setEvidenceUrls([]); })
+      .finally(() => { setLoadingEvidence(false); });
+  }, [selected?.id]);
 
   const resolve = (resolution: 'RELEASE_TO_SELLER' | 'REFUND_BUYER') => {
     if (!selected) return;
@@ -247,6 +260,32 @@ export default function DisputesView({ disputes }: DisputesViewProps) {
                 <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}>Buyer&apos;s Reason</p>
                 <p className="font-medium" style={{ fontFamily: 'var(--font-body)', color: 'var(--color-foreground)' }}>{selected.reason}</p>
               </div>
+
+              {selected.evidenceUrls.length > 0 && (
+                <div className="rounded-xl p-3" style={{ backgroundColor: 'var(--color-surface-raised)' }}>
+                  <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}>Evidence</p>
+                  {loadingEvidence ? (
+                    <div className="space-y-2">
+                      {selected.evidenceUrls.map((_, i) => (
+                        <div key={i} className="h-48 rounded-lg animate-pulse" style={{ backgroundColor: 'var(--color-surface-high)' }} />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {(evidenceUrls ?? []).map((url, i) => (
+                        <a key={i} href={url} target="_blank" rel="noreferrer">
+                          <img
+                            src={url}
+                            alt={`Evidence ${String(i + 1)}`}
+                            className="w-full rounded-lg object-contain"
+                            style={{ maxHeight: 300 }}
+                          />
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {selected.sellerResponse && (
                 <div className="rounded-xl p-3" style={{ backgroundColor: 'var(--color-surface-raised)' }}>

@@ -8,7 +8,6 @@ const CreateDisputeSchema = z.object({
     .min(10)
     .max(1000)
     .describe('Detailed issue description from the buyer'),
-  evidenceUrls: z.array(z.string()).optional().describe('Optional evidence asset URLs')
 });
 
 export class CreateDisputeDto extends createZodDto(CreateDisputeSchema) {}

@@ -2,6 +2,7 @@ export const ADMIN_ROUTES = {
   BASE:                     'admin',
   METRICS:                  'metrics',
   DISPUTES:                 'disputes',
+  DISPUTE_EVIDENCE_URL:     'disputes/:id/evidence-url',
   ORDERS:                   'orders',
   ORDER_DETAIL:             'orders/:id',
   USERS:                    'users',

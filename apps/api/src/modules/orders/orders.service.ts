@@ -1,5 +1,8 @@
+import { randomUUID } from 'node:crypto';
+
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
@@ -22,6 +25,7 @@ import {
 
 import { ONE_HOUR_MS, ONE_MINUTE_MS } from '../../common/time.constants';
 import { AppConfigService } from '../app-config/app-config.service';
+import { StorageService } from '../storage/storage.service';
 import { CodeVaultService } from '../listings/services/code-vault.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PaymentsService } from '../payments/payments.service';
@@ -43,6 +47,8 @@ import { VerifyPaymentDto } from './dto/verify-payment.dto';
 @Injectable()
 export class OrdersService {
   private readonly logger = new Logger(OrdersService.name);
+  private static readonly EVIDENCE_ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+  private static readonly EVIDENCE_MAX_SIZE_BYTES = 5 * 1024 * 1024;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -51,7 +57,8 @@ export class OrdersService {
     private readonly paymentsService: PaymentsService,
     private readonly eventEmitter: EventEmitter2,
     private readonly disputeStrikes: DisputeStrikesService,
-    private readonly appConfigService: AppConfigService
+    private readonly appConfigService: AppConfigService,
+    private readonly storageService: StorageService
   ) {}
 
   findAllForUser(userId: string) {
@@ -662,12 +669,6 @@ export class OrdersService {
       throw new BadRequestException('Only the buyer can raise a dispute on this order.');
     }
 
-    if (!dto.evidenceUrls || dto.evidenceUrls.length === 0) {
-      throw new BadRequestException(
-        'Please attach a screenshot showing the redemption failure. Disputes without evidence cannot be processed.'
-      );
-    }
-
     const { dispute, listingTransitioned } = await this.prisma.$transaction(async (tx) => {
       // Atomically claim the CODE_REVEALED → DISPUTED transition first.
       // If another concurrent request (e.g. confirm) already moved the order,
@@ -688,7 +689,8 @@ export class OrdersService {
           raisedById: raisedByUserId,
           reason: dto.reason,
           description: dto.description,
-          evidenceUrls: dto.evidenceUrls ?? [],
+          evidenceUrls: [],
+          evidenceDeadline: new Date(Date.now() + 24 * 60 * 60 * 1000),
           status: DisputeStatus.OPEN
         }
       });
@@ -742,6 +744,19 @@ export class OrdersService {
         metadata: {
           disputeId: dispute.id
         }
+      },
+      {
+        userId: order.buyerId,
+        orderId: order.id,
+        listingId: order.listingId,
+        channel: NotificationChannel.PUSH,
+        eventType: 'dispute.evidence.reminder',
+        title: 'Add evidence to your dispute',
+        message: 'Attach screenshots to strengthen your case. You have 24 hours.',
+        metadata: {
+          disputeId: dispute.id,
+          evidenceDeadlineAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+        }
       }
     ]);
 
@@ -775,6 +790,59 @@ export class OrdersService {
     });
 
     return dispute;
+  }
+
+  async addDisputeEvidence(orderId: string, buyerId: string, file: Express.Multer.File | undefined) {
+    if (!file) {
+      throw new BadRequestException('No file attached.');
+    }
+
+    if (!OrdersService.EVIDENCE_ALLOWED_TYPES.includes(file.mimetype)) {
+      throw new BadRequestException('Only JPEG, PNG, or WebP images are allowed.');
+    }
+    if (file.size > OrdersService.EVIDENCE_MAX_SIZE_BYTES) {
+      throw new BadRequestException('File size must be 5MB or less.');
+    }
+
+    const dispute = await this.prisma.dispute.findUnique({
+      where: { orderId },
+      include: { order: { select: { buyerId: true } } }
+    });
+
+    if (!dispute) {
+      throw new NotFoundException('No dispute found for this order.');
+    }
+    if (dispute.order.buyerId !== buyerId) {
+      throw new ForbiddenException('Only the buyer can add evidence.');
+    }
+    if (!([DisputeStatus.OPEN, DisputeStatus.UNDER_REVIEW] as DisputeStatus[]).includes(dispute.status)) {
+      throw new BadRequestException('Evidence can only be added to open disputes.');
+    }
+    if (!dispute.evidenceDeadline || new Date() > dispute.evidenceDeadline) {
+      throw new BadRequestException('The evidence upload window has closed.');
+    }
+    if (dispute.evidenceUrls.length >= 3) {
+      throw new BadRequestException('Maximum 3 evidence images allowed.');
+    }
+
+    const ext = file.mimetype === 'image/png' ? 'png' : file.mimetype === 'image/webp' ? 'webp' : 'jpg';
+    const key = `dispute-evidence/${orderId}/${randomUUID()}.${ext}`;
+    await this.storageService.uploadFile(key, file.buffer, file.mimetype);
+
+    // Upload before DB write: if update fails, the object is orphaned in storage.
+    // Accepted trade-off for Phase 1 — the alternative order (DB first) would store
+    // a key that points to a non-existent object. Cleanup path is manual for now.
+    const updated = await this.prisma.dispute.update({
+      where: { id: dispute.id },
+      data: { evidenceUrls: { push: key } },
+      select: { evidenceUrls: true, evidenceDeadline: true }
+    });
+
+    return {
+      key,
+      totalCount: updated.evidenceUrls.length,
+      deadlineAt: updated.evidenceDeadline?.toISOString() ?? null
+    };
   }
 
   async resolveDispute(id: string, resolution: DisputeResolution, actorId: string | null) {

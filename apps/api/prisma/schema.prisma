@@ -280,6 +280,7 @@ model Dispute {
   reason         String
   description    String
   evidenceUrls   String[]
+  evidenceDeadline DateTime?
   sellerResponse String?
   resolution     DisputeResolution?
   status         DisputeStatus      @default(OPEN)

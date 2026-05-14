@@ -1,12 +1,15 @@
 import { BlurView } from 'expo-blur';
 import * as Clipboard from 'expo-clipboard';
 import { Image } from 'expo-image';
+import * as ImageManipulator from 'expo-image-manipulator';
+import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { openAuthSessionAsync } from 'expo-web-browser';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Modal,
   Pressable,
   ScrollView,
@@ -65,7 +68,9 @@ export default function OrderDetailScreen() {
   const [disputeOpen, setDisputeOpen] = useState(false);
   const [reason, setReason] = useState('voucher-invalid');
   const [description, setDescription] = useState('');
-  const [evidenceUrl, setEvidenceUrl] = useState('');
+  const [evidenceUris, setEvidenceUris] = useState<string[]>([]);
+  const [evidenceUploading, setEvidenceUploading] = useState(false);
+  const [evidenceSheetOpen, setEvidenceSheetOpen] = useState(false);
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -182,17 +187,58 @@ export default function OrderDetailScreen() {
     if (!sessionToken || !orderId) return;
     setBusyAction('dispute');
     try {
-      await api.createDispute(sessionToken, orderId, {
-        reason,
-        description,
-        evidenceUrls: evidenceUrl.trim() ? [evidenceUrl.trim()] : [],
-      });
+      await api.createDispute(sessionToken, orderId, { reason, description });
       setDisputeOpen(false);
       await reloadOrder();
-      setFeedback('Dispute raised. Your payment is held until this is resolved.');
+      setFeedback('Dispute raised. Attach screenshots within 24 hours to strengthen your case.');
     } catch (error_) {
       setFeedback(error_ instanceof Error ? error_.message : 'Could not raise dispute.');
     } finally { setBusyAction(null); }
+  }
+
+  async function compressImage(uri: string): Promise<{ uri: string; mimeType: string }> {
+    const rendered = await ImageManipulator.ImageManipulator
+      .manipulate(uri)
+      .resize({ width: 1600 })
+      .renderAsync();
+    const saved = await rendered.saveAsync({ compress: 0.75, format: ImageManipulator.SaveFormat.JPEG });
+    return { uri: saved.uri, mimeType: 'image/jpeg' };
+  }
+
+  async function pickAndUpload(source: 'camera' | 'gallery') {
+    if (!sessionToken || !orderId) return;
+    setEvidenceSheetOpen(false);
+
+    let pickerResult: ImagePicker.ImagePickerResult;
+
+    if (source === 'camera') {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== ImagePicker.PermissionStatus.GRANTED) {
+        Alert.alert('Camera Access Denied', 'Enable it in Settings → Vouchrex to take photos.');
+        return;
+      }
+      pickerResult = await ImagePicker.launchCameraAsync({ quality: 1 });
+    } else {
+      pickerResult = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        quality: 1,
+        allowsMultipleSelection: false,
+      });
+    }
+
+    if (pickerResult.canceled || pickerResult.assets.length === 0) return;
+
+    setEvidenceUploading(true);
+    try {
+      const { uri, mimeType } = await compressImage(pickerResult.assets[0].uri);
+      await api.uploadDisputeEvidence(sessionToken, orderId, uri, mimeType);
+      setEvidenceUris((prev) => [...prev, uri]);
+      await reloadOrder();
+    } catch (error_) {
+      setFeedback(error_ instanceof Error ? error_.message : 'Upload failed.');
+    } finally {
+      setEvidenceUploading(false);
+    }
   }
 
   // ── Loading / error states ──
@@ -566,22 +612,85 @@ export default function OrderDetailScreen() {
 
             {/* ── Dispute info ── */}
             {order.dispute ? (
-              <View style={{
-                backgroundColor: theme.colors.dangerSoft,
-                borderRadius: 16,
-                padding: theme.spacing[5],
-                gap: theme.spacing[2],
-                marginBottom: theme.spacing[6],
-              }}>
-                <Text style={{ fontFamily: theme.fontFamily.headline, fontSize: 14, fontWeight: '700', color: theme.colors.danger }}>
-                  Dispute: {formatStatus(order.dispute.status)}
-                </Text>
-                <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 13, color: theme.colors.danger }}>
-                  {order.dispute.reason}
-                </Text>
-                <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 13, color: theme.colors.inkSecondary, lineHeight: 18 }}>
-                  {order.dispute.description}
-                </Text>
+              <View style={{ gap: theme.spacing[4], marginBottom: theme.spacing[6] }}>
+                <View style={{
+                  backgroundColor: theme.colors.dangerSoft,
+                  borderRadius: 16,
+                  padding: theme.spacing[5],
+                  gap: theme.spacing[2],
+                }}>
+                  <Text style={{ fontFamily: theme.fontFamily.headline, fontSize: 14, fontWeight: '700', color: theme.colors.danger }}>
+                    Dispute: {formatStatus(order.dispute.status)}
+                  </Text>
+                  <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 13, color: theme.colors.danger }}>
+                    {order.dispute.reason}
+                  </Text>
+                  <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 13, color: theme.colors.inkSecondary, lineHeight: 18 }}>
+                    {order.dispute.description}
+                  </Text>
+                </View>
+
+                {/* Evidence upload section — only shown while window is open */}
+                {isBuyer &&
+                  order.dispute.evidenceDeadline &&
+                  new Date() < new Date(order.dispute.evidenceDeadline) &&
+                  ['OPEN', 'UNDER_REVIEW'].includes(order.dispute.status) ? (
+                  <View style={{
+                    backgroundColor: theme.colors.surface,
+                    borderRadius: 16,
+                    borderWidth: 1,
+                    borderColor: theme.colors.border,
+                    padding: theme.spacing[5],
+                    gap: theme.spacing[3],
+                  }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 13, fontWeight: '600', color: theme.colors.ink }}>
+                        Add Evidence
+                      </Text>
+                      <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 11, color: theme.colors.inkMuted }}>
+                        {Math.max(0, Math.ceil((new Date(order.dispute.evidenceDeadline).getTime() - Date.now()) / 3_600_000))}h remaining
+                      </Text>
+                    </View>
+
+                    <View style={{ flexDirection: 'row', gap: theme.spacing[2] }}>
+                      {evidenceUris.map((uri, idx) => (
+                        <View key={idx} style={{ width: 64, height: 64, borderRadius: theme.radius.md, overflow: 'hidden' }}>
+                          <Image source={{ uri }} style={{ width: 64, height: 64 }} contentFit="cover" />
+                        </View>
+                      ))}
+
+                      {(order.dispute.evidenceUrls.length + evidenceUris.length) < 3 ? (
+                        <Pressable
+                          onPress={() => { setEvidenceSheetOpen(true); }}
+                          disabled={evidenceUploading}
+                          style={({ pressed }) => ({
+                            width: 64, height: 64,
+                            borderRadius: theme.radius.md,
+                            borderWidth: 1.5,
+                            borderColor: theme.colors.brand,
+                            borderStyle: 'dashed',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            opacity: pressed || evidenceUploading ? 0.5 : 1,
+                          })}>
+                          {evidenceUploading
+                            ? <ActivityIndicator size="small" color={theme.colors.brand} />
+                            : <Ionicons name="add" size={22} color={theme.colors.brand} />}
+                        </Pressable>
+                      ) : null}
+                    </View>
+
+                    {order.dispute.evidenceUrls.length > 0 ? (
+                      <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 12, color: theme.colors.inkMuted }}>
+                        {order.dispute.evidenceUrls.length} image{order.dispute.evidenceUrls.length > 1 ? 's' : ''} uploaded
+                      </Text>
+                    ) : null}
+
+                    <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 12, color: theme.colors.inkMuted }}>
+                      Screenshots help resolve your dispute faster.
+                    </Text>
+                  </View>
+                ) : null}
               </View>
             ) : null}
 
@@ -730,22 +839,69 @@ export default function OrderDetailScreen() {
               value={description}
             />
 
-            {/* Evidence — required */}
-            <TextField
-              helperText="Required: paste a public link to a screenshot of the failed redemption (image upload coming soon)."
-              label="Screenshot link"
-              onChangeText={setEvidenceUrl}
-              placeholder="https://…"
-              value={evidenceUrl}
-            />
 
             <PrimaryButton
-              disabled={description.trim().length < 10 || evidenceUrl.trim().length === 0}
+              disabled={description.trim().length < 10}
               label="Submit dispute"
               loading={busyAction === 'dispute'}
               onPress={() => { void handleDispute(); }}
               tone="danger"
             />
+          </View>
+        </Modal>
+
+        {/* ── Evidence source picker — cross-platform (Camera / Gallery) ── */}
+        <Modal
+          animationType="slide"
+          onRequestClose={() => { setEvidenceSheetOpen(false); }}
+          transparent
+          visible={evidenceSheetOpen}>
+          <Pressable
+            onPress={() => { setEvidenceSheetOpen(false); }}
+            style={{ flex: 1, backgroundColor: theme.colors.shadowStrong }}
+          />
+          <View style={{
+            backgroundColor: theme.colors.surface,
+            borderTopLeftRadius: 28,
+            borderTopRightRadius: 28,
+            paddingHorizontal: theme.spacing[6],
+            paddingTop: theme.spacing[3],
+            paddingBottom: Math.max(insets.bottom, theme.spacing[6]),
+            gap: theme.spacing[3],
+          }}>
+            <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: theme.colors.surfaceHighest, alignSelf: 'center' }} />
+            <Text style={{ fontFamily: theme.fontFamily.headline, fontSize: 17, fontWeight: '700', color: theme.colors.ink, textAlign: 'center' }}>
+              Add Evidence
+            </Text>
+            <Pressable
+              onPress={() => { void pickAndUpload('camera'); }}
+              style={({ pressed }) => ({
+                flexDirection: 'row', alignItems: 'center', gap: theme.spacing[3],
+                backgroundColor: theme.colors.surfaceHigh,
+                borderRadius: theme.radius.lg,
+                padding: theme.spacing[4],
+                opacity: pressed ? 0.7 : 1,
+              })}>
+              <Ionicons name="camera-outline" size={22} color={theme.colors.ink} />
+              <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 15, color: theme.colors.ink }}>Take Photo</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => { void pickAndUpload('gallery'); }}
+              style={({ pressed }) => ({
+                flexDirection: 'row', alignItems: 'center', gap: theme.spacing[3],
+                backgroundColor: theme.colors.surfaceHigh,
+                borderRadius: theme.radius.lg,
+                padding: theme.spacing[4],
+                opacity: pressed ? 0.7 : 1,
+              })}>
+              <Ionicons name="images-outline" size={22} color={theme.colors.ink} />
+              <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 15, color: theme.colors.ink }}>Choose from Gallery</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => { setEvidenceSheetOpen(false); }}
+              style={({ pressed }) => ({ alignItems: 'center', paddingVertical: theme.spacing[3], opacity: pressed ? 0.6 : 1 })}>
+              <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 15, color: theme.colors.inkMuted }}>Cancel</Text>
+            </Pressable>
           </View>
         </Modal>
 

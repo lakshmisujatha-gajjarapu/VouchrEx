@@ -123,6 +123,9 @@ export interface Dispute {
   orderId: string;
   status: string;
   reason: string;
+  description: string;
+  evidenceUrls: string[];
+  evidenceDeadline: string | null;
   sellerResponse: string | null;
   resolution: string | null;
   resolvedAt: string | null;
@@ -205,6 +208,7 @@ export interface OrderDetailDispute {
   reason: string;
   description: string;
   evidenceUrls: string[];
+  evidenceDeadline: string | null;
   sellerResponse: string | null;
   resolution: string | null;
   status: string;
