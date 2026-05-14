@@ -36,8 +36,8 @@ type Suggestion = {
   readonly source: 'local' | 'brandfetch';
 };
 
-function todayString() {
-  const d = new Date();
+function defaultExpiryDateString() {
+  const d = new Date(Date.now() + 48 * 60 * 60 * 1000);
   return `${String(d.getFullYear())}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
@@ -87,7 +87,7 @@ export default function SellScreen() {
   const [voucherType, setVoucherType]   = useState<VoucherType>('gift-card');
   const [faceValue, setFaceValue]       = useState('');
   const [sellingPrice, setSellingPrice] = useState('');
-  const [expiryDate, setExpiryDate]     = useState(todayString);
+  const [expiryDate, setExpiryDate]     = useState(defaultExpiryDateString);
   const [code, setCode]                 = useState('');
   const [submitting, setSubmitting]     = useState(false);
   const [feedback, setFeedback]         = useState<string | null>(null);
@@ -101,7 +101,7 @@ export default function SellScreen() {
       setVoucherType('gift-card');
       setFaceValue('');
       setSellingPrice('');
-      setExpiryDate(todayString());
+      setExpiryDate(defaultExpiryDateString());
       setCode('');
       setFeedback(null);
     }, [])
@@ -518,7 +518,7 @@ export default function SellScreen() {
               {/* ── Expiry Date ── */}
               <View>
                 <FieldLabel>Expiry Date</FieldLabel>
-                <DateField label="Expiry date" minimumDate={new Date()} onChange={setExpiryDate} value={expiryDate} />
+                <DateField label="Expiry date" minimumDate={new Date(Date.now() + 48 * 60 * 60 * 1000)} onChange={setExpiryDate} value={expiryDate} />
               </View>
 
               {/* ── Trust Panel ── bg-surface-container-low per spec */}

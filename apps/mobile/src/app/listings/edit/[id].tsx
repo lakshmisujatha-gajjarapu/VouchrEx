@@ -413,7 +413,7 @@ export default function EditListingScreen() {
                 <View className="mb-2">
                   <DateField
                     label="Expiry date"
-                    minimumDate={new Date()}
+                    minimumDate={new Date(Date.now() + 48 * 60 * 60 * 1000)}
                     onChange={setExpiryDate}
                     value={expiryDate}
                   />
