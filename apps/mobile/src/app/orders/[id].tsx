@@ -526,6 +526,17 @@ export default function OrderDetailScreen() {
                       </Text>
                     </Pressable>
 
+                    {reveal.pin ? (
+                      <View style={{ marginTop: theme.spacing[3], gap: theme.spacing[2] }}>
+                        <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 13, fontWeight: '600', color: theme.colors.inkSecondary, textTransform: 'uppercase', letterSpacing: 0.6 }}>
+                          PIN
+                        </Text>
+                        <Text style={{ fontFamily: theme.fontFamily.mono, fontSize: 28, fontWeight: '700', color: theme.colors.ink, letterSpacing: 2 }}>
+                          {reveal.pin}
+                        </Text>
+                      </View>
+                    ) : null}
+
                     <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 12, color: theme.colors.inkMuted, textAlign: 'center' }}>
                       Watermarked reveal · Confirm or dispute within {String(reveal.verificationWindowHours)}h
                     </Text>
@@ -833,7 +844,7 @@ export default function OrderDetailScreen() {
             {/* Description */}
             <TextField
               helperText="Be specific — this helps resolve it faster."
-              label="Describe what happened"
+              label="Describe what happened (optional)"
               multiline
               onChangeText={setDescription}
               value={description}
@@ -841,7 +852,7 @@ export default function OrderDetailScreen() {
 
 
             <PrimaryButton
-              disabled={description.trim().length < 10}
+              disabled={false}
               label="Submit dispute"
               loading={busyAction === 'dispute'}
               onPress={() => { void handleDispute(); }}

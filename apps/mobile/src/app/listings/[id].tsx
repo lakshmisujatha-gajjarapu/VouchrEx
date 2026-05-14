@@ -254,6 +254,22 @@ export default function ListingDetailScreen() {
                       <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 12, color: theme.colors.inkMuted, marginTop: 4 }}>
                         {listing.voucherType}
                       </Text>
+                      {listing.redemptionMode ? (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                          <Ionicons
+                            name={listing.redemptionMode === 'IN_STORE' ? 'storefront-outline' : 'globe-outline'}
+                            size={14}
+                            color={theme.colors.inkSecondary}
+                          />
+                          <Text style={{ fontFamily: theme.fontFamily.label, fontSize: 13, color: theme.colors.inkSecondary }}>
+                            {listing.redemptionMode === 'ONLINE'
+                              ? 'Online only'
+                              : listing.redemptionMode === 'IN_STORE'
+                              ? 'In-store only'
+                              : 'Online & In-store'}
+                          </Text>
+                        </View>
+                      ) : null}
                     </View>
                   </View>
 
@@ -262,9 +278,6 @@ export default function ListingDetailScreen() {
                     <View>
                       <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 11, fontWeight: '700', color: theme.colors.inkMuted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: theme.spacing[2] }}>
                         Voucher Description
-                      </Text>
-                      <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 15, color: theme.colors.ink, lineHeight: 22 }}>
-                        Valid for {listing.brand.category} purchases. Cannot be partially redeemed. The code will be released upon payment confirmation.
                       </Text>
                     </View>
                     <View style={{ paddingTop: theme.spacing[4], borderTopWidth: 1, borderTopColor: theme.colors.borderHair, flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
@@ -304,6 +317,34 @@ export default function ListingDetailScreen() {
                 </View>
               </View>
             </View>
+
+                  {listing.minimumOrderValue ? (
+                    <View style={{
+                      flexDirection: 'row', gap: 10, alignItems: 'flex-start',
+                      backgroundColor: theme.colors.surfaceRaised,
+                      borderRadius: theme.radius.sm, padding: 14,
+                    }}>
+                      <Ionicons name="information-circle-outline" size={16} color={theme.colors.inkSecondary} style={{ marginTop: 1 }} />
+                      <Text style={{ flex: 1, fontSize: 13, fontFamily: theme.fontFamily.body, color: theme.colors.inkSecondary, lineHeight: 19 }}>
+                        Min. spend ₹{String(listing.minimumOrderValue)} required to redeem this voucher.
+                      </Text>
+                    </View>
+                  ) : null}
+
+                  {listing.sellerNotes ? (
+                    <View style={{
+                      backgroundColor: theme.colors.surfaceRaised,
+                      borderRadius: theme.radius.sm,
+                      padding: 14, gap: 6,
+                    }}>
+                      <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 13, fontWeight: '600', color: theme.colors.ink }}>
+                        Terms & Conditions
+                      </Text>
+                      <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 13, color: theme.colors.inkSecondary, lineHeight: 19 }}>
+                        {listing.sellerNotes}
+                      </Text>
+                    </View>
+                  ) : null}
 
           </View>
         </ScrollView>

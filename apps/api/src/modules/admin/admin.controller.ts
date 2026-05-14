@@ -4,12 +4,14 @@ import {
   AdminRole,
   DisputeStatus,
   EscrowStatus,
+  ListingStatus,
   NotificationChannel,
   OrderStatus,
   PaymentStatus,
   PayoutStatus,
   RefundStatus,
-  UserStatus
+  UserStatus,
+  VerificationStatus,
 } from '@prisma/client';
 
 import { parsePagination, normalizeSearch, normalizeQBy, containsCi, startsWithCi } from '../../common/pagination';
@@ -208,6 +210,55 @@ export class AdminController {
     const total = await this.prisma.dispute.count({ where });
 
     return { data, total, page: p, pageSize: ps };
+  }
+
+  /** Single dispute detail for the admin detail page. */
+  @ApiHeader({ name: adminHeaderName, required: true })
+  @Get(ADMIN_ROUTES.DISPUTE_DETAIL)
+  async getDisputeDetail(
+    @Param('id') id: string,
+    @Headers(adminHeaderName) adminToken?: string
+  ) {
+    await this.adminAccessService.requireAdminAccess(adminToken);
+
+    const dispute = await this.prisma.dispute.findUnique({
+      where: { id },
+      include: {
+        order: {
+          include: {
+            listing: { include: { brand: true } },
+            buyer: {
+              select: {
+                id: true, name: true, phone: true, email: true,
+                tier: true, trustScore: true, status: true,
+                disputeCount: true, totalSales: true, createdAt: true,
+                buyerStrikes: true,
+                _count: {
+                  select: {
+                    purchases: { where: { status: { not: OrderStatus.CANCELLED } } },
+                    disputes: true,
+                  },
+                },
+              },
+            },
+            seller: {
+              select: {
+                id: true, name: true, phone: true, email: true,
+                tier: true, trustScore: true, status: true,
+                disputeCount: true, totalSales: true, createdAt: true,
+                sellerStrikes: true, payoutHoldUntil: true,
+                payoutAccount: { select: { kycStatus: true, upiId: true } },
+              },
+            },
+            payment: true,
+          },
+        },
+        raisedBy: { select: { id: true, name: true } },
+      },
+    });
+
+    if (!dispute) throw new NotFoundException(`Dispute ${id} not found`);
+    return dispute;
   }
 
   @ApiHeader({ name: adminHeaderName, required: true })
@@ -863,6 +914,102 @@ export class AdminController {
     await this.adminAccessService.requireSuperAdmin(adminToken);
     await this.adminAccessService.setPassword(id, body.password);
     return { success: true };
+  }
+
+  // ─── Listings ────────────────────────────────────────────────────────────────
+
+  /** List all listings. Filterable by status and verificationStatus, paginated + searchable. */
+  @ApiHeader({ name: adminHeaderName, required: true })
+  @Get(ADMIN_ROUTES.LISTINGS)
+  async getListings(
+    @Headers(adminHeaderName) adminToken?: string,
+    @Query('status') status?: string,
+    @Query('verificationStatus') verificationStatus?: string,
+    @Query('q') q?: string,
+    @Query('qBy') qBy?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string
+  ) {
+    await this.adminAccessService.requireAdminAccess(adminToken);
+
+    const search = normalizeSearch(q);
+    const key = normalizeQBy(qBy);
+    const { skip, take, page: p, pageSize: ps } = parsePagination(page, pageSize);
+
+    const statusWhere = status ? { status: status as ListingStatus } : {};
+    const verificationWhere = verificationStatus ? { verificationStatus: verificationStatus as VerificationStatus } : {};
+    const searchWhere = (() => {
+      if (!search || !key) return {};
+      switch (key) {
+        case 'brand':       return { brand: { name: containsCi(search) } };
+        case 'sellerPhone': return { seller: { phone: containsCi(search) } };
+        case 'sellerName':  return { seller: { name: containsCi(search) } };
+        default:            return {};
+      }
+    })();
+    const where = { AND: [statusWhere, verificationWhere, searchWhere] };
+
+    const data = await this.prisma.voucherListing.findMany({
+      where,
+      include: {
+        brand: { select: { id: true, name: true, category: true } },
+        seller: { select: { id: true, name: true, phone: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take,
+    });
+    const total = await this.prisma.voucherListing.count({ where });
+
+    return { data, total, page: p, pageSize: ps };
+  }
+
+  /** Single listing detail with seller profile, brand, code vault metadata, and audit log. */
+  @ApiHeader({ name: adminHeaderName, required: true })
+  @Get(ADMIN_ROUTES.LISTING_DETAIL)
+  async getListingDetail(
+    @Param('id') id: string,
+    @Headers(adminHeaderName) adminToken?: string
+  ) {
+    await this.adminAccessService.requireAdminAccess(adminToken);
+
+    const listing = await this.prisma.voucherListing.findUnique({
+      where: { id },
+      include: {
+        brand: true,
+        seller: {
+          select: {
+            id: true, name: true, phone: true, email: true,
+            tier: true, trustScore: true, status: true,
+            totalSales: true, disputeCount: true,
+            sellerStrikes: true, createdAt: true,
+            payoutAccount: { select: { kycStatus: true, upiId: true } },
+          },
+        },
+        codeVault: {
+          select: {
+            id: true, codeHash: true, viewCount: true,
+            firstViewedAt: true, lastViewedAt: true, createdAt: true,
+            encryptedPin: true,
+          },
+        },
+        order: {
+          select: {
+            id: true, status: true, createdAt: true,
+            buyer: { select: { id: true, name: true, phone: true } },
+          },
+        },
+      },
+    });
+
+    if (!listing) throw new NotFoundException(`Listing ${id} not found`);
+
+    const auditLog = await this.prisma.auditLog.findMany({
+      where: { entityType: 'listing', entityId: id },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    return { ...listing, auditLog };
   }
 
   // ─── App Config (marketplace-wide runtime settings) ──────────────────────────

@@ -1,8 +1,6 @@
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
-// Static safety cap; see comment in create-listing.dto.ts. Real cap lives in
-// AppConfig (`listing_max_price_inr`) and is enforced in ListingsService.
 const LISTING_FACE_VALUE_SAFETY_CAP = 10_000_000;
 
 const UpdateListingSchema = z.object({
@@ -17,7 +15,11 @@ const UpdateListingSchema = z.object({
     .optional()
     .describe('Voucher expiry in ISO 8601 format'),
   code: z.string().optional().describe('Optional replacement voucher code'),
-  proofUrl: z.string().optional().describe('Optional proof asset URL')
+  pin: z.string().optional().describe('Optional replacement PIN'),
+  proofUrl: z.string().optional().describe('Optional proof asset URL'),
+  minimumOrderValue: z.coerce.number().int().min(1).optional().describe('Minimum cart value in INR'),
+  redemptionMode: z.enum(['ONLINE', 'IN_STORE', 'BOTH']).optional().describe('Redemption mode'),
+  sellerNotes: z.string().max(500).optional().describe('Seller terms, max 500 characters')
 });
 
 export class UpdateListingDto extends createZodDto(UpdateListingSchema) {}

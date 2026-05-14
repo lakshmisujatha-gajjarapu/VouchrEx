@@ -76,6 +76,12 @@ export interface VoucherListing {
   brand: Brand;
   faceValue: number;
   askPrice: number;
+  sellingPrice: number;
+  discountPercent: number;
+  voucherType: string;
+  minimumOrderValue: number | null;
+  redemptionMode: 'ONLINE' | 'IN_STORE' | 'BOTH' | null;
+  sellerNotes: string | null;
 }
 
 export interface Order {
@@ -174,6 +180,9 @@ export interface OrderDetailListing {
   verificationStatus: string;
   expiryDate: string;
   proofUrl: string | null;
+  minimumOrderValue: number | null;
+  redemptionMode: 'ONLINE' | 'IN_STORE' | 'BOTH' | null;
+  sellerNotes: string | null;
   buyerId: string | null;
   soldAt: string | null;
   createdAt: string;
@@ -186,6 +195,7 @@ export interface OrderDetailListing {
     firstViewedAt: string | null;
     lastViewedAt: string | null;
     createdAt: string;
+    encryptedPin: string | null;
   } | null;
 }
 
@@ -315,6 +325,72 @@ export interface AdminTeamMember {
   role: 'ADMIN' | 'SUPER_ADMIN';
   active: boolean;
   createdAt: string;
+}
+
+export interface AdminListingDetail {
+  id: string;
+  voucherType: string;
+  faceValue: number;
+  sellingPrice: number;
+  discountPercent: number;
+  status: string;
+  verificationStatus: string;
+  expiryDate: string;
+  proofUrl: string | null;
+  minimumOrderValue: number | null;
+  redemptionMode: 'ONLINE' | 'IN_STORE' | 'BOTH' | null;
+  sellerNotes: string | null;
+  createdAt: string;
+  updatedAt: string;
+  brand: { id: string; name: string; category: string; logoUrl: string | null };
+  seller: {
+    id: string;
+    name: string | null;
+    phone: string;
+    email: string | null;
+    tier: string;
+    trustScore: number;
+    status: string;
+    totalSales: number;
+    disputeCount: number;
+    sellerStrikes: number;
+    createdAt: string;
+    payoutAccount: { kycStatus: string; upiId: string | null } | null;
+  };
+  codeVault: {
+    id: string;
+    codeHash: string;
+    viewCount: number;
+    firstViewedAt: string | null;
+    lastViewedAt: string | null;
+    createdAt: string;
+    encryptedPin: string | null;
+  } | null;
+  order: {
+    id: string;
+    status: string;
+    createdAt: string;
+    buyer: { id: string; name: string | null; phone: string };
+  } | null;
+  auditLog: OrderDetailAuditLog[];
+}
+
+export interface AdminListing {
+  id: string;
+  voucherType: string;
+  faceValue: number;
+  sellingPrice: number;
+  discountPercent: number;
+  status: string;
+  verificationStatus: string;
+  expiryDate: string;
+  proofUrl: string | null;
+  minimumOrderValue: number | null;
+  redemptionMode: 'ONLINE' | 'IN_STORE' | 'BOTH' | null;
+  sellerNotes: string | null;
+  createdAt: string;
+  brand: { id: string; name: string; category: string };
+  seller: { id: string; name: string | null; phone: string };
 }
 
 export interface AppConfigRow {

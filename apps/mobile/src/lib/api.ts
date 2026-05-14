@@ -72,6 +72,9 @@ export type Listing = {
   readonly status: string;
   readonly expiryDate: string;
   readonly proofUrl?: string | null;
+  readonly minimumOrderValue?: number | null;
+  readonly redemptionMode?: 'ONLINE' | 'IN_STORE' | 'BOTH' | null;
+  readonly sellerNotes?: string | null;
   readonly createdAt: string;
   readonly brand: Brand;
   readonly order?: {
@@ -143,6 +146,7 @@ export type CreateOrderResult = {
 export type RevealResult = {
   readonly watermarkedCodeImageUrl: string;
   readonly voucherCode: string;
+  readonly pin?: string | null;
   readonly verificationDeadline: string;
   readonly revealCount: number;
   readonly verificationWindowHours: number;
@@ -327,6 +331,10 @@ export const api = {
       readonly expiryDate: string;
       readonly code: string;
       readonly proofUrl?: string;
+      readonly pin?: string;
+      readonly minimumOrderValue?: number;
+      readonly redemptionMode?: 'ONLINE' | 'IN_STORE' | 'BOTH';
+      readonly sellerNotes?: string;
     }
   ) {
     return apiRequest<Listing>(LISTINGS.CREATE, {
@@ -352,6 +360,10 @@ export const api = {
       readonly expiryDate?: string;
       readonly code?: string;
       readonly proofUrl?: string;
+      readonly pin?: string;
+      readonly minimumOrderValue?: number;
+      readonly redemptionMode?: 'ONLINE' | 'IN_STORE' | 'BOTH';
+      readonly sellerNotes?: string;
     }
   ) {
     return apiRequest<Listing>(LISTINGS.BY_ID(id), {

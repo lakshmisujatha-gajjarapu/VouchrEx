@@ -4,6 +4,7 @@ export const ROUTES = {
   DASHBOARD: '/dashboard',
   DISPUTES: '/disputes',
   ORDERS: '/orders',
+  LISTINGS: '/listings',
   USERS: '/users',
   PAYOUTS: '/payouts',
   REFUNDS: '/refunds',

@@ -1,10 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   Text,
   TextInput,
@@ -14,9 +16,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ConfigChangeBanner } from '@/components/config-change-banner';
 import { DateField } from '@/components/date-field';
+import { FieldLabel } from '@/components/field-label';
 import { FilterChip } from '@/components/filter-chip';
 import { PrimaryButton } from '@/components/primary-button';
-import { TextField } from '@/components/text-field';
+import { SubmergedInput } from '@/components/submerged-input';
 import { useAuth } from '@/hooks/use-auth';
 import { useAsyncResource } from '@/hooks/use-async-resource';
 import { useConfig } from '@/hooks/use-config';
@@ -25,13 +28,22 @@ import { searchBrandfetchBrands } from '@/lib/brandfetch';
 import { formatStatus } from '@/lib/format';
 import { useTheme } from '@/theme/theme-context';
 
-const VOUCHER_TYPES = ['gift-card', 'promo-code', 'cashback', 'subscription'] as const;
+const VOUCHER_TYPES = ['gift-card', 'promo-code'] as const;
 type VoucherType = (typeof VOUCHER_TYPES)[number];
 
 type Suggestion = {
   readonly name: string;
   readonly meta: string;
   readonly source: 'local' | 'brandfetch';
+};
+
+const REDEMPTION_MODES = ['ONLINE', 'IN_STORE', 'BOTH'] as const;
+type RedemptionMode = (typeof REDEMPTION_MODES)[number];
+
+const REDEMPTION_MODE_LABELS: Record<RedemptionMode, string> = {
+  ONLINE: 'Online',
+  IN_STORE: 'In-store',
+  BOTH: 'Both',
 };
 
 const editableStatuses = new Set(['ACTIVE', 'DRAFT', 'VERIFYING']);
@@ -58,9 +70,16 @@ export default function EditListingScreen() {
   const [sellingPrice, setSellingPrice] = useState('');
   const [expiryDate, setExpiryDate] = useState('');
   const [code, setCode] = useState('');
+  const [codeCopied, setCodeCopied] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<{ ok: boolean; text: string } | null>(null);
   const deferredBrandName = useDeferredValue(brandName.trim());
+
+  const [pin, setPin]                             = useState('');
+  const [pinCopied, setPinCopied]                 = useState(false);
+  const [redemptionMode, setRedemptionMode]       = useState<'ONLINE' | 'IN_STORE' | 'BOTH' | null>(null);
+  const [minimumOrderValue, setMinimumOrderValue] = useState('');
+  const [sellerNotes, setSellerNotes]             = useState('');
 
   const listingResource = useAsyncResource(
     useCallback(async () => {
@@ -137,6 +156,15 @@ export default function EditListingScreen() {
     setExpiryDate(isoToDateInput(listingResource.data.expiryDate));
     setCode('');
     setFeedback(null);
+    setRedemptionMode(
+      listingResource.data.redemptionMode === 'ONLINE' ||
+      listingResource.data.redemptionMode === 'IN_STORE' ||
+      listingResource.data.redemptionMode === 'BOTH'
+        ? listingResource.data.redemptionMode
+        : null
+    );
+    setMinimumOrderValue(listingResource.data.minimumOrderValue ? String(listingResource.data.minimumOrderValue) : '');
+    setSellerNotes(listingResource.data.sellerNotes ?? '');
   }, [listingResource.data]);
 
   const handlePriceInput = (next: string, setter: (v: string) => void) => {
@@ -160,16 +188,15 @@ export default function EditListingScreen() {
   const faceValueExceedsCap = parsedFaceValue > listingMaxPriceInr;
   const sellingPriceInvalid =
     parsedSellingPrice > 0 && parsedFaceValue > 0 && parsedSellingPrice >= parsedFaceValue;
-  const canSubmit = Boolean(
-    listingResource.data &&
-      !locked &&
-      brandName.trim() &&
-      expiryDate &&
-      parsedFaceValue > 0 &&
-      parsedSellingPrice > 0 &&
-      parsedSellingPrice < parsedFaceValue &&
-      !faceValueExceedsCap
-  );
+
+  const canSubmit =
+    Boolean(brandName.trim() && expiryDate) &&
+    parsedFaceValue > 0 &&
+    parsedSellingPrice > 0 &&
+    parsedSellingPrice < parsedFaceValue &&
+    !faceValueExceedsCap &&
+    (voucherType === 'gift-card' ? redemptionMode !== null : true) &&
+    Boolean(listingResource.data && !locked);
 
   async function handleSubmit() {
     if (!sessionToken || !listingId) {
@@ -187,6 +214,10 @@ export default function EditListingScreen() {
         sellingPrice: parsedSellingPrice,
         expiryDate: new Date(`${expiryDate}T23:59:59.000Z`).toISOString(),
         ...(code.trim() ? { code: code.trim() } : {}),
+        ...(pin.trim() ? { pin: pin.trim() } : {}),
+        ...(redemptionMode ? { redemptionMode } : {}),
+        ...(minimumOrderValue ? { minimumOrderValue: Number(minimumOrderValue) } : {}),
+        ...(sellerNotes.trim() ? { sellerNotes: sellerNotes.trim() } : {}),
       });
 
       router.replace('/listings');
@@ -200,19 +231,9 @@ export default function EditListingScreen() {
     }
   }
 
-  const divider = (
-    <View
-      style={{
-        height: 1,
-        backgroundColor: theme.colors.border,
-        marginVertical: 12,
-      }}
-    />
-  );
-
   if (listingResource.loading && !listingResource.data) {
     return (
-      <View className="flex-1 items-center justify-center" style={{ backgroundColor: theme.colors.background }}>
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.background }}>
         <ActivityIndicator color={theme.colors.brand} />
       </View>
     );
@@ -220,16 +241,16 @@ export default function EditListingScreen() {
 
   if (!listingResource.data) {
     return (
-      <View className="flex-1" style={{ backgroundColor: theme.colors.background }}>
-        <SafeAreaView className="flex-1" edges={['top', 'left', 'right']}>
+      <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+        <SafeAreaView style={{ flex: 1 }} edges={['top', 'left', 'right']}>
           <View style={{ flex: 1, paddingHorizontal: 20, paddingTop: theme.spacing[3], gap: theme.spacing[3] }}>
-            <Text className="font-label text-caption font-extrabold uppercase tracking-[0.6px]" style={{ color: theme.colors.brand }}>
+            <Text style={{ fontFamily: theme.fontFamily.label, fontSize: 12, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.6, color: theme.colors.brand }}>
               Listings
             </Text>
-            <Text className="font-headline text-[26px] font-bold leading-[30px]" style={{ color: theme.colors.ink }}>
+            <Text style={{ fontFamily: theme.fontFamily.headline, fontSize: 26, fontWeight: '700', lineHeight: 30, color: theme.colors.ink }}>
               Edit listing
             </Text>
-            <Text className="text-body" style={{ color: theme.colors.danger }}>
+            <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 14, color: theme.colors.danger }}>
               {listingResource.error ?? 'Listing was not found.'}
             </Text>
             <PrimaryButton
@@ -246,60 +267,65 @@ export default function EditListingScreen() {
   }
 
   return (
-    <View className="flex-1" style={{ backgroundColor: theme.colors.background }}>
-      <SafeAreaView className="flex-1" edges={['top', 'left', 'right']}>
+    <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+      <SafeAreaView style={{ flex: 1 }} edges={['top', 'left', 'right']}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
           <ConfigChangeBanner />
           <ScrollView
-            contentContainerStyle={{ flexGrow: 1 }}
+            contentContainerStyle={{ paddingBottom: 120 }}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}>
-            <View style={{ flex: 1, paddingHorizontal: 20, paddingTop: 8, paddingBottom: theme.spacing[4], gap: theme.spacing[3] }}>
-              <View>
-                <Text className="font-label text-caption font-extrabold uppercase tracking-[0.6px]" style={{ color: theme.colors.brand }}>
+            <View style={{ paddingHorizontal: theme.spacing[5], paddingTop: theme.spacing[5], gap: theme.spacing[6] }}>
+
+              {/* ── Header ── */}
+              <View style={{ gap: 6 }}>
+                <Text style={{
+                  fontFamily: theme.fontFamily.label,
+                  fontSize: 12,
+                  fontWeight: '800',
+                  textTransform: 'uppercase',
+                  letterSpacing: 0.6,
+                  color: theme.colors.brand,
+                }}>
                   Listings
                 </Text>
-                <Text className="font-headline text-[26px] font-bold leading-[30px]" style={{ color: theme.colors.ink }}>
+                <Text style={{
+                  fontFamily: theme.fontFamily.headline,
+                  fontSize: 26,
+                  fontWeight: '700',
+                  lineHeight: 30,
+                  color: theme.colors.ink,
+                }}>
                   Edit listing
                 </Text>
-                <Text className="mt-1 text-caption" style={{ color: theme.colors.inkMuted }}>
+                <Text style={{
+                  fontFamily: theme.fontFamily.body,
+                  fontSize: 14,
+                  color: theme.colors.inkMuted,
+                }}>
                   Update seller-side details before the listing turns into an order.
                 </Text>
               </View>
 
-              <View
-                className="rounded-app-xl"
-                style={{
-                  backgroundColor: theme.colors.surface,
-                  borderWidth: 1,
-                  borderColor: theme.colors.border,
-                  shadowColor: theme.colors.shadow,
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 1,
-                  shadowRadius: 12,
-                  elevation: 2,
-                  padding: theme.spacing[4],
-                }}>
-                <Text className="mb-2 font-label text-caption font-extrabold uppercase tracking-[0.5px]" style={{ color: theme.colors.brand }}>
-                  Brand {brandName.trim() ? `· ${brandName.trim()}` : ''}
-                </Text>
+              {/* ── Brand ── */}
+              <View>
+                <FieldLabel>Brand</FieldLabel>
                 <View
-                  className="flex-row items-center rounded-app-sm"
                   style={{
-                    backgroundColor: theme.colors.surfaceTray,
-                    borderWidth: 1,
-                    borderColor: theme.colors.border,
-                    paddingHorizontal: 10,
-                    gap: 6,
-                    height: 40,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    height: 56,
+                    borderRadius: 14,
+                    backgroundColor: theme.colors.surfaceHigh,
+                    paddingHorizontal: 16,
+                    gap: 8,
                   }}>
-                  <Ionicons color={theme.colors.inkMuted} name="search-outline" size={15} />
+                  <Ionicons color={theme.colors.inkMuted} name="search-outline" size={18} />
                   <TextInput
-                    className="flex-1 font-label"
+                    style={{ flex: 1, fontFamily: theme.fontFamily.body, fontSize: 15, color: theme.colors.ink }}
                     onChangeText={setBrandName}
                     placeholder="Enter brand name"
                     placeholderTextColor={theme.colors.inkMuted}
-                    style={{ color: theme.colors.ink, fontSize: 14, letterSpacing: 0 }}
                     value={brandName}
                   />
                   {suggestionsResource.loading ? (
@@ -307,158 +333,418 @@ export default function EditListingScreen() {
                   ) : null}
                 </View>
 
-                {deferredBrandName.length >= 2 ? null : (
-                  <Text className="mt-2 text-caption" style={{ color: theme.colors.inkMuted }}>
-                    Start typing to see local matches and Brandfetch suggestions.
-                  </Text>
-                )}
-
                 {deferredBrandName.length >= 2 && (suggestionsResource.data?.length ?? 0) > 0 ? (
-                  <View className="mt-2 gap-2">
-                    <View className="flex-row flex-wrap gap-1">
-                      {suggestionsResource.data?.map((suggestion) => (
-                        <FilterChip
-                          key={`${suggestion.source}:${suggestion.name}`}
-                          label={suggestion.name}
-                          onPress={() => {
-                            setBrandName(suggestion.name);
-                          }}
-                          selected={normalizeBrandName(suggestion.name) === normalizeBrandName(brandName)}
-                        />
-                      ))}
-                    </View>
+                  <View style={{ marginTop: 10, flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                    {suggestionsResource.data?.map((s) => (
+                      <FilterChip
+                        key={`${s.source}:${s.name}`}
+                        label={s.name}
+                        onPress={() => { setBrandName(s.name); }}
+                        selected={normalizeBrandName(s.name) === normalizeBrandName(brandName)}
+                      />
+                    ))}
                   </View>
                 ) : null}
+              </View>
 
-                {divider}
-
-                <Text className="mb-2 font-label text-caption font-extrabold uppercase tracking-[0.5px]" style={{ color: theme.colors.brand }}>
-                  Type
-                </Text>
-                <View className="flex-row flex-wrap gap-1">
-                  {VOUCHER_TYPES.map((type) => (
-                    <FilterChip
-                      key={type}
-                      label={type}
-                      onPress={() => {
-                        setVoucherType(type);
-                      }}
-                      selected={voucherType === type}
-                    />
+              {/* ── Type chips (display-only) ── */}
+              <View>
+                <FieldLabel>Type</FieldLabel>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }} pointerEvents="none">
+                  {VOUCHER_TYPES.map((t) => (
+                    <FilterChip key={t} label={t} onPress={() => {}} selected={voucherType === t} />
                   ))}
                 </View>
-
-                {divider}
-
-                <Text className="mb-2 font-label text-caption font-extrabold uppercase tracking-[0.5px]" style={{ color: theme.colors.brand }}>
-                  Pricing {discount > 0 ? `· ${String(discount)}% off` : ''}
+                <Text style={{ fontSize: 12, fontFamily: theme.fontFamily.label, color: theme.colors.inkMuted, marginTop: 6 }}>
+                  Voucher type cannot be changed after listing.
                 </Text>
-                <View className="mb-2 flex-row gap-2">
-                  <View className="flex-1">
-                    <TextField
-                      label="Face value (₹)"
-                      onChangeText={(v) => { handlePriceInput(v, setFaceValue); }}
-                      value={faceValue}
-                      keyboardType="numeric"
-                      placeholder="500"
+              </View>
+
+              {/* ── Form: gift-card ── */}
+              {voucherType === 'gift-card' ? (
+                <>
+                  {/* Code */}
+                  <View>
+                    <FieldLabel>Voucher Code (optional replacement)</FieldLabel>
+                    <SubmergedInput
+                      autoCapitalize="characters"
+                      autoCorrect={false}
+                      fontMono
+                      onChangeText={setCode}
+                      placeholder="Leave blank to keep current code"
+                      rightIcon={
+                        code.trim() ? (
+                          <Pressable
+                            onPress={() => {
+                              void Clipboard.setStringAsync(code.trim()).then(() => {
+                                setCodeCopied(true);
+                                setTimeout(() => { setCodeCopied(false); }, 2000);
+                              });
+                            }}
+                            style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
+                            <Ionicons
+                              name={codeCopied ? 'checkmark-circle' : 'copy-outline'}
+                              size={20}
+                              color={codeCopied ? theme.colors.action : theme.colors.brand}
+                            />
+                          </Pressable>
+                        ) : (
+                          <Ionicons name="lock-closed-outline" size={20} color={theme.colors.inkMuted} />
+                        )
+                      }
+                      value={code}
                     />
-                    <Text style={{
-                      fontSize: 11,
-                      fontFamily: theme.fontFamily.body,
-                      color: faceValueExceedsCap ? theme.colors.danger : theme.colors.inkSecondary,
-                      marginTop: theme.spacing[1],
-                    }}>
-                      {faceValueExceedsCap
-                        ? `Voucher value can't exceed ₹${String(listingMaxPriceInr)} right now.`
-                        : `Max ₹${String(listingMaxPriceInr)} face value`}
+                    <Text style={{ fontSize: 12, fontFamily: theme.fontFamily.label, color: theme.colors.inkMuted, marginTop: 6, fontStyle: 'italic' }}>
+                      Only visible to the buyer after purchase.
                     </Text>
                   </View>
-                  <View className="flex-1">
-                    <TextField
-                      label="Sell price (₹)"
-                      onChangeText={(v) => { handlePriceInput(v, setSellingPrice); }}
-                      value={sellingPrice}
+
+                  {/* PIN (optional) */}
+                  <View>
+                    <FieldLabel>PIN (optional)</FieldLabel>
+                    <SubmergedInput
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      fontMono
                       keyboardType="numeric"
-                      placeholder="420"
-                      rightIcon={discount > 0 ? (
-                        <View style={{
-                          paddingHorizontal: 6,
-                          paddingVertical: 3,
-                          borderRadius: 6,
-                          backgroundColor: theme.colors.actionSoft,
-                        }}>
-                          <Text style={{
-                            fontSize: 11,
-                            fontWeight: '700',
-                            fontFamily: theme.fontFamily.labelSemi,
-                            color: theme.colors.action,
-                          }}>
-                            {String(discount)}%
-                          </Text>
-                        </View>
-                      ) : undefined}
+                      onChangeText={setPin}
+                      placeholder="e.g. 1234"
+                      rightIcon={
+                        pin.trim() ? (
+                          <Pressable
+                            onPress={() => {
+                              void Clipboard.setStringAsync(pin.trim()).then(() => {
+                                setPinCopied(true);
+                                setTimeout(() => { setPinCopied(false); }, 2000);
+                              });
+                            }}
+                            style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
+                            <Ionicons
+                              name={pinCopied ? 'checkmark-circle' : 'copy-outline'}
+                              size={20}
+                              color={pinCopied ? theme.colors.action : theme.colors.brand}
+                            />
+                          </Pressable>
+                        ) : undefined
+                      }
+                      value={pin}
                     />
-                    {sellingPriceInvalid ? (
+                  </View>
+
+                  {/* Face Value + Price */}
+                  <View style={{ flexDirection: 'row', gap: theme.spacing[3] }}>
+                    <View style={{ flex: 1 }}>
+                      <FieldLabel>Face Value</FieldLabel>
+                      <SubmergedInput
+                        keyboardType="numeric"
+                        onChangeText={(v) => { handlePriceInput(v, setFaceValue); }}
+                        placeholder="1000"
+                        prefix="₹"
+                        value={faceValue}
+                      />
                       <Text style={{
                         fontSize: 11,
                         fontFamily: theme.fontFamily.body,
-                        color: theme.colors.danger,
+                        color: faceValueExceedsCap ? theme.colors.danger : theme.colors.inkSecondary,
                         marginTop: theme.spacing[1],
                       }}>
-                        Selling price must be less than face value.
+                        {faceValueExceedsCap
+                          ? `Voucher value can't exceed ₹${String(listingMaxPriceInr)} right now.`
+                          : `Max ₹${String(listingMaxPriceInr)} face value`}
                       </Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <FieldLabel>Your Price</FieldLabel>
+                      <SubmergedInput
+                        keyboardType="numeric"
+                        onChangeText={(v) => { handlePriceInput(v, setSellingPrice); }}
+                        placeholder="850"
+                        prefix="₹"
+                        rightIcon={discount > 0 ? (
+                          <View style={{
+                            paddingHorizontal: 6,
+                            paddingVertical: 3,
+                            borderRadius: 6,
+                            backgroundColor: theme.colors.actionSoft,
+                          }}>
+                            <Text style={{
+                              fontSize: 11,
+                              fontWeight: '700',
+                              fontFamily: theme.fontFamily.labelSemi,
+                              color: theme.colors.action,
+                            }}>
+                              {String(discount)}%
+                            </Text>
+                          </View>
+                        ) : undefined}
+                        value={sellingPrice}
+                      />
+                      {sellingPriceInvalid ? (
+                        <Text style={{
+                          fontSize: 11,
+                          fontFamily: theme.fontFamily.body,
+                          color: theme.colors.danger,
+                          marginTop: theme.spacing[1],
+                        }}>
+                          Selling price must be less than face value.
+                        </Text>
+                      ) : null}
+                    </View>
+                  </View>
+
+                  {/* Expiry */}
+                  <View>
+                    <FieldLabel>Expiry Date</FieldLabel>
+                    <DateField
+                      label="Expiry date"
+                      minimumDate={new Date(Date.now() + 48 * 60 * 60 * 1000)}
+                      onChange={setExpiryDate}
+                      value={expiryDate}
+                    />
+                  </View>
+
+                  {/* Redeem via */}
+                  <View>
+                    <FieldLabel>Redeem via</FieldLabel>
+                    <View style={{ flexDirection: 'row', gap: 8 }}>
+                      {REDEMPTION_MODES.map((mode) => (
+                        <FilterChip
+                          key={mode}
+                          label={REDEMPTION_MODE_LABELS[mode]}
+                          onPress={() => { setRedemptionMode(mode); }}
+                          selected={redemptionMode === mode}
+                        />
+                      ))}
+                    </View>
+                    {redemptionMode === 'IN_STORE' || redemptionMode === 'BOTH' ? (
+                      <View style={{
+                        marginTop: 10,
+                        flexDirection: 'row',
+                        gap: 8,
+                        backgroundColor: theme.colors.surfaceRaised,
+                        borderRadius: theme.radius.sm,
+                        padding: 12,
+                        alignItems: 'flex-start',
+                      }}>
+                        <Ionicons name="information-circle-outline" size={16} color={theme.colors.inkMuted} style={{ marginTop: 1 }} />
+                        <Text style={{ flex: 1, fontSize: 13, fontFamily: theme.fontFamily.body, color: theme.colors.inkSecondary, lineHeight: 18 }}>
+                          Buyers will need to visit a store to redeem. Make sure the voucher is valid for in-store use.
+                        </Text>
+                      </View>
                     ) : null}
                   </View>
-                </View>
-                <View className="mb-2">
-                  <DateField
-                    label="Expiry date"
-                    minimumDate={new Date(Date.now() + 48 * 60 * 60 * 1000)}
-                    onChange={setExpiryDate}
-                    value={expiryDate}
-                  />
-                </View>
-                <TextField
-                  label="Voucher code (optional replacement)"
-                  onChangeText={setCode}
-                  value={code}
-                  autoCapitalize="characters"
-                  placeholder="Leave blank to keep current code"
-                />
 
-                <Text className="mt-2 text-caption" style={{ color: theme.colors.inkMuted }}>
-                  {locked
-                    ? `This listing is ${formatStatus(listingResource.data.status)} and can no longer be changed.`
-                    : 'Once an order exists, the listing becomes immutable.'}
-                </Text>
+                  {/* Min spend */}
+                  <View>
+                    <FieldLabel>Minimum Spend (optional)</FieldLabel>
+                    <SubmergedInput
+                      keyboardType="numeric"
+                      onChangeText={(v) => {
+                        const digits = v.replace(/\D/g, '');
+                        setMinimumOrderValue(digits);
+                      }}
+                      placeholder="e.g. 500"
+                      prefix="₹"
+                      value={minimumOrderValue}
+                    />
+                    <Text style={{ fontSize: 12, fontFamily: theme.fontFamily.label, color: theme.colors.inkMuted, marginTop: 6 }}>
+                      Minimum cart value required to apply this voucher.
+                    </Text>
+                  </View>
 
-                <View className="mt-4 gap-2">
-                  <PrimaryButton
-                    disabled={!canSubmit}
-                    label="Save changes"
-                    loading={submitting}
-                    onPress={() => {
-                      void handleSubmit();
-                    }}
-                    tone="brand"
-                  />
-                  <PrimaryButton
-                    label="Back to listings"
-                    onPress={() => {
-                      router.replace('/listings');
-                    }}
-                    tone="secondary"
-                  />
-                </View>
-              </View>
+                  {/* Terms / seller notes */}
+                  <View>
+                    <FieldLabel>Terms &amp; Notes (optional)</FieldLabel>
+                    <SubmergedInput
+                      autoCapitalize="sentences"
+                      onChangeText={setSellerNotes}
+                      placeholder="Any usage restrictions or tips for the buyer…"
+                      value={sellerNotes}
+                    />
+                  </View>
+                </>
+              ) : (
+                /* ── Form: promo-code / cashback / subscription ── */
+                <>
+                  {/* Code */}
+                  <View>
+                    <FieldLabel>Promo Code (optional replacement)</FieldLabel>
+                    <SubmergedInput
+                      autoCapitalize="characters"
+                      autoCorrect={false}
+                      fontMono
+                      onChangeText={setCode}
+                      placeholder="Leave blank to keep current code"
+                      rightIcon={
+                        code.trim() ? (
+                          <Pressable
+                            onPress={() => {
+                              void Clipboard.setStringAsync(code.trim()).then(() => {
+                                setCodeCopied(true);
+                                setTimeout(() => { setCodeCopied(false); }, 2000);
+                              });
+                            }}
+                            style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
+                            <Ionicons
+                              name={codeCopied ? 'checkmark-circle' : 'copy-outline'}
+                              size={20}
+                              color={codeCopied ? theme.colors.action : theme.colors.brand}
+                            />
+                          </Pressable>
+                        ) : (
+                          <Ionicons name="lock-closed-outline" size={20} color={theme.colors.inkMuted} />
+                        )
+                      }
+                      value={code}
+                    />
+                    <Text style={{ fontSize: 12, fontFamily: theme.fontFamily.label, color: theme.colors.inkMuted, marginTop: 6, fontStyle: 'italic' }}>
+                      Only visible to the buyer after purchase.
+                    </Text>
+                  </View>
 
+                  {/* Discount Value + Price */}
+                  <View style={{ flexDirection: 'row', gap: theme.spacing[3] }}>
+                    <View style={{ flex: 1 }}>
+                      <FieldLabel>Discount Value</FieldLabel>
+                      <SubmergedInput
+                        keyboardType="numeric"
+                        onChangeText={(v) => { handlePriceInput(v, setFaceValue); }}
+                        placeholder="200"
+                        prefix="₹"
+                        value={faceValue}
+                      />
+                      <Text style={{
+                        fontSize: 11,
+                        fontFamily: theme.fontFamily.body,
+                        color: faceValueExceedsCap ? theme.colors.danger : theme.colors.inkSecondary,
+                        marginTop: theme.spacing[1],
+                      }}>
+                        {faceValueExceedsCap
+                          ? `Voucher value can't exceed ₹${String(listingMaxPriceInr)} right now.`
+                          : `Max ₹${String(listingMaxPriceInr)} face value`}
+                      </Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <FieldLabel>Your Price</FieldLabel>
+                      <SubmergedInput
+                        keyboardType="numeric"
+                        onChangeText={(v) => { handlePriceInput(v, setSellingPrice); }}
+                        placeholder="150"
+                        prefix="₹"
+                        rightIcon={discount > 0 ? (
+                          <View style={{
+                            paddingHorizontal: 6,
+                            paddingVertical: 3,
+                            borderRadius: 6,
+                            backgroundColor: theme.colors.actionSoft,
+                          }}>
+                            <Text style={{
+                              fontSize: 11,
+                              fontWeight: '700',
+                              fontFamily: theme.fontFamily.labelSemi,
+                              color: theme.colors.action,
+                            }}>
+                              {String(discount)}%
+                            </Text>
+                          </View>
+                        ) : undefined}
+                        value={sellingPrice}
+                      />
+                      {sellingPriceInvalid ? (
+                        <Text style={{
+                          fontSize: 11,
+                          fontFamily: theme.fontFamily.body,
+                          color: theme.colors.danger,
+                          marginTop: theme.spacing[1],
+                        }}>
+                          Selling price must be less than face value.
+                        </Text>
+                      ) : null}
+                    </View>
+                  </View>
+
+                  {/* Expiry */}
+                  <View>
+                    <FieldLabel>Expiry Date</FieldLabel>
+                    <DateField
+                      label="Expiry date"
+                      minimumDate={new Date(Date.now() + 48 * 60 * 60 * 1000)}
+                      onChange={setExpiryDate}
+                      value={expiryDate}
+                    />
+                  </View>
+
+                  {/* Min spend */}
+                  <View>
+                    <FieldLabel>Minimum Spend (optional)</FieldLabel>
+                    <SubmergedInput
+                      keyboardType="numeric"
+                      onChangeText={(v) => {
+                        const digits = v.replace(/\D/g, '');
+                        setMinimumOrderValue(digits);
+                      }}
+                      placeholder="e.g. 500"
+                      prefix="₹"
+                      value={minimumOrderValue}
+                    />
+                    <Text style={{ fontSize: 12, fontFamily: theme.fontFamily.label, color: theme.colors.inkMuted, marginTop: 6 }}>
+                      Minimum cart value required to apply this code.
+                    </Text>
+                  </View>
+
+                  {/* Terms / seller notes */}
+                  <View>
+                    <FieldLabel>Terms &amp; Notes (optional)</FieldLabel>
+                    <SubmergedInput
+                      autoCapitalize="sentences"
+                      onChangeText={setSellerNotes}
+                      placeholder="Any usage restrictions or tips for the buyer…"
+                      value={sellerNotes}
+                    />
+                  </View>
+                </>
+              )}
+
+              {/* ── Lock notice ── */}
+              <Text style={{ fontSize: 13, fontFamily: theme.fontFamily.body, color: theme.colors.inkMuted }}>
+                {locked
+                  ? `This listing is ${formatStatus(listingResource.data.status)} and can no longer be changed.`
+                  : 'Once an order exists, the listing becomes immutable.'}
+              </Text>
+
+              {/* ── Feedback ── */}
               {feedback ? (
-                <Text
-                  className="text-center text-caption font-semibold"
-                  style={{ color: feedback.ok ? theme.colors.success : theme.colors.danger }}>
+                <Text style={{
+                  textAlign: 'center',
+                  fontSize: 14,
+                  fontFamily: theme.fontFamily.labelSemi,
+                  fontWeight: '600',
+                  color: feedback.ok ? theme.colors.success : theme.colors.danger,
+                }}>
                   {feedback.text}
                 </Text>
               ) : null}
+
+              {/* ── Actions ── */}
+              <View style={{ gap: theme.spacing[3] }}>
+                <PrimaryButton
+                  disabled={!canSubmit}
+                  label="Save changes"
+                  loading={submitting}
+                  onPress={() => {
+                    void handleSubmit();
+                  }}
+                  tone="brand"
+                />
+                <PrimaryButton
+                  label="Back to listings"
+                  onPress={() => {
+                    router.replace('/listings');
+                  }}
+                  tone="secondary"
+                />
+              </View>
+
             </View>
           </ScrollView>
         </KeyboardAvoidingView>

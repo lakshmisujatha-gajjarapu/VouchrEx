@@ -196,6 +196,9 @@ export default async function OrderDetailPage({ params }: PageProps) {
           <Row label="Verification status"   value={<Badge status={listing.verificationStatus} />} />
           <Row label="Expiry"                value={formatDateTime(listing.expiryDate)} />
           <Row label="Proof URL"             value={listing.proofUrl ? <a href={listing.proofUrl} target="_blank" rel="noreferrer" className="underline" style={{ color: 'var(--color-primary)' }}>view</a> : '—'} />
+          <Row label="Redemption mode"       value={listing.redemptionMode ?? '—'} />
+          <Row label="Min. spend"            value={listing.minimumOrderValue ? formatCurrency(listing.minimumOrderValue) : '—'} />
+          <Row label="Seller notes"          value={listing.sellerNotes ?? '—'} />
           <Row label="Buyer ID"              value={listing.buyerId ?? '—'} mono />
           <Row label="Sold at"               value={listing.soldAt ? formatDateTime(listing.soldAt) : '—'} />
           <Row label="Created"               value={formatDateTime(listing.createdAt)} />
@@ -211,6 +214,7 @@ export default async function OrderDetailPage({ params }: PageProps) {
               <Row label="First viewed"  value={listing.codeVault.firstViewedAt ? formatDateTime(listing.codeVault.firstViewedAt) : '—'} />
               <Row label="Last viewed"   value={listing.codeVault.lastViewedAt ? formatDateTime(listing.codeVault.lastViewedAt) : '—'} />
               <Row label="Vault created" value={formatDateTime(listing.codeVault.createdAt)} />
+              <Row label="PIN stored"    value={listing.codeVault.encryptedPin ? 'Yes' : 'No'} />
             </div>
           </div>
         )}

@@ -35,6 +35,12 @@ enum VerificationStatus {
   MANUAL_REVIEW
 }
 
+enum RedemptionMode {
+  ONLINE
+  IN_STORE
+  BOTH
+}
+
 enum OrderStatus {
   INITIATED
   PAYMENT_PENDING
@@ -173,6 +179,9 @@ model VoucherListing {
   verificationStatus VerificationStatus @default(PENDING)
   expiryDate         DateTime
   proofUrl           String?
+  minimumOrderValue  Int?
+  redemptionMode     RedemptionMode?
+  sellerNotes        String?
   buyerId            String?
   soldAt             DateTime?
   createdAt          DateTime           @default(now())
@@ -196,8 +205,11 @@ model CodeVault {
   codeHash      String         @unique
   viewCount     Int            @default(0)
   firstViewedAt DateTime?
-  lastViewedAt  DateTime?
-  createdAt     DateTime       @default(now())
+  lastViewedAt     DateTime?
+  encryptedPin     String?
+  encryptionPinIv  String?
+  encryptionPinTag String?
+  createdAt        DateTime       @default(now())
   listing       VoucherListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
 }
 

@@ -1,6 +1,8 @@
 import { cookies } from 'next/headers';
 import { API_CONFIG, ADMIN_HEADER, AUTH_CONFIG } from './constants';
 import type {
+  AdminListing,
+  AdminListingDetail,
   AdminMe,
   AdminMetrics,
   AdminTeamMember,
@@ -61,6 +63,10 @@ export async function getMetrics(): Promise<AdminMetrics> {
   return apiFetch<AdminMetrics>('/admin/metrics');
 }
 
+export async function getDispute(id: string): Promise<Dispute> {
+  return apiFetch<Dispute>(`/admin/disputes/${id}`);
+}
+
 export async function getDisputes(query: ListQuery = {}): Promise<PaginatedResult<Dispute>> {
   return apiFetch<PaginatedResult<Dispute>>(`/admin/disputes${buildListQuery(query)}`);
 }
@@ -105,6 +111,24 @@ export async function getMe(): Promise<AdminMe> {
 
 export async function getTeam(query: ListQuery = {}): Promise<PaginatedResult<AdminTeamMember>> {
   return apiFetch<PaginatedResult<AdminTeamMember>>(`/admin/team${buildListQuery(query)}`);
+}
+
+export async function getListing(id: string): Promise<AdminListingDetail> {
+  return apiFetch<AdminListingDetail>(`/admin/listings/${id}`);
+}
+
+export async function getListings(query: ListQuery & { verificationStatus?: string } = {}): Promise<PaginatedResult<AdminListing>> {
+  const params = new URLSearchParams();
+  if (query.status) params.set('status', query.status);
+  if (query.verificationStatus) params.set('verificationStatus', query.verificationStatus);
+  if (query.q && query.q.trim() && query.qBy) {
+    params.set('q', query.q.trim());
+    params.set('qBy', query.qBy);
+  }
+  if (query.page && query.page > 1) params.set('page', String(query.page));
+  if (query.pageSize) params.set('pageSize', String(query.pageSize));
+  const qs = params.toString();
+  return apiFetch<PaginatedResult<AdminListing>>(`/admin/listings${qs ? `?${qs}` : ''}`);
 }
 
 export async function getAppConfig(): Promise<AppConfigRow[]> {

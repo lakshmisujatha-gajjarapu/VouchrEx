@@ -3,7 +3,7 @@ import { Text } from 'react-native';
 
 import { useTheme } from '@/theme/theme-context';
 
-export function FieldLabel({ children }: { readonly children: string }) {
+export function FieldLabel({ children }: { readonly children: React.ReactNode }) {
   const theme = useTheme();
   return (
     <Text style={{

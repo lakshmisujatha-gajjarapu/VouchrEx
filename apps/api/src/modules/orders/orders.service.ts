@@ -612,12 +612,22 @@ export class OrdersService {
       status: OrderStatus.CODE_REVEALED
     });
 
+    const pin =
+      codeVault.encryptedPin && codeVault.encryptionPinIv && codeVault.encryptionPinTag
+        ? this.codeVaultService.decrypt({
+            encryptedCode: codeVault.encryptedPin,
+            encryptionIv: codeVault.encryptionPinIv,
+            encryptionTag: codeVault.encryptionPinTag
+          })
+        : null;
+
     return {
       watermarkedCodeImageUrl,
       voucherCode: code,
       verificationDeadline,
       revealCount: codeVault.viewCount + 1,
-      verificationWindowHours
+      verificationWindowHours,
+      ...(pin ? { pin } : {})
     };
   }
 

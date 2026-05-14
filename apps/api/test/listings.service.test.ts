@@ -265,3 +265,97 @@ test('ListingsService.remove rejects when listing has an active order', async ()
     /active order/i
   );
 });
+
+test('ListingsService.create forces redemptionMode=ONLINE for promo-code', async () => {
+  let capturedData: any = null;
+
+  const prisma: any = {
+    voucherListing: {
+      count: async () => 0,
+      create: async ({ data }: any) => {
+        capturedData = data;
+        return {
+          id: 'listing_2', sellerId: data.sellerId, brandId: data.brandId,
+          status: 'ACTIVE', sellingPrice: data.sellingPrice, faceValue: data.faceValue,
+          discountPercent: data.discountPercent, expiryDate: data.expiryDate,
+          brand: { id: data.brandId, name: 'Swiggy' }, seller: { id: data.sellerId, name: 'Raj' }
+        };
+      }
+    },
+    user: { findUnique: async () => ({ trustScore: 100 }) },
+    codeVault: { findUnique: async () => null }
+  };
+
+  const codeVault: any = {
+    hash: () => 'hash',
+    encrypt: () => ({ encryptedCode: 'c', encryptionIv: 'i', encryptionTag: 't', codeHash: 'h' })
+  };
+  const notifications: any = { createNotification: async () => ({}) };
+  const brands: any = { resolveForListing: async () => ({ id: 'brand_2', name: 'Swiggy' }) };
+  const payouts: any = { findByUserId: async () => ({ id: 'payout_1' }) };
+  const eventEmitter: any = { emit: () => true };
+
+  const service = new ListingsService(prisma, codeVault, notifications, brands, payouts, eventEmitter, { getNumber: async (_k: string, f: number) => f } as any);
+
+  await service.create(
+    {
+      brandName: 'Swiggy', voucherType: 'promo-code', faceValue: 200, sellingPrice: 150,
+      code: 'SWIGGY20', redemptionMode: 'IN_STORE',
+      expiryDate: new Date(Date.now() + 30 * 86_400_000).toISOString()
+    } as any,
+    { id: 'seller_2', name: 'Raj' } as any
+  );
+
+  assert.equal(capturedData.redemptionMode, 'ONLINE', 'promo-code should always get ONLINE redemptionMode');
+});
+
+test('ListingsService.create encrypts PIN and stores alongside code', async () => {
+  let capturedCreate: any = null;
+  let encryptCallCount = 0;
+
+  const prisma: any = {
+    voucherListing: {
+      count: async () => 0,
+      create: async ({ data }: any) => {
+        capturedCreate = data;
+        return {
+          id: 'listing_3', sellerId: data.sellerId, brandId: data.brandId,
+          status: 'ACTIVE', sellingPrice: data.sellingPrice, faceValue: data.faceValue,
+          discountPercent: data.discountPercent, expiryDate: data.expiryDate,
+          brand: { id: data.brandId, name: 'Amazon' }, seller: { id: data.sellerId, name: 'Meera' }
+        };
+      }
+    },
+    user: { findUnique: async () => ({ trustScore: 100 }) },
+    codeVault: { findUnique: async () => null }
+  };
+
+  const codeVault: any = {
+    hash: () => 'hash',
+    encrypt: (value: string) => {
+      encryptCallCount++;
+      return { encryptedCode: `enc_${value}`, encryptionIv: `iv_${value}`, encryptionTag: `tag_${value}`, codeHash: `hash_${value}` };
+    }
+  };
+  const notifications: any = { createNotification: async () => ({}) };
+  const brands: any = { resolveForListing: async () => ({ id: 'brand_1', name: 'Amazon' }) };
+  const payouts: any = { findByUserId: async () => ({ id: 'payout_1' }) };
+  const eventEmitter: any = { emit: () => true };
+
+  const service = new ListingsService(prisma, codeVault, notifications, brands, payouts, eventEmitter, { getNumber: async (_k: string, f: number) => f } as any);
+
+  await service.create(
+    {
+      brandName: 'Amazon', voucherType: 'gift-card', faceValue: 500, sellingPrice: 450,
+      code: 'AMZ123', pin: '9876', redemptionMode: 'ONLINE',
+      expiryDate: new Date(Date.now() + 30 * 86_400_000).toISOString()
+    } as any,
+    { id: 'seller_3', name: 'Meera' } as any
+  );
+
+  assert.equal(encryptCallCount, 2, 'encrypt should be called once for code and once for PIN');
+  const vaultCreate = capturedCreate?.codeVault?.create;
+  assert.ok(vaultCreate?.encryptedPin, 'encryptedPin should be stored in codeVault');
+  assert.ok(vaultCreate?.encryptionPinIv, 'encryptionPinIv should be stored');
+  assert.ok(vaultCreate?.encryptionPinTag, 'encryptionPinTag should be stored');
+});

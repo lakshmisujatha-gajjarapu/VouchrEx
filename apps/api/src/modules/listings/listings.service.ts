@@ -10,7 +10,8 @@ import {
   ListingStatus,
   NotificationChannel,
   OrderStatus,
-  Prisma
+  Prisma,
+  RedemptionMode,
 } from '@prisma/client';
 
 import { DEFAULT_CURRENCY } from '../../common/marketplace.constants';
@@ -235,6 +236,16 @@ export class ListingsService {
     }
 
     const encrypted = this.codeVaultService.encrypt(createListingDto.code);
+
+    const effectiveRedemptionMode =
+      createListingDto.voucherType === 'promo-code'
+        ? 'ONLINE'
+        : (createListingDto.redemptionMode ?? null);
+
+    const encryptedPin = createListingDto.pin
+      ? this.codeVaultService.encrypt(createListingDto.pin)
+      : null;
+
     const discountPercent =
       ((createListingDto.faceValue - createListingDto.sellingPrice) / createListingDto.faceValue) *
       100;
@@ -250,10 +261,22 @@ export class ListingsService {
           discountPercent,
           expiryDate,
           status: ListingStatus.ACTIVE,
+          ...(effectiveRedemptionMode ? { redemptionMode: effectiveRedemptionMode as RedemptionMode } : {}),
+          ...(createListingDto.minimumOrderValue ? { minimumOrderValue: createListingDto.minimumOrderValue } : {}),
+          ...(createListingDto.sellerNotes ? { sellerNotes: createListingDto.sellerNotes } : {}),
+          ...(createListingDto.proofUrl ? { proofUrl: createListingDto.proofUrl } : {}),
           codeVault: {
-            create: encrypted
-          },
-          ...(createListingDto.proofUrl ? { proofUrl: createListingDto.proofUrl } : {})
+            create: {
+              ...encrypted,
+              ...(encryptedPin
+                ? {
+                    encryptedPin: encryptedPin.encryptedCode,
+                    encryptionPinIv: encryptedPin.encryptionIv,
+                    encryptionPinTag: encryptedPin.encryptionTag
+                  }
+                : {})
+            }
+          }
         },
         include: {
           brand: true,
@@ -363,11 +386,32 @@ export class ListingsService {
           ...(updateListingDto.sellingPrice ? { sellingPrice: updateListingDto.sellingPrice } : {}),
           ...(updateListingDto.expiryDate ? { expiryDate: nextExpiryDate } : {}),
           ...(updateListingDto.proofUrl ? { proofUrl: updateListingDto.proofUrl } : {}),
+          ...(updateListingDto.minimumOrderValue !== undefined
+            ? { minimumOrderValue: updateListingDto.minimumOrderValue }
+            : {}),
+          ...(updateListingDto.redemptionMode
+            ? { redemptionMode: updateListingDto.redemptionMode as RedemptionMode }
+            : {}),
+          ...(updateListingDto.sellerNotes !== undefined
+            ? { sellerNotes: updateListingDto.sellerNotes }
+            : {}),
           discountPercent,
           ...(encrypted
             ? {
                 codeVault: {
-                  update: encrypted
+                  update: {
+                    ...encrypted,
+                    ...(updateListingDto.pin
+                      ? (() => {
+                          const ep = this.codeVaultService.encrypt(updateListingDto.pin);
+                          return {
+                            encryptedPin: ep.encryptedCode,
+                            encryptionPinIv: ep.encryptionIv,
+                            encryptionPinTag: ep.encryptionTag
+                          };
+                        })()
+                      : {})
+                  }
                 }
               }
             : {})

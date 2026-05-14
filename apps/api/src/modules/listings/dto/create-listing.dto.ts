@@ -1,10 +1,6 @@
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
-// Static safety cap to reject obviously absurd input at the schema layer.
-// The authoritative business cap is `listing_max_price_inr` in AppConfig and
-// enforced in ListingsService — clients should call GET /config to discover it
-// rather than relying on this Swagger-exposed number, which is intentionally loose.
 const LISTING_FACE_VALUE_SAFETY_CAP = 10_000_000;
 
 const CreateListingSchema = z.object({
@@ -26,7 +22,11 @@ const CreateListingSchema = z.object({
     .datetime({ offset: true })
     .describe('Voucher expiry in ISO 8601 format'),
   code: z.string().describe('Voucher code. Encrypted before storage'),
-  proofUrl: z.string().optional().describe('Optional proof asset URL')
+  pin: z.string().optional().describe('Optional secondary PIN (e.g. scratch PIN on gift cards). Encrypted before storage'),
+  proofUrl: z.string().optional().describe('Optional proof asset URL'),
+  minimumOrderValue: z.coerce.number().int().min(1).optional().describe('Minimum cart value required to redeem this voucher in INR'),
+  redemptionMode: z.enum(['ONLINE', 'IN_STORE', 'BOTH']).optional().describe('Where this voucher can be redeemed. Auto-set to ONLINE for promo-codes'),
+  sellerNotes: z.string().max(500).optional().describe('Seller-written terms and conditions, max 500 characters')
 });
 
 export class CreateListingDto extends createZodDto(CreateListingSchema) {}

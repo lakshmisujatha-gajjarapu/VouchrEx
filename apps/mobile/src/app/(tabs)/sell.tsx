@@ -9,6 +9,7 @@ import {
   Pressable,
   ScrollView,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -92,6 +93,11 @@ export default function SellScreen() {
   const [submitting, setSubmitting]     = useState(false);
   const [feedback, setFeedback]         = useState<string | null>(null);
   const [codeCopied, setCodeCopied]     = useState(false);
+  const [pin, setPin]                             = useState('');
+  const [pinCopied, setPinCopied]                 = useState(false);
+  const [redemptionMode, setRedemptionMode]       = useState<'ONLINE' | 'IN_STORE' | 'BOTH' | null>(null);
+  const [minimumOrderValue, setMinimumOrderValue] = useState('');
+  const [sellerNotes, setSellerNotes]             = useState('');
 
   // Reset form each time this screen comes into focus so stale values from a
   // previous session don't persist (tab screens stay mounted in memory).
@@ -104,6 +110,11 @@ export default function SellScreen() {
       setExpiryDate(defaultExpiryDateString());
       setCode('');
       setFeedback(null);
+      setPin('');
+      setPinCopied(false);
+      setRedemptionMode(null);
+      setMinimumOrderValue('');
+      setSellerNotes('');
     }, [])
   );
 
@@ -152,7 +163,8 @@ export default function SellScreen() {
     parsedFaceValue > 0 &&
     parsedSellingPrice > 0 &&
     parsedSellingPrice < parsedFaceValue &&
-    !faceValueExceedsCap;
+    !faceValueExceedsCap &&
+    (voucherType === 'gift-card' ? redemptionMode !== null : true);
 
   async function handleCreateListing() {
     if (!sessionToken) return;
@@ -165,6 +177,10 @@ export default function SellScreen() {
         sellingPrice: Number(sellingPrice),
         expiryDate: new Date(`${expiryDate}T23:59:59.000Z`).toISOString(),
         code,
+        ...(pin.trim() ? { pin: pin.trim() } : {}),
+        ...(redemptionMode ? { redemptionMode } : {}),
+        ...(minimumOrderValue ? { minimumOrderValue: Number(minimumOrderValue) } : {}),
+        ...(sellerNotes.trim() ? { sellerNotes: sellerNotes.trim() } : {}),
       });
       router.replace('/(tabs)/listings');
     } catch (e) {
@@ -402,124 +418,274 @@ export default function SellScreen() {
                 </View>
               </View>
 
-              {/* ── Voucher Code ── */}
-              <View>
-                <FieldLabel>Voucher Code</FieldLabel>
-                <SubmergedInput
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  fontMono
-                  onChangeText={setCode}
-                  placeholder="ABCD-1234-EFGH-5678"
-                  rightIcon={
-                    code.trim() ? (
-                      <Pressable
-                        onPress={() => {
-                          void Clipboard.setStringAsync(code.trim()).then(() => {
-                            setCodeCopied(true);
-                            setTimeout(() => { setCodeCopied(false); }, 2000);
-                          });
-                        }}
-                        style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
-                        <Ionicons
-                          name={codeCopied ? 'checkmark-circle' : 'copy-outline'}
-                          size={20}
-                          color={codeCopied ? theme.colors.action : theme.colors.brand}
-                        />
-                      </Pressable>
-                    ) : (
-                      <Ionicons name="lock-closed-outline" size={20} color={theme.colors.inkMuted} />
-                    )
-                  }
-                  value={code}
-                />
-                <Text style={{ fontSize: 12, fontFamily: theme.fontFamily.label, color: theme.colors.inkMuted, marginTop: 6, fontStyle: 'italic' }}>
-                  Only visible to the buyer after purchase.
-                </Text>
-              </View>
+              {voucherType === 'gift-card' ? (
+                <>
+                  {/* Gift Card: Code */}
+                  <View>
+                    <FieldLabel>Card Number</FieldLabel>
+                    <SubmergedInput
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      fontMono
+                      onChangeText={setCode}
+                      placeholder="ABCD-1234-EFGH-5678"
+                      rightIcon={
+                        code.trim() ? (
+                          <Pressable
+                            onPress={() => {
+                              void Clipboard.setStringAsync(code.trim()).then(() => {
+                                setCodeCopied(true);
+                                setTimeout(() => { setCodeCopied(false); }, 2000);
+                              });
+                            }}
+                            style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
+                            <Ionicons name={codeCopied ? 'checkmark-circle' : 'copy-outline'} size={20} color={codeCopied ? theme.colors.action : theme.colors.brand} />
+                          </Pressable>
+                        ) : (
+                          <Ionicons name="lock-closed-outline" size={20} color={theme.colors.inkMuted} />
+                        )
+                      }
+                      value={code}
+                    />
+                    <Text style={{ fontSize: 12, fontFamily: theme.fontFamily.label, color: theme.colors.inkMuted, marginTop: 6, fontStyle: 'italic' }}>
+                      Only visible to the buyer after purchase.
+                    </Text>
+                  </View>
 
-              {/* ── Face Value + Price (2 col) ── */}
-              <View style={{ flexDirection: 'row', gap: theme.spacing[3] }}>
-                <View style={{ flex: 1 }}>
-                  <View style={{ minHeight: 18, justifyContent: 'center', marginBottom: theme.spacing[2] }}>
-                    <Text style={{
-                      fontSize: 13, fontWeight: '600',
-                      fontFamily: theme.fontFamily.labelSemi,
-                      color: theme.colors.inkSecondary,
-                      textTransform: 'uppercase', letterSpacing: 0.8,
-                    }}>
-                      Face Value
+                  {/* Gift Card: PIN */}
+                  <View>
+                    <FieldLabel>PIN <Text style={{ fontFamily: theme.fontFamily.label, color: theme.colors.inkMuted, fontWeight: '400' }}>(optional)</Text></FieldLabel>
+                    <SubmergedInput
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      fontMono
+                      onChangeText={setPin}
+                      placeholder="e.g. 1234"
+                      keyboardType="numeric"
+                      rightIcon={
+                        pin.trim() ? (
+                          <Pressable
+                            onPress={() => {
+                              void Clipboard.setStringAsync(pin.trim()).then(() => {
+                                setPinCopied(true);
+                                setTimeout(() => { setPinCopied(false); }, 2000);
+                              });
+                            }}
+                            style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
+                            <Ionicons name={pinCopied ? 'checkmark-circle' : 'copy-outline'} size={20} color={pinCopied ? theme.colors.action : theme.colors.brand} />
+                          </Pressable>
+                        ) : (
+                          <Ionicons name="keypad-outline" size={20} color={theme.colors.inkMuted} />
+                        )
+                      }
+                      value={pin}
+                    />
+                    <Text style={{ fontSize: 12, fontFamily: theme.fontFamily.label, color: theme.colors.inkMuted, marginTop: 6, fontStyle: 'italic' }}>
+                      Some cards have a separate scratch PIN — enter it here.
                     </Text>
                   </View>
-                  <SubmergedInput
-                    value={faceValue}
-                    onChangeText={(v) => { handlePriceInput(v, setFaceValue); }}
-                    placeholder="1000"
-                    keyboardType="numeric"
-                    prefix="₹"
-                  />
-                  <Text style={{
-                    fontSize: 11,
-                    fontFamily: theme.fontFamily.body,
-                    color: faceValueExceedsCap ? theme.colors.danger : theme.colors.inkSecondary,
-                    marginTop: theme.spacing[1],
-                  }}>
-                    {faceValueExceedsCap
-                      ? `Voucher value can't exceed ₹${String(listingMaxPriceInr)} right now.`
-                      : `Max ₹${String(listingMaxPriceInr)} face value`}
-                  </Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <View style={{ minHeight: 18, justifyContent: 'center', marginBottom: theme.spacing[2] }}>
-                    <Text style={{
-                      fontSize: 13, fontWeight: '600',
-                      fontFamily: theme.fontFamily.labelSemi,
-                      color: theme.colors.inkSecondary,
-                      textTransform: 'uppercase', letterSpacing: 0.8,
-                    }}>
-                      Your Price
-                    </Text>
+
+                  {/* Gift Card: Face Value + Price */}
+                  <View style={{ flexDirection: 'row', gap: theme.spacing[3] }}>
+                    <View style={{ flex: 1 }}>
+                      <View style={{ minHeight: 18, justifyContent: 'center', marginBottom: theme.spacing[2] }}>
+                        <Text style={{ fontSize: 13, fontWeight: '600', fontFamily: theme.fontFamily.labelSemi, color: theme.colors.inkSecondary, textTransform: 'uppercase', letterSpacing: 0.8 }}>Face Value</Text>
+                      </View>
+                      <SubmergedInput value={faceValue} onChangeText={(v) => { handlePriceInput(v, setFaceValue); }} placeholder="1000" keyboardType="numeric" prefix="₹" />
+                      <Text style={{ fontSize: 11, fontFamily: theme.fontFamily.body, color: faceValueExceedsCap ? theme.colors.danger : theme.colors.inkSecondary, marginTop: theme.spacing[1] }}>
+                        {faceValueExceedsCap ? `Voucher value can't exceed ₹${String(listingMaxPriceInr)} right now.` : `Max ₹${String(listingMaxPriceInr)} face value`}
+                      </Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <View style={{ minHeight: 18, justifyContent: 'center', marginBottom: theme.spacing[2] }}>
+                        <Text style={{ fontSize: 13, fontWeight: '600', fontFamily: theme.fontFamily.labelSemi, color: theme.colors.inkSecondary, textTransform: 'uppercase', letterSpacing: 0.8 }}>Your Price</Text>
+                      </View>
+                      <SubmergedInput
+                        value={sellingPrice} onChangeText={(v) => { handlePriceInput(v, setSellingPrice); }} placeholder="850" keyboardType="numeric" prefix="₹"
+                        rightIcon={discount > 0 ? (
+                          <View style={{ paddingHorizontal: 6, paddingVertical: 3, borderRadius: 6, backgroundColor: theme.colors.actionSoft }}>
+                            <Text style={{ fontSize: 11, fontWeight: '700', fontFamily: theme.fontFamily.labelSemi, color: theme.colors.action }}>{String(discount)}%</Text>
+                          </View>
+                        ) : undefined}
+                      />
+                      {sellingPriceInvalid ? <Text style={{ fontSize: 11, fontFamily: theme.fontFamily.body, color: theme.colors.danger, marginTop: theme.spacing[1] }}>Selling price must be less than face value.</Text> : null}
+                    </View>
                   </View>
-                  <SubmergedInput
-                    value={sellingPrice}
-                    onChangeText={(v) => { handlePriceInput(v, setSellingPrice); }}
-                    placeholder="850"
-                    keyboardType="numeric"
-                    prefix="₹"
-                    rightIcon={discount > 0 ? (
-                      <View style={{
-                        paddingHorizontal: 6, paddingVertical: 3,
-                        borderRadius: 6,
-                        backgroundColor: theme.colors.actionSoft,
-                      }}>
-                        <Text style={{
-                          fontSize: 11, fontWeight: '700',
-                          fontFamily: theme.fontFamily.labelSemi,
-                          color: theme.colors.action,
-                        }}>
-                          {String(discount)}%
+
+                  {/* Gift Card: Expiry */}
+                  <View>
+                    <FieldLabel>Expiry Date</FieldLabel>
+                    <DateField label="Expiry date" minimumDate={new Date(Date.now() + 48 * 60 * 60 * 1000)} onChange={setExpiryDate} value={expiryDate} />
+                  </View>
+
+                  {/* Gift Card: Redeem via */}
+                  <View>
+                    <FieldLabel>Redeem via</FieldLabel>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                      {(['ONLINE', 'IN_STORE', 'BOTH'] as const).map((mode) => (
+                        <FilterChip
+                          key={mode}
+                          label={mode === 'ONLINE' ? 'Online' : mode === 'IN_STORE' ? 'In-store' : 'Both'}
+                          onPress={() => { setRedemptionMode(mode); }}
+                          selected={redemptionMode === mode}
+                        />
+                      ))}
+                    </View>
+                    {redemptionMode === null && (
+                      <Text style={{ fontSize: 12, fontFamily: theme.fontFamily.label, color: theme.colors.inkMuted, marginTop: 6 }}>
+                        Required — select where this card can be used.
+                      </Text>
+                    )}
+                    {redemptionMode === 'IN_STORE' && (
+                      <View style={{ marginTop: 10, flexDirection: 'row', gap: 10, backgroundColor: theme.colors.surfaceRaised, borderRadius: theme.radius.sm, padding: 12, alignItems: 'flex-start' }}>
+                        <Ionicons name="warning-outline" size={16} color={theme.colors.inkSecondary} style={{ marginTop: 1 }} />
+                        <Text style={{ flex: 1, fontSize: 13, fontFamily: theme.fontFamily.body, color: theme.colors.inkSecondary, lineHeight: 19 }}>
+                          In-store vouchers are harder for buyers to verify. Make sure your buyer knows exactly how to redeem it.
                         </Text>
                       </View>
-                    ) : undefined}
-                  />
-                  {sellingPriceInvalid ? (
-                    <Text style={{
-                      fontSize: 11,
-                      fontFamily: theme.fontFamily.body,
-                      color: theme.colors.danger,
-                      marginTop: theme.spacing[1],
-                    }}>
-                      Selling price must be less than face value.
-                    </Text>
-                  ) : null}
-                </View>
-              </View>
+                    )}
+                  </View>
 
-              {/* ── Expiry Date ── */}
-              <View>
-                <FieldLabel>Expiry Date</FieldLabel>
-                <DateField label="Expiry date" minimumDate={new Date(Date.now() + 48 * 60 * 60 * 1000)} onChange={setExpiryDate} value={expiryDate} />
-              </View>
+                  {/* Gift Card: Min Spend */}
+                  <View>
+                    <FieldLabel>Min. spend <Text style={{ fontFamily: theme.fontFamily.label, color: theme.colors.inkMuted, fontWeight: '400' }}>(optional)</Text></FieldLabel>
+                    <SubmergedInput value={minimumOrderValue} onChangeText={(v) => { handlePriceInput(v, setMinimumOrderValue); }} placeholder="499" keyboardType="numeric" prefix="₹" />
+                    <Text style={{ fontSize: 12, fontFamily: theme.fontFamily.label, color: theme.colors.inkMuted, marginTop: 6, fontStyle: 'italic' }}>
+                      Leave blank if there's no minimum cart requirement.
+                    </Text>
+                  </View>
+
+                  {/* Gift Card: Terms */}
+                  <View>
+                    <FieldLabel>Terms & notes <Text style={{ fontFamily: theme.fontFamily.label, color: theme.colors.inkMuted, fontWeight: '400' }}>(optional)</Text></FieldLabel>
+                    <TextInput
+                      multiline
+                      numberOfLines={3}
+                      onChangeText={(v) => { setSellerNotes(v.slice(0, 500)); }}
+                      placeholder={'e.g. First order only · Cannot combine with sale prices · Valid on electronics category'}
+                      placeholderTextColor={theme.colors.inkMuted}
+                      value={sellerNotes}
+                      style={{
+                        borderRadius: 14,
+                        backgroundColor: theme.colors.surfaceHigh,
+                        paddingHorizontal: 16,
+                        paddingVertical: 14,
+                        fontSize: 15,
+                        fontFamily: theme.fontFamily.body,
+                        color: theme.colors.ink,
+                        minHeight: 88,
+                        textAlignVertical: 'top',
+                      }}
+                    />
+                    <Text style={{ fontSize: 12, fontFamily: theme.fontFamily.label, color: theme.colors.inkMuted, marginTop: 6 }}>
+                      {String(sellerNotes.length)}/500
+                    </Text>
+                  </View>
+                </>
+              ) : (
+                <>
+                  {/* Promo Code: Code */}
+                  <View>
+                    <FieldLabel>Promo Code</FieldLabel>
+                    <SubmergedInput
+                      autoCapitalize="characters"
+                      autoCorrect={false}
+                      fontMono
+                      onChangeText={setCode}
+                      placeholder="SAVE20"
+                      rightIcon={
+                        code.trim() ? (
+                          <Pressable
+                            onPress={() => {
+                              void Clipboard.setStringAsync(code.trim()).then(() => {
+                                setCodeCopied(true);
+                                setTimeout(() => { setCodeCopied(false); }, 2000);
+                              });
+                            }}
+                            style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
+                            <Ionicons name={codeCopied ? 'checkmark-circle' : 'copy-outline'} size={20} color={codeCopied ? theme.colors.action : theme.colors.brand} />
+                          </Pressable>
+                        ) : (
+                          <Ionicons name="lock-closed-outline" size={20} color={theme.colors.inkMuted} />
+                        )
+                      }
+                      value={code}
+                    />
+                    <Text style={{ fontSize: 12, fontFamily: theme.fontFamily.label, color: theme.colors.inkMuted, marginTop: 6, fontStyle: 'italic' }}>
+                      Only visible to the buyer after purchase.
+                    </Text>
+                  </View>
+
+                  {/* Promo Code: Face Value + Price */}
+                  <View style={{ flexDirection: 'row', gap: theme.spacing[3] }}>
+                    <View style={{ flex: 1 }}>
+                      <View style={{ minHeight: 18, justifyContent: 'center', marginBottom: theme.spacing[2] }}>
+                        <Text style={{ fontSize: 13, fontWeight: '600', fontFamily: theme.fontFamily.labelSemi, color: theme.colors.inkSecondary, textTransform: 'uppercase', letterSpacing: 0.8 }}>Discount Value</Text>
+                      </View>
+                      <SubmergedInput value={faceValue} onChangeText={(v) => { handlePriceInput(v, setFaceValue); }} placeholder="200" keyboardType="numeric" prefix="₹" />
+                      <Text style={{ fontSize: 11, fontFamily: theme.fontFamily.body, color: faceValueExceedsCap ? theme.colors.danger : theme.colors.inkSecondary, marginTop: theme.spacing[1] }}>
+                        {faceValueExceedsCap ? `Value can't exceed ₹${String(listingMaxPriceInr)} right now.` : `Max ₹${String(listingMaxPriceInr)}`}
+                      </Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <View style={{ minHeight: 18, justifyContent: 'center', marginBottom: theme.spacing[2] }}>
+                        <Text style={{ fontSize: 13, fontWeight: '600', fontFamily: theme.fontFamily.labelSemi, color: theme.colors.inkSecondary, textTransform: 'uppercase', letterSpacing: 0.8 }}>Your Price</Text>
+                      </View>
+                      <SubmergedInput
+                        value={sellingPrice} onChangeText={(v) => { handlePriceInput(v, setSellingPrice); }} placeholder="150" keyboardType="numeric" prefix="₹"
+                        rightIcon={discount > 0 ? (
+                          <View style={{ paddingHorizontal: 6, paddingVertical: 3, borderRadius: 6, backgroundColor: theme.colors.actionSoft }}>
+                            <Text style={{ fontSize: 11, fontWeight: '700', fontFamily: theme.fontFamily.labelSemi, color: theme.colors.action }}>{String(discount)}%</Text>
+                          </View>
+                        ) : undefined}
+                      />
+                      {sellingPriceInvalid ? <Text style={{ fontSize: 11, fontFamily: theme.fontFamily.body, color: theme.colors.danger, marginTop: theme.spacing[1] }}>Selling price must be less than face value.</Text> : null}
+                    </View>
+                  </View>
+
+                  {/* Promo Code: Expiry */}
+                  <View>
+                    <FieldLabel>Expiry Date</FieldLabel>
+                    <DateField label="Expiry date" minimumDate={new Date(Date.now() + 48 * 60 * 60 * 1000)} onChange={setExpiryDate} value={expiryDate} />
+                  </View>
+
+                  {/* Promo Code: Min Spend */}
+                  <View>
+                    <FieldLabel>Min. spend <Text style={{ fontFamily: theme.fontFamily.label, color: theme.colors.inkMuted, fontWeight: '400' }}>(optional)</Text></FieldLabel>
+                    <SubmergedInput value={minimumOrderValue} onChangeText={(v) => { handlePriceInput(v, setMinimumOrderValue); }} placeholder="499" keyboardType="numeric" prefix="₹" />
+                    <Text style={{ fontSize: 12, fontFamily: theme.fontFamily.label, color: theme.colors.inkMuted, marginTop: 6, fontStyle: 'italic' }}>
+                      Common on Swiggy, Zomato, Myntra codes — leave blank if none.
+                    </Text>
+                  </View>
+
+                  {/* Promo Code: Terms */}
+                  <View>
+                    <FieldLabel>Terms & notes <Text style={{ fontFamily: theme.fontFamily.label, color: theme.colors.inkMuted, fontWeight: '400' }}>(optional)</Text></FieldLabel>
+                    <TextInput
+                      multiline
+                      numberOfLines={3}
+                      onChangeText={(v) => { setSellerNotes(v.slice(0, 500)); }}
+                      placeholder={'e.g. First order only · Cannot combine with sale prices · Valid on electronics category'}
+                      placeholderTextColor={theme.colors.inkMuted}
+                      value={sellerNotes}
+                      style={{
+                        borderRadius: 14,
+                        backgroundColor: theme.colors.surfaceHigh,
+                        paddingHorizontal: 16,
+                        paddingVertical: 14,
+                        fontSize: 15,
+                        fontFamily: theme.fontFamily.body,
+                        color: theme.colors.ink,
+                        minHeight: 88,
+                        textAlignVertical: 'top',
+                      }}
+                    />
+                    <Text style={{ fontSize: 12, fontFamily: theme.fontFamily.label, color: theme.colors.inkMuted, marginTop: 6 }}>
+                      {String(sellerNotes.length)}/500
+                    </Text>
+                  </View>
+                </>
+              )}
 
               {/* ── Trust Panel ── bg-surface-container-low per spec */}
               <View style={{

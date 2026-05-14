@@ -2,6 +2,7 @@ export const ADMIN_ROUTES = {
   BASE:                     'admin',
   METRICS:                  'metrics',
   DISPUTES:                 'disputes',
+  DISPUTE_DETAIL:           'disputes/:id',
   DISPUTE_EVIDENCE_URL:     'disputes/:id/evidence-url',
   ORDERS:                   'orders',
   ORDER_DETAIL:             'orders/:id',
@@ -24,4 +25,6 @@ export const ADMIN_ROUTES = {
   TEAM_MEMBER_SET_PASSWORD: 'team/:id/set-password',
   CONFIG:                   'config',
   CONFIG_KEY:               'config/:key',
+  LISTINGS:                 'listings',
+  LISTING_DETAIL:           'listings/:id',
 } as const;
