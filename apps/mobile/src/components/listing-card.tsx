@@ -95,7 +95,13 @@ export function ListingCard({ listing, onPress }: Props) {
             </Text>
           </View>
         </View>
-        <View style={{ borderTopWidth: 1, borderTopColor: theme.colors.border, borderStyle: 'dashed', marginBottom: theme.spacing[3] }} />
+        <View style={{ borderTopWidth: 1, borderTopColor: theme.colors.border, borderStyle: 'dashed', marginBottom: theme.spacing[2] }} />
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[1], backgroundColor: theme.colors.successSoft, paddingHorizontal: theme.spacing[2], paddingVertical: theme.spacing[1], borderRadius: theme.radius.pill, alignSelf: 'flex-start', marginBottom: theme.spacing[2] }}>
+          <Ionicons name="lock-closed" size={11} color={theme.colors.success} />
+          <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 10, fontWeight: '700', color: theme.colors.success, textTransform: 'uppercase', letterSpacing: 0.6 }}>
+            100% Escrow Protected
+          </Text>
+        </View>
         <View style={{ gap: theme.spacing[1] }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
             <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 12, color: theme.colors.inkMuted }}>Expiry</Text>

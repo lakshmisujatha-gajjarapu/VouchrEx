@@ -1,4 +1,3 @@
-import { BlurView } from 'expo-blur';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useMemo, useState } from 'react';
@@ -10,7 +9,6 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useColorScheme } from 'nativewind';
 
 import { PrimaryButton } from '@/components/primary-button';
 import { useAuth } from '@/hooks/use-auth';
@@ -25,7 +23,6 @@ export default function ListingDetailScreen() {
   const router = useRouter();
   const theme = useTheme();
   const insets = useSafeAreaInsets();
-  const { colorScheme } = useColorScheme();
   const { id } = useLocalSearchParams<{ readonly id?: string | string[] }>();
   const listingId = useMemo(() => (Array.isArray(id) ? id[0] : id), [id]);
   const { sessionToken, user } = useAuth();
@@ -145,7 +142,7 @@ export default function ListingDetailScreen() {
           </Text>
         </View>
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: insets.bottom + theme.spacing[6] }}>
           <View style={{ paddingHorizontal: 20 }}>
 
             {/* ── Hero ── */}
@@ -306,12 +303,11 @@ export default function ListingDetailScreen() {
               style={({ pressed }) => ({
                 flexDirection: 'row',
                 alignItems: 'center',
-                justifyContent: 'space-between',
                 paddingHorizontal: theme.spacing[2],
                 marginBottom: theme.spacing[8],
                 opacity: pressed ? 0.7 : 1,
               })}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[3] }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[3], flex: 1 }}>
                 <View style={{
                   width: 40, height: 40, borderRadius: 20,
                   backgroundColor: theme.colors.surfaceHigh,
@@ -319,16 +315,15 @@ export default function ListingDetailScreen() {
                 }}>
                   <Ionicons name="person-outline" size={18} color={theme.colors.brand} />
                 </View>
-                <View>
+                <View style={{ flex: 1 }}>
                   <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 13, fontWeight: '700', color: theme.colors.ink }}>
                     {listing.seller.name}
                   </Text>
                   <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 11, color: theme.colors.inkMuted }}>
-                    Verified seller
+                    Verified seller · <Text style={{ color: theme.colors.brand }}>View profile</Text>
                   </Text>
                 </View>
               </View>
-              <Ionicons name="chevron-forward" size={16} color={theme.colors.inkMuted} />
             </Pressable>
 
                   {listing.minimumOrderValue ? (
@@ -359,50 +354,24 @@ export default function ListingDetailScreen() {
                     </View>
                   ) : null}
 
-          </View>
-        </ScrollView>
-
-        {/* ── Glassmorphic sticky footer ── */}
-        <View style={{
-          position: 'absolute',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          paddingHorizontal: theme.spacing[5],
-          paddingTop: theme.spacing[4],
-          paddingBottom: Math.max(insets.bottom, theme.spacing[6]),
-          overflow: 'hidden',
-        }}>
-          {/* Blur background */}
-          <BlurView
-            intensity={60}
-            style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 }}
-            tint={colorScheme === 'dark' ? 'dark' : 'light'}
-          />
-          <View style={{
-            position: 'absolute', top: 0, right: 0, bottom: 0, left: 0,
-            backgroundColor: theme.colors.glassSurface,
-            borderTopWidth: 1,
-            borderTopColor: theme.colors.borderHair,
-          }} />
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[4] }}>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 10, fontWeight: '700', color: theme.colors.inkMuted, textTransform: 'uppercase', letterSpacing: 1 }}>
-                You pay
-              </Text>
-              <Text style={{ fontFamily: theme.fontFamily.mono, fontSize: 24, fontWeight: '700', color: theme.colors.ink }}>
-                {formatCurrency(totalDue)}
-              </Text>
-              <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 11, color: theme.colors.inkMuted, marginTop: 2 }}>
-                {formatCurrency(listing.sellingPrice)} + {formatCurrency(buyerFee)} fee
-              </Text>
-            </View>
-            {error ? (
-              <Text style={{ position: 'absolute', top: -20, left: 0, right: 0, textAlign: 'center', fontSize: 12, color: theme.colors.danger, fontFamily: theme.fontFamily.labelSemi }}>
-                {error}
-              </Text>
-            ) : null}
-            <View style={{ flex: 1 }}>
+            {/* ── Buy CTA ── */}
+            <View style={{ marginTop: theme.spacing[8], gap: theme.spacing[3] }}>
+              <View>
+                <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 10, fontWeight: '700', color: theme.colors.inkMuted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>
+                  You pay
+                </Text>
+                <Text style={{ fontFamily: theme.fontFamily.mono, fontSize: 28, fontWeight: '700', color: theme.colors.ink }}>
+                  {formatCurrency(totalDue)}
+                </Text>
+                <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 12, color: theme.colors.inkMuted, marginTop: 2 }}>
+                  {formatCurrency(listing.sellingPrice)} + {formatCurrency(buyerFee)} fee
+                </Text>
+              </View>
+              {error ? (
+                <Text style={{ fontSize: 12, color: theme.colors.danger, fontFamily: theme.fontFamily.labelSemi }}>
+                  {error}
+                </Text>
+              ) : null}
               <PrimaryButton
                 disabled={isOwnListing}
                 icon={isOwnListing ? undefined : 'ticket-outline'}
@@ -411,9 +380,18 @@ export default function ListingDetailScreen() {
                 onPress={() => { void handleBuyNow(); }}
                 tone="brand"
               />
+              {!isOwnListing ? (
+                <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: theme.spacing[2], backgroundColor: theme.colors.successSoft, padding: theme.spacing[3], borderRadius: theme.radius.md }}>
+                  <Ionicons name="lock-closed" size={14} color={theme.colors.success} style={{ marginTop: 2 }} />
+                  <Text style={{ flex: 1, fontFamily: theme.fontFamily.body, fontSize: 13, color: theme.colors.success, lineHeight: 18 }}>
+                    Your {formatCurrency(totalDue)} is locked safely in Escrow. The seller gets ₹0 until you confirm the voucher works.
+                  </Text>
+                </View>
+              ) : null}
             </View>
+
           </View>
-        </View>
+        </ScrollView>
 
       </SafeAreaView>
     </View>

@@ -435,10 +435,15 @@ export default function OrderDetailScreen() {
                   </Text>
                 </View>
                 {order.verificationDeadline ? (
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 13, color: theme.colors.inkMuted }}>Verify by</Text>
-                    <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 13, fontWeight: '600', color: theme.colors.countdown }}>
-                      {formatCountdown(order.verificationDeadline)}
+                  <View style={{ backgroundColor: `${theme.colors.countdown}18`, borderRadius: theme.radius.sm, padding: theme.spacing[3], gap: theme.spacing[1] }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[2] }}>
+                      <Ionicons name="flash" size={14} color={theme.colors.countdown} />
+                      <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 14, fontWeight: '700', color: theme.colors.countdown }}>
+                        Verify within {formatCountdown(order.verificationDeadline)}
+                      </Text>
+                    </View>
+                    <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 12, color: theme.colors.inkMuted, lineHeight: 16 }}>
+                      Order auto-confirms after this window closes.
                     </Text>
                   </View>
                 ) : null}
@@ -750,16 +755,12 @@ export default function OrderDetailScreen() {
                 onPress={() => { void handleConfirm(); }}
                 tone="brand"
               />
-              <Pressable
+              <PrimaryButton
+                label="Report Issue"
+                loading={busyAction === 'dispute'}
                 onPress={() => { setDisputeOpen(true); }}
-                style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1, alignItems: 'center', paddingVertical: 8 })}>
-                <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 13, color: theme.colors.inkMuted }}>
-                  Something wrong?{' '}
-                  <Text style={{ color: theme.colors.danger, fontFamily: theme.fontFamily.labelSemi, fontWeight: '600' }}>
-                    Raise a dispute
-                  </Text>
-                </Text>
-              </Pressable>
+                tone="danger"
+              />
             </>
           ) : null}
         </View>
