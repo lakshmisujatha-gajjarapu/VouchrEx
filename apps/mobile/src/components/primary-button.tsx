@@ -112,9 +112,12 @@ export function PrimaryButton({
           {loading
             ? <ActivityIndicator color={theme.colors.white} />
             : (
-                <Text style={{ color: theme.colors.white, fontSize: 16, fontWeight: '700', fontFamily: theme.fontFamily.labelSemi, letterSpacing: 0.2 }}>
-                  {label}
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[2] }}>
+                  {icon ? <Ionicons name={icon} size={20} color={theme.colors.white} /> : null}
+                  <Text style={{ color: theme.colors.white, fontSize: 16, fontWeight: '700', fontFamily: theme.fontFamily.labelSemi, letterSpacing: 0.2 }}>
+                    {label}
+                  </Text>
+                </View>
               )}
         </LinearGradient>
       ) : (

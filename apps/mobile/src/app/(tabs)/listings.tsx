@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useDeferredValue, useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   Modal,
   Pressable,
@@ -86,6 +87,7 @@ function ListingDetailSheet({
   const theme = useTheme();
   const urgency = getExpiryUrgency(listing.expiryDate);
   const hasActiveOrder = Boolean(listing.order);
+  const savings = Math.round(listing.discountPercent);
 
   const editable = (
     editableStatuses.has(listing.status) &&
@@ -97,7 +99,6 @@ function ListingDetailSheet({
 
   return (
     <View style={styles.sheetOverlay}>
-      {/* Tap outside to close */}
       <Pressable
         accessibilityLabel="Close"
         style={[StyleSheet.absoluteFill, { backgroundColor: theme.colors.scrim }]}
@@ -117,27 +118,42 @@ function ListingDetailSheet({
             styles.sheetCloseBtn,
             { backgroundColor: theme.colors.surfaceTray, opacity: pressed ? 0.7 : 1 },
           ]}>
-          <Ionicons color={theme.colors.inkMuted} name="close" size={16} />
+          <Ionicons color={theme.colors.inkMuted} name="close-outline" size={18} />
         </Pressable>
 
         <ScrollView
           contentContainerStyle={styles.sheetScroll}
           showsVerticalScrollIndicator={false}>
 
-          {/* Brand header */}
-          <View style={{ gap: 2 }}>
-            <Text style={[styles.sheetCategory, { color: theme.colors.brand }]}>
+          {/* ── Brand header ── */}
+          <View style={{ gap: 4 }}>
+            <Text style={{
+              fontFamily: theme.fontFamily.labelSemi,
+              fontSize: 11,
+              letterSpacing: 0.8,
+              textTransform: 'uppercase',
+              color: theme.colors.brand,
+            }}>
               {listing.brand.category}
             </Text>
-            <Text style={[styles.sheetBrandName, { color: theme.colors.ink }]}>
+            <Text style={{
+              fontFamily: theme.fontFamily.headlineExtra,
+              fontSize: 26,
+              letterSpacing: -0.5,
+              color: theme.colors.ink,
+            }}>
               {listing.brand.name}
             </Text>
-            <Text style={[styles.sheetType, { color: theme.colors.inkMuted }]}>
+            <Text style={{
+              fontFamily: theme.fontFamily.body,
+              fontSize: 14,
+              color: theme.colors.inkMuted,
+            }}>
               {listing.voucherType}
             </Text>
           </View>
 
-          {/* Status pills */}
+          {/* ── Status pills ── */}
           <View style={styles.pillRow}>
             <StatusPill label={getCardEyebrow(listing)} tone={getStatusPillTone(listing)} />
             {urgency === 'warning' ? (
@@ -148,55 +164,183 @@ function ListingDetailSheet({
             ) : null}
           </View>
 
-          {/* Price + expiry grid */}
-          <View
-            style={[
-              styles.sheetGrid,
-              { borderColor: theme.colors.border },
-            ]}>
-            <KeylineRow label="Selling price" value={formatCurrency(listing.sellingPrice)} />
-            <KeylineRow label="Face value" value={formatCurrency(listing.faceValue)} />
-            <KeylineRow
-              label="Discount"
-              value={`${String(Math.round(listing.discountPercent))}% off`}
-            />
-            <KeylineRow label="Expires" value={formatDate(listing.expiryDate)} />
+          {/* ── Price bento ── */}
+          <View style={{ flexDirection: 'row', gap: theme.spacing[3] }}>
+            {/* Selling price tile */}
+            <View style={{
+              flex: 1,
+              backgroundColor: theme.colors.surfaceRaised,
+              borderRadius: theme.radius.md,
+              borderWidth: 1,
+              borderColor: theme.colors.border,
+              padding: theme.spacing[4],
+              gap: 6,
+            }}>
+              <Text style={{
+                fontFamily: theme.fontFamily.labelSemi,
+                fontSize: 10,
+                textTransform: 'uppercase',
+                letterSpacing: 0.8,
+                color: theme.colors.inkMuted,
+              }}>
+                Selling Price
+              </Text>
+              <Text style={{
+                fontFamily: theme.fontFamily.mono,
+                fontSize: 26,
+                color: theme.colors.ink,
+                letterSpacing: -0.5,
+              }}>
+                {formatCurrency(listing.sellingPrice)}
+              </Text>
+              {/* Savings badge */}
+              <View style={{
+                alignSelf: 'flex-start',
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 4,
+                backgroundColor: theme.colors.actionSoft,
+                borderRadius: theme.radius.pill,
+                paddingHorizontal: 8,
+                paddingVertical: 3,
+              }}>
+                <Ionicons name="trending-down-outline" size={11} color={theme.colors.action} />
+                <Text style={{
+                  fontFamily: theme.fontFamily.labelSemi,
+                  fontSize: 11,
+                  color: theme.colors.action,
+                }}>
+                  {String(savings)}% off
+                </Text>
+              </View>
+            </View>
+
+            {/* Expiry tile */}
+            <View style={{
+              flex: 1,
+              backgroundColor: theme.colors.surfaceRaised,
+              borderRadius: theme.radius.md,
+              borderWidth: 1,
+              borderColor: urgency === 'danger'
+                ? theme.colors.pillDangerBorder
+                : urgency === 'warning'
+                  ? theme.colors.pillWarnBorder
+                  : theme.colors.border,
+              padding: theme.spacing[4],
+              gap: 6,
+            }}>
+              <Text style={{
+                fontFamily: theme.fontFamily.labelSemi,
+                fontSize: 10,
+                textTransform: 'uppercase',
+                letterSpacing: 0.8,
+                color: theme.colors.inkMuted,
+              }}>
+                Expires
+              </Text>
+              <Text style={{
+                fontFamily: theme.fontFamily.headline,
+                fontSize: 20,
+                color: urgency === 'danger'
+                  ? theme.colors.danger
+                  : urgency === 'warning'
+                    ? theme.colors.warning
+                    : theme.colors.ink,
+                letterSpacing: -0.3,
+              }}>
+                {formatDate(listing.expiryDate)}
+              </Text>
+              <Text style={{
+                fontFamily: theme.fontFamily.body,
+                fontSize: 12,
+                color: theme.colors.inkMuted,
+              }}>
+                Face value {formatCurrency(listing.faceValue)}
+              </Text>
+            </View>
           </View>
 
-          {/* Order section */}
+          {/* ── Active order ── */}
           {hasActiveOrder && listing.order ? (
             <View style={{ gap: 10 }}>
-              <Text style={[styles.sheetSectionLabel, { color: theme.colors.inkMuted }]}>
+              <Text style={{
+                fontFamily: theme.fontFamily.labelSemi,
+                fontSize: 11,
+                textTransform: 'uppercase',
+                letterSpacing: 0.6,
+                color: theme.colors.inkMuted,
+              }}>
                 Active order
               </Text>
-              <View
-                style={[
-                  styles.sheetGrid,
-                  { borderColor: theme.colors.pillBrandBorder },
-                ]}>
-                <KeylineRow
-                  label="Order status"
-                  value={formatStatus(listing.order.status)}
-                />
+              <View style={[styles.sheetGrid, { borderColor: theme.colors.pillBrandBorder }]}>
+                <KeylineRow label="Order status" value={formatStatus(listing.order.status)} />
               </View>
               <PrimaryButton label="View order" onPress={onViewOrder} tone="secondary" />
             </View>
           ) : null}
 
-          {/* Actions */}
-          <View style={{ gap: 10 }}>
-            {editable ? (
-              <PrimaryButton label="Edit listing" onPress={onEdit} tone="secondary" />
-            ) : null}
-            {deletable ? (
-              <PrimaryButton
-                label="Delete listing"
-                loading={deleting}
-                onPress={onDelete}
-                tone="danger"
-              />
-            ) : null}
-          </View>
+          {/* ── Actions — edit (primary gradient) + compact danger delete ── */}
+          {(editable || deletable) ? (
+            <View style={{ flexDirection: 'row', gap: theme.spacing[3], alignItems: 'center' }}>
+              {editable ? (
+                <View style={{ flex: 1 }}>
+                  <PrimaryButton
+                    icon="create-outline"
+                    label="Edit listing"
+                    onPress={onEdit}
+                    tone="brand"
+                    variant="gradient"
+                  />
+                </View>
+              ) : null}
+              {deletable ? (
+                <Pressable
+                  accessibilityLabel="Delete listing"
+                  accessibilityRole="button"
+                  onPress={onDelete}
+                  style={({ pressed }) => ({
+                    width: editable ? 64 : undefined,
+                    flex: editable ? undefined : 1,
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 3,
+                    height: 56,
+                    borderRadius: theme.radius.md,
+                    borderWidth: 1.5,
+                    borderColor: theme.colors.pillDangerBorder,
+                    backgroundColor: pressed ? theme.colors.dangerSoft : `${theme.colors.danger}0F`,
+                  })}>
+                  {deleting
+                    ? <ActivityIndicator size="small" color={theme.colors.danger} />
+                    : (
+                        <>
+                          <Ionicons name="trash-outline" size={18} color={theme.colors.danger} />
+                          {editable ? (
+                            <Text style={{
+                              fontFamily: theme.fontFamily.labelSemi,
+                              fontSize: 10,
+                              color: theme.colors.danger,
+                              letterSpacing: 0.3,
+                            }}>
+                              Delete
+                            </Text>
+                          ) : (
+                            <Text style={{
+                              fontFamily: theme.fontFamily.labelSemi,
+                              fontSize: 15,
+                              color: theme.colors.danger,
+                            }}>
+                              Delete
+                            </Text>
+                          )}
+                        </>
+                      )}
+                </Pressable>
+              ) : null}
+            </View>
+          ) : null}
+
         </ScrollView>
       </View>
     </View>
