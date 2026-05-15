@@ -43,7 +43,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        app: [api, admin]
+        app: [api, admin, mobile]
         platform: [linux/amd64, linux/arm64]
         include:
           - platform: linux/amd64
@@ -72,6 +72,15 @@ jobs:
         with:
           images: ${{ secrets.DOCKERHUB_USERNAME }}/vouchrex-${{ matrix.app }}
 
+      - name: Resolve build args
+        id: buildargs
+        run: |
+          if [ "${{ matrix.app }}" = "mobile" ]; then
+            echo "args=EXPO_PUBLIC_API_BASE_URL=${{ secrets.MOBILE_API_BASE_URL }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "args=" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Build and push by digest
         id: build
         uses: docker/build-push-action@v6
@@ -80,6 +89,7 @@ jobs:
           file: apps/${{ matrix.app }}/Dockerfile
           platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: ${{ steps.buildargs.outputs.args }}
           outputs: type=image,name=${{ secrets.DOCKERHUB_USERNAME }}/vouchrex-${{ matrix.app }},push-by-digest=true,name-canonical=true,push=true
           cache-from: type=gha,scope=${{ matrix.app }}-${{ steps.prep.outputs.pair }}
           cache-to: type=gha,mode=max,scope=${{ matrix.app }}-${{ steps.prep.outputs.pair }}
@@ -105,7 +115,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        app: [api, admin]
+        app: [api, admin, mobile]
     steps:
       - uses: actions/download-artifact@v4
         with:

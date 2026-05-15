@@ -22,7 +22,7 @@ on:
         type: choice
         required: true
         default: api
-        options: [api, admin, both]
+        options: [api, admin, mobile, all]
 
 permissions:
   contents: read
@@ -34,7 +34,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [api, admin]
+        target: [api, admin, mobile]
     env:
       PORTAINER_URL: ${{ secrets.PORTAINER_URL }}
       PORTAINER_TOKEN: ${{ secrets.PORTAINER_TOKEN }}
@@ -42,12 +42,12 @@ jobs:
       CONTAINER_NAME: vouchrex-${{ matrix.target }}
     steps:
       - name: Skip unselected target
-        if: inputs.service != matrix.target && inputs.service != 'both'
+        if: inputs.service != matrix.target && inputs.service != 'all'
         run: |
           echo "Skipping ${{ matrix.target }} — user selected '${{ inputs.service }}'."
 
       - name: Redeploy ${{ matrix.target }}
-        if: inputs.service == matrix.target || inputs.service == 'both'
+        if: inputs.service == matrix.target || inputs.service == 'all'
         run: |
           set -euo pipefail
           BASE="$PORTAINER_URL/api/endpoints/$PORTAINER_ENDPOINT_ID/docker"

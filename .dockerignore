@@ -8,11 +8,15 @@ node_modules
 !.env.example
 terraform/environments/secrets.*.tfvars
 
-# Workspaces not needed in the API image (keep package.json for Yarn install)
-apps/mobile
-!apps/mobile/package.json
+# Worker source not needed in any image (keep package.json for Yarn install)
 apps/worker
 !apps/worker/package.json
+
+# Mobile: exclude heavy/generated dirs but include source for the mobile Dockerfile
+apps/mobile/node_modules
+apps/mobile/ios
+apps/mobile/dist
+apps/mobile/.expo
 
 # Build artefacts — builder stage starts fresh
 apps/api/dist
