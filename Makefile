@@ -9,7 +9,7 @@ COMPOSE_PROJECT_NAME ?= vouchrex
 
 export COMPOSE_PROJECT_NAME
 
-.PHONY: help install infra-up infra-down up down build ps logs api-dev mobile-dev admin-dev admin-build mobile-build lint typecheck test check clean reset-infra migrate migrate-deploy push seed studio
+.PHONY: help install infra-up infra-down up down build ps logs api-dev mobile-dev mobile-all mobile-ios mobile-android mobile-web mobile-build-all admin-dev admin-build mobile-build lint typecheck test check clean reset-infra migrate migrate-deploy push seed studio
 
 help: ## Show available targets
 	@awk 'BEGIN {FS = ":.*## "}; /^[a-zA-Z0-9_.-]+:.*## / {printf "\033[36m%-18s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -44,8 +44,22 @@ logs: ## Follow compose logs
 api-dev: infra-up ## Run the API directly with local env loading
 	$(YARN) workspace $(API_WORKSPACE) start:dev
 
-mobile-dev: ## Run the Expo React Native app
+mobile-dev: ## Start Expo dev server (press i=iOS, a=Android, w=web)
 	$(YARN) workspace $(MOBILE_WORKSPACE) start
+
+mobile-all: ## Start Expo dev server and open iOS simulator, Android emulator, and web
+	$(YARN) workspace $(MOBILE_WORKSPACE) expo start --ios --android --web
+
+mobile-ios: ## (One-time) Native build + install iOS dev client on simulator
+	$(YARN) workspace $(MOBILE_WORKSPACE) expo run:ios
+
+mobile-android: ## (One-time) Native build + install Android dev client on emulator
+	$(YARN) workspace $(MOBILE_WORKSPACE) expo run:android
+
+mobile-build-all: mobile-ios mobile-android ## (One-time) Native build for both iOS simulator and Android emulator
+
+mobile-web: ## Start Expo web dev server in browser
+	$(YARN) workspace $(MOBILE_WORKSPACE) web
 
 mobile-build: ## Export the mobile app for web
 	$(YARN) workspace $(MOBILE_WORKSPACE) build

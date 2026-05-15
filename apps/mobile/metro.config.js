@@ -8,7 +8,7 @@ const monorepoRoot = path.resolve(projectRoot, '../..');
 const config = getDefaultConfig(projectRoot);
 
 // Watch the entire monorepo so Metro sees shared packages and workspace changes
-config.watchFolders = [monorepoRoot];
+config.watchFolders = [...(config.watchFolders ?? []), monorepoRoot];
 
 // Resolve modules from the app's own node_modules first, then fall back to the
 // monorepo root node_modules (where yarn hoists shared dependencies)

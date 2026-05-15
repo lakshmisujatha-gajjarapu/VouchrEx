@@ -28,6 +28,7 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
+      "expo-dev-client",
       "expo-router",
       [
         "expo-splash-screen",
@@ -50,7 +51,8 @@
           "photosPermission": "Vouchrex needs photo access to attach dispute evidence.",
           "cameraPermission": "Vouchrex needs camera access to photograph dispute evidence."
         }
-      ]
+      ],
+      "expo-image"
     ],
     "runtimeVersion": {
       "policy": "sdkVersion"

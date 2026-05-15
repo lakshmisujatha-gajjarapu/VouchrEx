@@ -1,4 +1,5 @@
 import * as Application from 'expo-application';
+import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
@@ -20,6 +21,8 @@ async function getDeviceId(): Promise<string> {
 }
 
 export async function registerForPush(sessionToken: string): Promise<void> {
+  if (Platform.OS === 'web') return;
+
   const settings = await Notifications.getPermissionsAsync();
   let granted = settings.granted;
 
@@ -29,7 +32,9 @@ export async function registerForPush(sessionToken: string): Promise<void> {
   }
   if (!granted) return;
 
-  const tokenResult = await Notifications.getExpoPushTokenAsync();
+  const projectId =
+    (Constants.expoConfig?.extra?.eas?.projectId as string | undefined) ?? '';
+  const tokenResult = await Notifications.getExpoPushTokenAsync({ projectId });
   const deviceId = await getDeviceId();
 
   await api.registerPushToken(sessionToken, {
