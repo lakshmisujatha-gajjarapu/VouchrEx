@@ -9,6 +9,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ProfileAvatar } from '@/components/profile-avatar';
+import { useTabBarClearance } from '@/hooks/use-tab-bar-clearance';
 import { useTheme } from '@/theme/theme-context';
 
 export function AppShell({
@@ -29,9 +30,10 @@ export function AppShell({
   readonly footer?: React.ReactNode;
 }) {
   const theme = useTheme();
+  const tabBarClearance = useTabBarClearance();
 
   const content = (
-    <View style={[{ paddingHorizontal: theme.spacing[5], paddingBottom: footer ? theme.spacing[2] : 100, gap: theme.spacing[3], paddingTop: theme.spacing[1] }, contentContainerStyle]}>
+    <View style={[{ paddingHorizontal: theme.spacing[5], paddingBottom: footer ? theme.spacing[2] : tabBarClearance, gap: theme.spacing[3], paddingTop: theme.spacing[1] }, contentContainerStyle]}>
       {children}
     </View>
   );

@@ -1,11 +1,13 @@
 import { useRouter } from 'expo-router';
 import React, { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
+import Animated, { FadeIn, useReducedMotion } from 'react-native-reanimated';
 
 import { AppShell } from '@/components/app-shell';
 import { FilterChip } from '@/components/filter-chip';
 import { StatusPill } from '@/components/status-pill';
 import { TicketCard } from '@/components/ticket-card';
+import { ListingCardSkeleton } from '@/components/listing-card-skeleton';
 import { useAuth } from '@/hooks/use-auth';
 import { useAsyncResource } from '@/hooks/use-async-resource';
 import { useOrdersListSocket } from '@/hooks/use-orders-list-socket';
@@ -61,6 +63,7 @@ export default function OrdersScreen() {
   const { sessionToken, user } = useAuth();
   const theme = useTheme();
   const [segment, setSegment] = useState<Segment>('buying');
+  const reducedMotion = useReducedMotion();
 
   const ordersResource = useAsyncResource(
     useCallback(() => {
@@ -89,47 +92,52 @@ export default function OrdersScreen() {
   }), [visibleOrders]);
 
   return (
-    <AppShell eyebrow="Track" subtitle="See what needs action." title="Orders">
-      <View className="flex-row gap-2">
-        <FilterChip label="Buying"   onPress={() => { setSegment('buying'); }}   selected={segment === 'buying'} />
-        <FilterChip label="Selling"  onPress={() => { setSegment('selling'); }}  selected={segment === 'selling'} />
-      </View>
-      <View className="flex-row flex-wrap gap-2">
-        <StatusPill label={`${String(summary.actionCount)} need action`} tone="warning" />
-        <StatusPill label={`${String(summary.completedCount)} settled`}  tone="success" />
-      </View>
+    <Animated.View entering={reducedMotion ? undefined : FadeIn.duration(400)} style={{ flex: 1 }}>
+      <AppShell eyebrow="Track" subtitle="See what needs action." title="Orders">
+        <View className="flex-row gap-2">
+          <FilterChip label="Buying"   onPress={() => { setSegment('buying'); }}   selected={segment === 'buying'} />
+          <FilterChip label="Selling"  onPress={() => { setSegment('selling'); }}  selected={segment === 'selling'} />
+        </View>
+        <View className="flex-row flex-wrap gap-2">
+          <StatusPill label={`${String(summary.actionCount)} need action`} tone="warning" />
+          <StatusPill label={`${String(summary.completedCount)} settled`}  tone="success" />
+        </View>
 
-      {ordersResource.loading && !ordersResource.data
-        ? <ActivityIndicator color={theme.colors.brand} />
-        : null}
-      {ordersResource.error ? (
-        <Text className="text-body" style={{ color: theme.colors.danger }}>
-          {ordersResource.error}
-        </Text>
-      ) : null}
-
-      {visibleOrders.map((order) => (
-        <TicketCard
-          key={order.id}
-          eyebrow={formatStatus(order.status)}
-          meta={order.status === 'CODE_REVEALED' ? formatCountdown(order.verificationDeadline) ?? 'Timer active' : undefined}
-          onPress={() => { router.push(`/orders/${order.id}`); }}
-          subtitle={`${order.listing.brand.name} • ${formatCurrency(order.amount)}`}
-          title={nextStepForOrder(order.status, segment)}
-          tone={cardTone(order.status)}>
-          <View className="mt-2 flex-row flex-wrap gap-2">
-            <StatusPill
-              label={escrowPillLabel(order.status)}
-              tone={escrowPillTone(order.status)}
-            />
-            {segment === 'selling' ? <StatusPill label="Seller" tone="neutral" /> : null}
+        {ordersResource.loading && !ordersResource.data ? (
+          <View style={{ gap: theme.spacing[5] }}>
+            <ListingCardSkeleton />
+            <ListingCardSkeleton />
           </View>
-        </TicketCard>
-      ))}
+        ) : null}
+        {ordersResource.error ? (
+          <Text className="text-body" style={{ color: theme.colors.danger }}>
+            {ordersResource.error}
+          </Text>
+        ) : null}
 
-      {!ordersResource.loading && visibleOrders.length === 0 ? (
-        <TicketCard subtitle="Orders show up after a reservation." title="No orders yet" />
-      ) : null}
-    </AppShell>
+        {visibleOrders.map((order) => (
+          <TicketCard
+            key={order.id}
+            eyebrow={formatStatus(order.status)}
+            meta={order.status === 'CODE_REVEALED' ? formatCountdown(order.verificationDeadline) ?? 'Timer active' : undefined}
+            onPress={() => { router.push(`/orders/${order.id}`); }}
+            subtitle={`${order.listing.brand.name} • ${formatCurrency(order.amount)}`}
+            title={nextStepForOrder(order.status, segment)}
+            tone={cardTone(order.status)}>
+            <View className="mt-2 flex-row flex-wrap gap-2">
+              <StatusPill
+                label={escrowPillLabel(order.status)}
+                tone={escrowPillTone(order.status)}
+              />
+              {segment === 'selling' ? <StatusPill label="Seller" tone="neutral" /> : null}
+            </View>
+          </TicketCard>
+        ))}
+
+        {!ordersResource.loading && visibleOrders.length === 0 ? (
+          <TicketCard subtitle="Orders show up after a reservation." title="No orders yet" />
+        ) : null}
+      </AppShell>
+    </Animated.View>
   );
 }

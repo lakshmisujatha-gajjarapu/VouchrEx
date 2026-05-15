@@ -1,8 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
-import { usePathname, useRouter } from 'expo-router';
-import React from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { usePathname, useRouter, type Href } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { Pressable, Text, View, type LayoutChangeEvent } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useColorScheme } from 'nativewind';
@@ -25,7 +31,6 @@ const TABS: readonly Tab[] = [
   { name: 'Inbox',    segment: 'inbox',    href: '/(tabs)/inbox',     icon: 'notifications-outline', iconActive: 'notifications' },
 ];
 
-// These are the native tab screens — they already have a tab bar from the Tabs navigator.
 const TAB_PATHNAMES = new Set(['/shop', '/listings', '/sell', '/orders', '/inbox']);
 
 export function FloatingTabBar() {
@@ -34,16 +39,43 @@ export function FloatingTabBar() {
   const router = useRouter();
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
+  const reducedMotion = useReducedMotion();
 
-  if (TAB_PATHNAMES.has(pathname)) return null;
+  const [containerWidth, setContainerWidth] = useState(0);
+  const translateX = useSharedValue(0);
+
+  const activeIndex = TABS.findIndex((tab) => pathname.startsWith(`/${tab.segment}`));
+
+  useEffect(() => {
+    if (containerWidth > 0 && activeIndex !== -1) {
+      const tabWidth = containerWidth / TABS.length;
+      const targetX = activeIndex * tabWidth;
+
+      translateX.value = reducedMotion
+        ? targetX
+        : withSpring(targetX, { damping: 20, stiffness: 150 });
+    }
+  }, [activeIndex, containerWidth, reducedMotion, translateX]);
+
+  const animatedPillStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }],
+    width: containerWidth / TABS.length,
+  }));
+
+  if (!TAB_PATHNAMES.has(pathname)) return null;
+
+  const onLayout = (event: LayoutChangeEvent) => {
+    setContainerWidth(event.nativeEvent.layout.width);
+  };
 
   return (
     <View
+      onLayout={onLayout}
       style={{
         position: 'absolute',
-        left: 14,
-        right: 14,
-        bottom: Math.max(insets.bottom, 14),
+        left: theme.spacing[3],
+        right: theme.spacing[3],
+        bottom: Math.max(insets.bottom, theme.spacing[3]),
         height: 64,
         borderRadius: theme.radius.pill,
         overflow: 'hidden',
@@ -55,7 +87,7 @@ export function FloatingTabBar() {
       }}>
       {/* Glassmorphic blur layer */}
       <BlurView
-        intensity={60}
+        intensity={theme.blurIntensity.mid}
         style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 }}
         tint={colorScheme === 'dark' ? 'dark' : 'light'}
       />
@@ -70,45 +102,58 @@ export function FloatingTabBar() {
           borderColor: theme.colors.glassBorder,
         }}
       />
+
+      {/* Sliding Background Pill */}
+      {containerWidth > 0 && (
+        <Animated.View
+          style={[
+            {
+              position: 'absolute',
+              top: theme.spacing[2],
+              bottom: theme.spacing[2],
+              backgroundColor: theme.colors.brandSoft,
+              borderRadius: theme.radius.pill,
+            },
+            animatedPillStyle,
+          ]}
+        />
+      )}
+
       {/* Tabs */}
       <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
-        {TABS.map((tab) => {
-          const isActive = pathname.startsWith(`/${tab.segment}`);
+        {TABS.map((tab, index) => {
+          const isActive = index === activeIndex;
           return (
             <Pressable
               key={tab.href}
               accessibilityLabel={tab.name}
-              accessibilityRole="button"
-              onPress={() => { router.navigate(tab.href as Parameters<typeof router.navigate>[0]); }}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: isActive }}
+              onPress={() => { router.navigate(tab.href as Href); }}
               style={({ pressed }) => ({
                 flex: 1,
                 alignItems: 'center',
                 justifyContent: 'center',
                 opacity: pressed ? 0.6 : 1,
               })}>
-              {isActive ? (
-                <View style={{
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  paddingVertical: 8,
-                  paddingHorizontal: 16,
-                  borderRadius: theme.radius.pill,
-                  backgroundColor: theme.colors.brandSoft,
-                  gap: 2,
-                }}>
-                  <Ionicons color={theme.colors.brand} name={tab.iconActive} size={22} />
-                  <Text numberOfLines={1} style={{ fontSize: 10, fontWeight: '600', letterSpacing: 0, color: theme.colors.brand, fontFamily: theme.fontFamily.label }}>
-                    {tab.name}
-                  </Text>
-                </View>
-              ) : (
-                <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 8, paddingHorizontal: 16, gap: 2 }}>
-                  <Ionicons color={theme.colors.inkMuted} name={tab.icon} size={22} />
-                  <Text numberOfLines={1} style={{ fontSize: 10, fontWeight: '600', letterSpacing: 0, color: theme.colors.inkMuted, fontFamily: theme.fontFamily.label }}>
-                    {tab.name}
-                  </Text>
-                </View>
-              )}
+              <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: theme.spacing[2], gap: 2 }}>
+                <Ionicons
+                  color={isActive ? theme.colors.brand : theme.colors.inkMuted}
+                  name={isActive ? tab.iconActive : tab.icon}
+                  size={22}
+                />
+                <Text
+                  numberOfLines={1}
+                  style={{
+                    fontSize: 10,
+                    fontWeight: '600',
+                    letterSpacing: 0,
+                    color: isActive ? theme.colors.brand : theme.colors.inkMuted,
+                    fontFamily: theme.fontFamily.label,
+                  }}>
+                  {tab.name}
+                </Text>
+              </View>
             </Pressable>
           );
         })}

@@ -12,6 +12,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import Animated, { FadeIn, useReducedMotion } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ConfigChangeBanner } from '@/components/config-change-banner';
@@ -24,6 +25,7 @@ import { ProfileAvatar } from '@/components/profile-avatar';
 import { useAuth } from '@/hooks/use-auth';
 import { useAsyncResource } from '@/hooks/use-async-resource';
 import { useConfig } from '@/hooks/use-config';
+import { useTabBarClearance } from '@/hooks/use-tab-bar-clearance';
 import { api, type PayoutAccount } from '@/lib/api';
 import { searchBrandfetchBrands } from '@/lib/brandfetch';
 import { useTheme } from '@/theme/theme-context';
@@ -51,6 +53,8 @@ export default function SellScreen() {
   const theme = useTheme();
   const router = useRouter();
   const { listingMaxPriceInr } = useConfig();
+  const reducedMotion = useReducedMotion();
+  const tabBarClearance = useTabBarClearance();
 
   // ── Payout account gate ──────────────────────────────────────────
   const [payoutAccount, setPayoutAccount]   = useState<PayoutAccount | null>(null);
@@ -191,7 +195,7 @@ export default function SellScreen() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+    <Animated.View entering={reducedMotion ? undefined : FadeIn.duration(400)} style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <SafeAreaView style={{ flex: 1 }} edges={['top', 'left', 'right']}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
 
@@ -232,7 +236,7 @@ export default function SellScreen() {
           ) : !payoutAccount?.registered ? (
             /* ── Payout gate: UPI registration ── */
             <ScrollView
-              contentContainerStyle={{ flexGrow: 1, paddingHorizontal: theme.spacing[5], paddingBottom: 60, justifyContent: 'center' }}
+              contentContainerStyle={{ flexGrow: 1, paddingHorizontal: theme.spacing[5], paddingBottom: tabBarClearance, justifyContent: 'center' }}
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}>
               <View style={{ alignItems: 'center', marginBottom: 32 }}>
@@ -339,7 +343,7 @@ export default function SellScreen() {
           ) : (
           /* ── Main listing form (payout account exists) ── */
           <ScrollView
-            contentContainerStyle={{ paddingBottom: 120 }}
+            contentContainerStyle={{ paddingBottom: tabBarClearance }}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}>
             <View style={{ paddingHorizontal: theme.spacing[5], gap: theme.spacing[6] }}>
@@ -776,6 +780,6 @@ export default function SellScreen() {
           )}
         </KeyboardAvoidingView>
       </SafeAreaView>
-    </View>
+    </Animated.View>
   );
 }

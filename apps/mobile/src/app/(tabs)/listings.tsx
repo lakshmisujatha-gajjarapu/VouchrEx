@@ -2,7 +2,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useDeferredValue, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   Modal,
   Pressable,
@@ -12,12 +11,14 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import Animated, { FadeIn, useReducedMotion } from 'react-native-reanimated';
 
 import { KeylineRow } from '@/components/keyline-row';
 import { PrimaryButton } from '@/components/primary-button';
 import { AppShell } from '@/components/app-shell';
 import { StatusPill } from '@/components/status-pill';
 import { TicketCard } from '@/components/ticket-card';
+import { ListingCardSkeleton } from '@/components/listing-card-skeleton';
 import { useAuth } from '@/hooks/use-auth';
 import { useAsyncResource } from '@/hooks/use-async-resource';
 import { useListingsSocket } from '@/hooks/use-listings-socket';
@@ -59,18 +60,6 @@ function getListingTab(listing: Listing): ListingTab {
   return 'live';
 }
 
-function isEditable(listing: Listing): boolean {
-  return (
-    editableStatuses.has(listing.status) &&
-    !listing.order &&
-    new Date(listing.expiryDate).getTime() > Date.now()
-  );
-}
-
-function isDeletable(listing: Listing): boolean {
-  return editableStatuses.has(listing.status) && !listing.order;
-}
-
 function matchesSearch(listing: Listing, query: string): boolean {
   if (!query) return true;
   const hay = [listing.brand.name, listing.voucherType, listing.status].join(' ').toLowerCase();
@@ -96,9 +85,15 @@ function ListingDetailSheet({
 }) {
   const theme = useTheme();
   const urgency = getExpiryUrgency(listing.expiryDate);
-  const editable = isEditable(listing);
-  const deletable = isDeletable(listing);
   const hasActiveOrder = Boolean(listing.order);
+
+  const editable = (
+    editableStatuses.has(listing.status) &&
+    !listing.order &&
+    new Date(listing.expiryDate).getTime() > Date.now()
+  );
+
+  const deletable = editableStatuses.has(listing.status) && !listing.order;
 
   return (
     <View style={styles.sheetOverlay}>
@@ -220,6 +215,7 @@ export default function ListingsScreen() {
   const [feedback, setFeedback] = useState<{ ok: boolean; text: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
   const deferredQuery = useDeferredValue(searchQuery.trim().toLowerCase());
+  const reducedMotion = useReducedMotion();
 
   const listingsResource = useAsyncResource(
     useCallback(() => {
@@ -294,133 +290,138 @@ export default function ListingsScreen() {
   }
 
   return (
-    <AppShell
-      eyebrow="Listings"
-      subtitle="Tap any card for details and actions."
-      title="Inventory">
-
-      {/* Search + tab toggle */}
-      <View
-        style={[
-          styles.searchBar,
-          {
-            backgroundColor: theme.colors.surfaceTray,
-            borderColor: theme.colors.border,
-          },
-        ]}>
-        <Ionicons color={theme.colors.inkMuted} name="search-outline" size={18} />
-        <TextInput
-          className="flex-1 font-body text-body"
-          onChangeText={setSearchQuery}
-          placeholder="Search by brand or type"
-          placeholderTextColor={theme.colors.inkMuted}
-          style={{ color: theme.colors.ink, letterSpacing: 0 }}
-          value={searchQuery}
-        />
-        {searchQuery ? (
-          <Pressable
-            accessibilityLabel="Clear search"
-            accessibilityRole="button"
-            onPress={() => { setSearchQuery(''); }}>
-            <Ionicons color={theme.colors.inkMuted} name="close-circle" size={18} />
-          </Pressable>
-        ) : null}
-        <View style={[styles.searchDivider, { backgroundColor: theme.colors.border }]} />
-        <Pressable
-          accessibilityLabel={`Switch to ${tab === 'live' ? 'history' : 'live'}`}
-          accessibilityRole="button"
-          onPress={() => { setTab((t) => (t === 'live' ? 'history' : 'live')); }}
-          style={({ pressed }) => [
-            styles.tabToggle,
+    <Animated.View entering={reducedMotion ? undefined : FadeIn.duration(400)} style={{ flex: 1 }}>
+      <AppShell
+        eyebrow="Listings"
+        subtitle="Tap any card for details and actions."
+        title="Inventory">
+        {/* Search + tab toggle */}
+        <View
+          style={[
+            styles.searchBar,
             {
-              backgroundColor: tab === 'live' ? theme.colors.brandSoft : theme.colors.surfaceRaised,
-              borderColor: tab === 'live' ? theme.colors.pillBrandBorder : theme.colors.border,
-              opacity: pressed ? 0.82 : 1,
+              backgroundColor: theme.colors.surfaceTray,
+              borderColor: theme.colors.border,
             },
           ]}>
-          <Ionicons
-            color={tab === 'live' ? theme.colors.brand : theme.colors.inkMuted}
-            name={tab === 'live' ? 'radio-button-on-outline' : 'time-outline'}
-            size={13}
+          <Ionicons color={theme.colors.inkMuted} name="search-outline" size={18} />
+          <TextInput
+            className="flex-1 font-body text-body"
+            onChangeText={setSearchQuery}
+            placeholder="Search by brand or type"
+            placeholderTextColor={theme.colors.inkMuted}
+            style={{ color: theme.colors.ink, letterSpacing: 0 }}
+            value={searchQuery}
           />
+          {searchQuery ? (
+            <Pressable
+              accessibilityLabel="Clear search"
+              accessibilityRole="button"
+              onPress={() => { setSearchQuery(''); }}>
+              <Ionicons color={theme.colors.inkMuted} name="close-circle" size={18} />
+            </Pressable>
+          ) : null}
+          <View style={[styles.searchDivider, { backgroundColor: theme.colors.border }]} />
+          <Pressable
+            accessibilityLabel={`Switch to ${tab === 'live' ? 'history' : 'live'}`}
+            accessibilityRole="button"
+            onPress={() => { setTab((t) => (t === 'live' ? 'history' : 'live')); }}
+            style={({ pressed }) => [
+              styles.tabToggle,
+              {
+                backgroundColor: tab === 'live' ? theme.colors.brandSoft : theme.colors.surfaceRaised,
+                borderColor: tab === 'live' ? theme.colors.pillBrandBorder : theme.colors.border,
+                opacity: pressed ? 0.82 : 1,
+              },
+            ]}>
+            <Ionicons
+              color={tab === 'live' ? theme.colors.brand : theme.colors.inkMuted}
+              name={tab === 'live' ? 'radio-button-on-outline' : 'time-outline'}
+              size={13}
+            />
+            <Text
+              className="font-label text-caption font-bold"
+              style={{ color: tab === 'live' ? theme.colors.brand : theme.colors.inkMuted }}>
+              {tab === 'live' ? 'Live' : 'History'}
+            </Text>
+          </Pressable>
+        </View>
+
+        {/* Feedback */}
+        {feedback ? (
           <Text
-            className="font-label text-caption font-bold"
-            style={{ color: tab === 'live' ? theme.colors.brand : theme.colors.inkMuted }}>
-            {tab === 'live' ? 'Live' : 'History'}
+            className="text-center text-caption font-semibold"
+            style={{ color: feedback.ok ? theme.colors.success : theme.colors.danger }}>
+            {feedback.text}
           </Text>
-        </Pressable>
-      </View>
+        ) : null}
 
-      {/* Feedback */}
-      {feedback ? (
-        <Text
-          className="text-center text-caption font-semibold"
-          style={{ color: feedback.ok ? theme.colors.success : theme.colors.danger }}>
-          {feedback.text}
-        </Text>
-      ) : null}
+        {/* Loading / error */}
+        {listingsResource.loading && !listingsResource.data ? (
+          <View style={{ gap: theme.spacing[5] }}>
+            <ListingCardSkeleton />
+            <ListingCardSkeleton />
+            <ListingCardSkeleton />
+          </View>
+        ) : null}
+        {listingsResource.error ? (
+          <Text className="text-body" style={{ color: theme.colors.danger }}>
+            {listingsResource.error}
+          </Text>
+        ) : null}
 
-      {/* Loading / error */}
-      {listingsResource.loading && !listingsResource.data ? (
-        <ActivityIndicator color={theme.colors.brand} />
-      ) : null}
-      {listingsResource.error ? (
-        <Text className="text-body" style={{ color: theme.colors.danger }}>
-          {listingsResource.error}
-        </Text>
-      ) : null}
+        {/* Compact listing cards — tap opens detail sheet */}
+        {visibleListings.map((listing) => (
+          <TicketCard
+            key={listing.id}
+            eyebrow={getCardEyebrow(listing)}
+            meta={`Expires ${formatDate(listing.expiryDate)}`}
+            onPress={() => { setSelectedListing(listing); }}
+            subtitle={`${formatCurrency(listing.sellingPrice)} • ${listing.voucherType}`}
+            title={listing.brand.name}
+            tone={getCardTone(listing)}
+          />
+        ))}
 
-      {/* Compact listing cards — tap opens detail sheet */}
-      {visibleListings.map((listing) => (
-        <TicketCard
-          key={listing.id}
-          eyebrow={getCardEyebrow(listing)}
-          meta={`Expires ${formatDate(listing.expiryDate)}`}
-          onPress={() => { setSelectedListing(listing); }}
-          subtitle={`${formatCurrency(listing.sellingPrice)} • ${listing.voucherType}`}
-          title={listing.brand.name}
-          tone={getCardTone(listing)}
-        />
-      ))}
-
-      {/* Empty state */}
-      {!listingsResource.loading && !listingsResource.error && visibleListings.length === 0 ? (
-        <TicketCard
-          subtitle={
-            deferredQuery
-              ? 'Try a different brand or voucher type.'
-              : tab === 'live'
-                ? 'Use the Sell tab to list a voucher.'
-                : 'No sold or expired listings yet.'
-          }
-          title={
-            deferredQuery
-              ? 'No matching listings'
-              : tab === 'live'
-                ? 'No live listings'
-                : 'No history yet'
-          }
-        />
-      ) : null}
-
-      {/* Detail sheet modal */}
-      <Modal
-        animationType="slide"
-        transparent
-        visible={Boolean(selectedListing)}
-        onRequestClose={closeSheet}>
-        {selectedListing ? (
-          <ListingDetailSheet
-            deleting={deleting}
-            listing={selectedListing}
-            onClose={closeSheet}
-            onDelete={() => { handleDeletePress(selectedListing); }}
-            onEdit={() => { handleEdit(selectedListing); }}
-            onViewOrder={() => { handleViewOrder(selectedListing); }}
+        {/* Empty state */}
+        {!listingsResource.loading && !listingsResource.error && visibleListings.length === 0 ? (
+          <TicketCard
+            subtitle={
+              deferredQuery
+                ? 'Try a different brand or voucher type.'
+                : tab === 'live'
+                  ? 'Use the Sell tab to list a voucher.'
+                  : 'No sold or expired listings yet.'
+            }
+            title={
+              deferredQuery
+                ? 'No matching listings'
+                : tab === 'live'
+                  ? 'No live listings'
+                  : 'No history yet'
+            }
           />
         ) : null}
-      </Modal>
-    </AppShell>
+
+        {/* Detail sheet modal */}
+        <Modal
+          animationType="slide"
+          transparent
+          visible={Boolean(selectedListing)}
+          onRequestClose={closeSheet}>
+          {selectedListing ? (
+            <ListingDetailSheet
+              deleting={deleting}
+              listing={selectedListing}
+              onClose={closeSheet}
+              onDelete={() => { handleDeletePress(selectedListing); }}
+              onEdit={() => { handleEdit(selectedListing); }}
+              onViewOrder={() => { handleViewOrder(selectedListing); }}
+            />
+          ) : null}
+        </Modal>
+      </AppShell>
+    </Animated.View>
   );
 }
 

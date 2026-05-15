@@ -14,6 +14,12 @@ const spacing = { 1: 4, 2: 8, 3: 12, 4: 16, 5: 20, 6: 24, 7: 28, 8: 32 } as cons
 const radius = { sm: 12, md: 18, lg: 24, xl: 30, pill: 999 } as const;
 const fontSize = { display: 32, title: 22, heading: 18, body: 15, label: 13, caption: 12, mono: 16 } as const;
 
+const blurIntensity = {
+  low: 60,
+  mid: 80,
+  high: 95,
+} as const;
+
 const gradients = {
   // Sign-in / onboarding background sweep
   signIn:  ['#FAF8FF', '#F4F3FB', '#EBDDFF'] as const,
@@ -69,9 +75,12 @@ export const lightTheme = {
     silver: '#94A3B8',
     bronze: '#B45309',
 
-    // Glass (sign-in screen only)
-    glassSurface: 'rgba(255,255,255,0.08)',
-    glassBorder: 'rgba(255,255,255,0.18)',
+    // Glass
+    glassSurface: '#FFFFFF14',
+    glassSurfaceStrong: '#FFFFFF24',
+    glassBorder: '#FFFFFF2E',
+    glassBorderStrong: '#FFFFFF38',
+    glassText: '#FFFFFFD6',
 
     // Timer
     countdown: '#D97706',
@@ -84,24 +93,21 @@ export const lightTheme = {
     pillWarnBorder: '#FDE68A',
 
     // Shadows (ambient, low-opacity tinted)
-    shadow: 'rgba(26,27,33,0.04)',
-    shadowStrong: 'rgba(26,27,33,0.10)',
+    shadow: '#1A1B210A',
+    shadowStrong: '#1A1B211A',
 
     // Decorative glows (ambient blobs on sign-in / hero sections)
-    brandGlow: 'rgba(110,58,202,0.15)',     // brand violet at 15%
-    actionGlow: 'rgba(5,150,105,0.08)',     // action emerald at 8%
+    brandGlow: '#6E3ACA26',     // brand violet at 15%
+    actionGlow: '#05966914',     // action emerald at 8%
 
     // Focus ring — form field focused border (brand at 20% opacity)
     focusRing: '#6E3ACA33',
-
-    // Glass text — readable white on frosted/glass surfaces
-    glassText: 'rgba(255,255,255,0.84)',
 
     // Hairline divider — subtle separator between list items
     borderHair: '#CCC3D630',
 
     // Scrim — modal/overlay backdrop tint
-    scrim: 'rgba(0,0,0,0.45)',
+    scrim: '#00000073',
 
     white: '#FFFFFF',
     transparent: 'transparent',
@@ -111,6 +117,7 @@ export const lightTheme = {
   radius,
   fontSize,
   fontFamily,
+  blurIntensity,
 } as const;
 
 export const darkTheme = {
@@ -157,8 +164,11 @@ export const darkTheme = {
     bronze: '#B45309',
 
     // Glass
-    glassSurface: 'rgba(255,255,255,0.08)',
-    glassBorder: 'rgba(255,255,255,0.18)',
+    glassSurface: '#FFFFFF14',
+    glassSurfaceStrong: '#0D0B1E8C',
+    glassBorder: '#FFFFFF2E',
+    glassBorderStrong: '#A78BFA26',
+    glassText: '#FFFFFFD6',
 
     // Timer
     countdown: '#FCD34D',
@@ -171,24 +181,21 @@ export const darkTheme = {
     pillWarnBorder: '#78350F',
 
     // Shadows
-    shadow: 'rgba(0,0,0,0.30)',
-    shadowStrong: 'rgba(0,0,0,0.50)',
+    shadow: '#0000004D',
+    shadowStrong: '#00000080',
 
     // Decorative glows
-    brandGlow: 'rgba(167,139,250,0.15)',    // brand violet at 15% (dark)
-    actionGlow: 'rgba(52,211,153,0.08)',    // action emerald at 8% (dark)
+    brandGlow: '#A78BFA26',    // brand violet at 15% (dark)
+    actionGlow: '#34D39914',    // action emerald at 8% (dark)
 
     // Focus ring
     focusRing: '#A78BFA33',
-
-    // Glass text
-    glassText: 'rgba(255,255,255,0.84)',
 
     // Hairline divider (dark uses surfaceHighest tone)
     borderHair: '#272445',
 
     // Scrim
-    scrim: 'rgba(0,0,0,0.45)',
+    scrim: '#00000073',
 
     white: '#FFFFFF',
     transparent: 'transparent',
@@ -198,6 +205,7 @@ export const darkTheme = {
   radius,
   fontSize,
   fontFamily,
+  blurIntensity,
 } as const;
 
 export const themeNames = ['light', 'dark'] as const;

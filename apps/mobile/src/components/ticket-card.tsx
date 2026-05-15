@@ -1,12 +1,12 @@
 import React from 'react';
 import {
-  Pressable,
   Text,
   View,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
 
+import { InteractivePressable } from '@/components/interactive-pressable';
 import { useTheme } from '@/theme/theme-context';
 
 export function TicketCard({
@@ -111,24 +111,22 @@ export function TicketCard({
 
   if (onPress) {
     return (
-      <Pressable
+      <InteractivePressable
         onPress={onPress}
-        className="overflow-hidden rounded-app-lg"
-        style={({ pressed }) => [
+        style={[
+          { overflow: 'hidden', borderRadius: theme.radius.lg },
           baseStyle,
           toneStyle,
           style,
-          { opacity: pressed ? 0.92 : 1 },
         ]}>
         {content}
-      </Pressable>
+      </InteractivePressable>
     );
   }
 
   return (
     <View
-      className="overflow-hidden rounded-app-lg"
-      style={[baseStyle, toneStyle, style]}>
+      style={[{ overflow: 'hidden', borderRadius: theme.radius.lg }, baseStyle, toneStyle, style]}>
       {content}
     </View>
   );

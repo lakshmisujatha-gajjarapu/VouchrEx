@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Text, View } from 'react-native';
 
+import { InteractivePressable } from '@/components/interactive-pressable';
 import { useTheme } from '@/theme/theme-context';
 
 /**
@@ -67,23 +68,23 @@ export function PrimaryButton({
           ? theme.colors.danger
           : theme.colors.shadowStrong;
 
+  const borderRadius = theme.radius.md;
+
   return (
-    <Pressable
+    <InteractivePressable
       accessibilityRole="button"
       disabled={disabled || loading}
       onPress={onPress}
-      style={({ pressed }) => ({
+      style={{
         width: '100%',
         shadowColor,
         shadowOffset: { width: 0, height: disabled ? 0 : 6 },
         shadowOpacity: disabled ? 0 : tone === 'secondary' ? 0.12 : useGradient ? 0.20 : 0.22,
-        shadowRadius: disabled ? 0 : tone === 'secondary' ? 16 : useGradient ? 28 : 14,
+        shadowRadius: disabled ? 0 : tone === 'secondary' ? theme.spacing[4] : useGradient ? theme.spacing[7] : theme.spacing[3],
         elevation: disabled ? 0 : tone === 'secondary' ? 2 : 4,
-        opacity: loading ? 0.7 : pressed ? 0.88 : 1,
-        transform: [{ scale: pressed && !disabled && !loading ? 0.982 : 1 }],
-        borderRadius: 16,
+        borderRadius,
         overflow: 'hidden',
-      })}>
+      }}>
       {useGradient ? (
         <LinearGradient
           colors={gradientColors[tone] ?? theme.gradients.brand}
@@ -92,10 +93,10 @@ export function PrimaryButton({
           style={{
             minHeight: 56,
             width: '100%',
-            borderRadius: 16,
+            borderRadius,
             alignItems: 'center',
             justifyContent: 'center',
-            paddingHorizontal: 16,
+            paddingHorizontal: theme.spacing[4],
           }}>
           {/* Top sheen — glass highlight */}
           <LinearGradient
@@ -105,7 +106,7 @@ export function PrimaryButton({
             start={{ x: 0.5, y: 0 }}
             style={{
               position: 'absolute', top: 0, left: 0, right: 0, height: '55%',
-              borderTopLeftRadius: 16, borderTopRightRadius: 16,
+              borderTopLeftRadius: borderRadius, borderTopRightRadius: borderRadius,
             }}
           />
           {loading
@@ -121,9 +122,9 @@ export function PrimaryButton({
           style={{
             minHeight: 56,
             width: '100%',
-            borderRadius: 16,
+            borderRadius,
             borderWidth: tone === 'secondary' || disabled ? 1.5 : 0,
-            paddingHorizontal: 16,
+            paddingHorizontal: theme.spacing[4],
             alignItems: 'center',
             justifyContent: 'center',
             backgroundColor: cfg.bg,
@@ -141,6 +142,6 @@ export function PrimaryButton({
               )}
         </View>
       )}
-    </Pressable>
+    </InteractivePressable>
   );
 }
