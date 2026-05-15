@@ -95,7 +95,7 @@ export function ListingCard({ listing, onPress }: Props) {
             </Text>
           </View>
         </View>
-        <View style={{ borderTopWidth: 1, borderTopColor: theme.colors.border, borderStyle: 'dashed', marginBottom: theme.spacing[2] }} />
+        <View style={{ borderTopWidth: 1, borderTopColor: theme.colors.border, borderStyle: 'solid', marginBottom: theme.spacing[2] }} />
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[1], backgroundColor: theme.colors.successSoft, paddingHorizontal: theme.spacing[2], paddingVertical: theme.spacing[1], borderRadius: theme.radius.pill, alignSelf: 'flex-start', marginBottom: theme.spacing[2] }}>
           <Ionicons name="lock-closed" size={11} color={theme.colors.success} />
           <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 10, fontWeight: '700', color: theme.colors.success, textTransform: 'uppercase', letterSpacing: 0.6 }}>

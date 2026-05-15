@@ -421,7 +421,7 @@ export default function OrderDetailScreen() {
 
               {/* Perforation line */}
               <View style={{ position: 'relative', height: 1, marginHorizontal: 16 }}>
-                <View style={{ position: 'absolute', left: 0, right: 0, top: 0, borderTopWidth: 1.5, borderColor: theme.colors.surfaceHigh, borderStyle: 'dashed' }} />
+                <View style={{ position: 'absolute', left: 0, right: 0, top: 0, borderTopWidth: 1.5, borderColor: theme.colors.surfaceHigh, borderStyle: 'solid' }} />
                 <View style={{ position: 'absolute', left: -28, top: -10, width: 20, height: 20, borderRadius: 10, backgroundColor: theme.colors.background }} />
                 <View style={{ position: 'absolute', right: -28, top: -10, width: 20, height: 20, borderRadius: 10, backgroundColor: theme.colors.background }} />
               </View>
@@ -684,7 +684,7 @@ export default function OrderDetailScreen() {
                             borderRadius: theme.radius.md,
                             borderWidth: 1.5,
                             borderColor: theme.colors.brand,
-                            borderStyle: 'dashed',
+                            borderStyle: 'solid',
                             alignItems: 'center',
                             justifyContent: 'center',
                             opacity: pressed || evidenceUploading ? 0.5 : 1,

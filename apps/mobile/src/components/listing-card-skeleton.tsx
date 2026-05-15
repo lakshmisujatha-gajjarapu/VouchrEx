@@ -38,7 +38,7 @@ export function ListingCardSkeleton() {
         </View>
 
         {/* Divider */}
-        <View style={{ borderTopWidth: 1, borderTopColor: theme.colors.borderHair, borderStyle: 'dashed', marginBottom: theme.spacing[3] }} />
+        <View style={{ borderTopWidth: 1, borderTopColor: theme.colors.borderHair, borderStyle: 'solid', marginBottom: theme.spacing[3] }} />
 
         {/* Details */}
         <View style={{ gap: theme.spacing[2] }}>
