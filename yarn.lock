@@ -8108,34 +8108,34 @@ __metadata:
   languageName: node
   linkType: hard
 
-"expo-image-loader@npm:~55.0.0":
-  version: 55.0.0
-  resolution: "expo-image-loader@npm:55.0.0"
+"expo-image-loader@npm:~6.0.0":
+  version: 6.0.0
+  resolution: "expo-image-loader@npm:6.0.0"
   peerDependencies:
     expo: "*"
-  checksum: 10c0/4e8d9a7cd69af109f818639afd1f2106825950b4d7eaa304645939710a84bec59b70fd7dc4a7543ee2f31fc517b9ed23afc750e4c20ed4f7cf114d3686efece3
+  checksum: 10c0/36f1e80d2b3d2a1cce440c7d938cd3cf3138f2b1fa706a1954e415bfae87b5b8eeaec65be0ab17880eb7585dd28c9225d056ebdb98ac81e0ffbfe880d952b0eb
   languageName: node
   linkType: hard
 
-"expo-image-manipulator@npm:^55.0.16":
-  version: 55.0.16
-  resolution: "expo-image-manipulator@npm:55.0.16"
+"expo-image-manipulator@npm:~14.0.8":
+  version: 14.0.8
+  resolution: "expo-image-manipulator@npm:14.0.8"
   dependencies:
-    expo-image-loader: "npm:~55.0.0"
+    expo-image-loader: "npm:~6.0.0"
   peerDependencies:
     expo: "*"
-  checksum: 10c0/0b968b4389b61efacc9c7f86e6099c1d8c0fe5ea716e78c06df0fe5e1924f79b83ff0faa65de73cc367dbc6f200a252ab12155ae3d13d8646c1c0311b9b528d5
+  checksum: 10c0/74ffd39bd205272edcdb0805109add190716090b137f371bb573aec9c6f638ca612155b0ff6cbfb7725c6b3c43a10901a47a0dab9c8ca2c467b2c1924e6503b6
   languageName: node
   linkType: hard
 
-"expo-image-picker@npm:^55.0.20":
-  version: 55.0.20
-  resolution: "expo-image-picker@npm:55.0.20"
+"expo-image-picker@npm:~17.0.11":
+  version: 17.0.11
+  resolution: "expo-image-picker@npm:17.0.11"
   dependencies:
-    expo-image-loader: "npm:~55.0.0"
+    expo-image-loader: "npm:~6.0.0"
   peerDependencies:
     expo: "*"
-  checksum: 10c0/d874049dc6423d0576937fd54c793f31094ec56dff595e5ec66fbac695634f5b106b20cbbd83628534efa17ea12c3f1abcc16c2df38ef74558a52f95c8cc4a1b
+  checksum: 10c0/4708eca0f93258b9214d4a107edeed52562ade4bc1b53c5fa6dcb1218ccdf56ba46e5993110cda81b19e6d5a52e61572e057ccbcb7efdd6a48d99f5633b178ec
   languageName: node
   linkType: hard
 
@@ -15374,8 +15374,8 @@ __metadata:
     expo-device: "npm:~8.0.10"
     expo-font: "npm:~14.0.11"
     expo-image: "npm:~3.0.11"
-    expo-image-manipulator: "npm:^55.0.16"
-    expo-image-picker: "npm:^55.0.20"
+    expo-image-manipulator: "npm:~14.0.8"
+    expo-image-picker: "npm:~17.0.11"
     expo-linear-gradient: "npm:~15.0.8"
     expo-linking: "npm:~8.0.12"
     expo-notifications: "npm:~0.32.17"

@@ -1466,6 +1466,77 @@ export class OrdersService {
   }
 
   /**
+   * Manually cancel a single PAYMENT_PENDING order (admin escape hatch).
+   * Releases the listing back to ACTIVE and marks payment FAILED.
+   * Safe to call even if the cron races — conditional updateMany guards against double-cancel.
+   */
+  async forceCancelOrder(orderId: string, actorId: string): Promise<{ cancelled: boolean; reason: string }> {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: { listing: { include: { brand: true } }, buyer: { select: { id: true } }, payment: true },
+    });
+
+    if (!order) return { cancelled: false, reason: 'Order not found.' };
+    if (order.status !== OrderStatus.PAYMENT_PENDING) {
+      return { cancelled: false, reason: `Order is ${order.status} — only PAYMENT_PENDING orders can be force-cancelled.` };
+    }
+
+    const txResult = await this.prisma.$transaction(async (tx) => {
+      const result = await tx.order.updateMany({
+        where: { id: orderId, status: OrderStatus.PAYMENT_PENDING },
+        data: { status: OrderStatus.CANCELLED },
+      });
+
+      if (result.count === 0) return { orderCancelled: false, listingReactivated: false };
+
+      const listingUpdate = await tx.voucherListing.updateMany({
+        where: { id: order.listingId, status: ListingStatus.RESERVED },
+        data: { status: ListingStatus.ACTIVE, buyerId: null },
+      });
+
+      if (order.payment) {
+        await tx.payment.update({
+          where: { orderId },
+          data: { status: PaymentStatus.FAILED },
+        });
+      }
+
+      await tx.auditLog.create({
+        data: {
+          entityType: 'order',
+          entityId: orderId,
+          action: 'order.admin_force_cancel',
+          actorId,
+          metadata: { reason: 'Admin manual force-cancel' },
+        },
+      });
+
+      return { orderCancelled: true, listingReactivated: listingUpdate.count > 0 };
+    });
+
+    if (!txResult.orderCancelled) {
+      return { cancelled: false, reason: 'Order transitioned out of PAYMENT_PENDING before cancel could complete.' };
+    }
+
+    if (txResult.listingReactivated) {
+      this.eventEmitter.emit('listing.updated', { listingId: order.listingId, status: ListingStatus.ACTIVE });
+    }
+
+    await this.notificationsService.createMany([{
+      userId: order.buyerId,
+      orderId,
+      listingId: order.listingId,
+      channel: NotificationChannel.IN_APP,
+      eventType: 'order.payment_timeout',
+      title: 'Order cancelled',
+      message: `Your ${order.listing.brand.name} reservation was released by support. The listing is available again.`,
+      metadata: { reason: 'admin_force_cancel' },
+    }]);
+
+    return { cancelled: true, reason: 'Order cancelled and listing released.' };
+  }
+
+  /**
    * Cancel orders that have been PAYMENT_PENDING beyond the payment window.
    * Releases the listing back to ACTIVE so other buyers can purchase it.
    * Uses conditional updateMany to safely handle races with the reconciliation job.

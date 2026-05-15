@@ -551,7 +551,7 @@ export default function SellScreen() {
                   {/* Gift Card: Min Spend */}
                   <View>
                     <FieldLabel>Min. spend <Text style={{ fontFamily: theme.fontFamily.label, color: theme.colors.inkMuted, fontWeight: '400' }}>(optional)</Text></FieldLabel>
-                    <SubmergedInput value={minimumOrderValue} onChangeText={(v) => { handlePriceInput(v, setMinimumOrderValue); }} placeholder="499" keyboardType="numeric" prefix="₹" />
+                    <SubmergedInput value={minimumOrderValue} onChangeText={(v) => { setMinimumOrderValue(v.replace(/\D/g, '')); }} placeholder="499" keyboardType="numeric" prefix="₹" />
                     <Text style={{ fontSize: 12, fontFamily: theme.fontFamily.label, color: theme.colors.inkMuted, marginTop: 6, fontStyle: 'italic' }}>
                       Leave blank if there's no minimum cart requirement.
                     </Text>
@@ -654,9 +654,9 @@ export default function SellScreen() {
                   {/* Promo Code: Min Spend */}
                   <View>
                     <FieldLabel>Min. spend <Text style={{ fontFamily: theme.fontFamily.label, color: theme.colors.inkMuted, fontWeight: '400' }}>(optional)</Text></FieldLabel>
-                    <SubmergedInput value={minimumOrderValue} onChangeText={(v) => { handlePriceInput(v, setMinimumOrderValue); }} placeholder="499" keyboardType="numeric" prefix="₹" />
+                    <SubmergedInput value={minimumOrderValue} onChangeText={(v) => { setMinimumOrderValue(v.replace(/\D/g, '')); }} placeholder="499" keyboardType="numeric" prefix="₹" />
                     <Text style={{ fontSize: 12, fontFamily: theme.fontFamily.label, color: theme.colors.inkMuted, marginTop: 6, fontStyle: 'italic' }}>
-                      Common on Swiggy, Zomato, Myntra codes — leave blank if none.
+                      Minimum cart value the buyer needs to apply this code. Leave blank if there's no minimum.
                     </Text>
                   </View>
 

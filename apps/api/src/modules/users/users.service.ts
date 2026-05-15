@@ -47,6 +47,21 @@ export class UsersService {
     });
   }
 
+  async getSellerPublicStats(sellerId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: sellerId },
+      select: { trustScore: true, tier: true, totalSales: true, disputeCount: true },
+    });
+    if (!user) throw new NotFoundException('Seller not found.');
+    const tier = computeTier(user.trustScore);
+    const nextTierAt =
+      tier === 'BLOCKED' ? 30 :
+      tier === 'BRONZE' ? 50 :
+      tier === 'SILVER' ? 80 :
+      null;
+    return { trustScore: user.trustScore, tier, nextTierAt, totalSales: user.totalSales, disputesAgainst: user.disputeCount };
+  }
+
   async getMyStats(userId: string) {
     const [user, disputesRaised, purchases] = await Promise.all([
       this.prisma.user.findUnique({

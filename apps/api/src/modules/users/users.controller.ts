@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Headers, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Get, Headers, Param, Patch, Post } from '@nestjs/common';
 import { ApiHeader, ApiTags } from '@nestjs/swagger';
 
 import { sessionHeaderName } from '../auth/auth.constants';
@@ -34,6 +34,11 @@ export class UsersController {
   ) {
     const user = await this.authService.requireSessionUser(sessionToken);
     return this.usersService.updateMe(user.id, updateUserDto);
+  }
+
+  @Get(USERS_ROUTES.PUBLIC_STATS)
+  getSellerPublicStats(@Param('id') id: string) {
+    return this.usersService.getSellerPublicStats(id);
   }
 
   @ApiHeader({ name: sessionHeaderName, required: true })

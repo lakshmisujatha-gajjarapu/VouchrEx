@@ -668,6 +668,83 @@ export class AdminController {
   }
 
   /**
+   * Force-cancel a PAYMENT_PENDING order that is stuck (e.g. payment dropped mid-flow).
+   * Releases the listing back to ACTIVE and marks payment FAILED.
+   * The cron does this automatically after PAYMENT_TIMEOUT_MINUTES (default 30),
+   * but this endpoint lets support unblock a buyer immediately.
+   */
+  @ApiHeader({ name: adminHeaderName, required: true })
+  @Post(ADMIN_ROUTES.ORDER_FORCE_CANCEL)
+  async forceCancelOrder(
+    @Param('orderId') orderId: string,
+    @Headers(adminHeaderName) adminToken?: string,
+  ) {
+    const actor = await this.adminAccessService.requireAdminAccess(adminToken);
+
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        listing: { include: { brand: true } },
+        payment: true,
+      },
+    });
+
+    if (!order) throw new NotFoundException('Order not found.');
+    if (order.status !== OrderStatus.PAYMENT_PENDING) {
+      throw new BadRequestException(`Order is ${order.status} — only PAYMENT_PENDING orders can be force-cancelled.`);
+    }
+
+    const result = await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.order.updateMany({
+        where: { id: orderId, status: OrderStatus.PAYMENT_PENDING },
+        data: { status: OrderStatus.CANCELLED },
+      });
+      if (updated.count === 0) return { cancelled: false };
+
+      await tx.voucherListing.updateMany({
+        where: { id: order.listingId, status: ListingStatus.RESERVED },
+        data: { status: ListingStatus.ACTIVE, buyerId: null },
+      });
+
+      if (order.payment) {
+        await tx.payment.update({
+          where: { orderId },
+          data: { status: PaymentStatus.FAILED },
+        });
+      }
+
+      await tx.auditLog.create({
+        data: {
+          entityType: 'order',
+          entityId: orderId,
+          action: 'order.admin_force_cancel',
+          actorId: actor.kind === 'session' ? actor.adminId : null,
+          metadata: { reason: 'Admin manual force-cancel' },
+        },
+      });
+
+      return { cancelled: true };
+    });
+
+    if (!result.cancelled) {
+      throw new BadRequestException('Order transitioned out of PAYMENT_PENDING before cancel could complete — refresh and retry.');
+    }
+
+    await this.notificationsService.createMany([{
+      userId: order.buyerId,
+      orderId,
+      listingId: order.listingId,
+      channel: NotificationChannel.IN_APP,
+      eventType: 'order.payment_timeout',
+      title: 'Order cancelled',
+      message: `Your ${order.listing.brand.name} reservation was released by support. The listing is available again.`,
+      metadata: { reason: 'admin_force_cancel' },
+    }]);
+
+    return { success: true, orderId, message: 'Order cancelled and listing released.' };
+  }
+
+  /**
    * Retry a failed auto-payout. Calls Razorpay Payouts API again using the
    * seller's registered fund account.
    */

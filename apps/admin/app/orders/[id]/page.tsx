@@ -4,6 +4,7 @@ import type { Metadata } from 'next';
 import { getOrder } from '@/lib/api';
 import { formatCurrency, formatDateTime, formatPhone, formatShortId, getRelativeTime } from '@/lib/utils';
 import type { OrderDetail, OrderDetailParty, OrderDetailPayment } from '@/lib/types';
+import { OrderActions } from './order-actions';
 
 export const metadata: Metadata = { title: 'Order Detail | VouchrEx Admin' };
 
@@ -282,6 +283,8 @@ export default async function OrderDetailPage({ params }: PageProps) {
           </div>
         </Section>
       )}
+
+      <OrderActions orderId={order.id} status={order.status} />
 
       <Section title="Notifications">
         {notifications.length === 0 ? (

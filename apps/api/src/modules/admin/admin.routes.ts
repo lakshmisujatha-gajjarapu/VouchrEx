@@ -14,6 +14,7 @@ export const ADMIN_ROUTES = {
   USER_CLEAR_PAYOUT_HOLD:   'users/:id/clear-payout-hold',
   PAYOUTS_PENDING:          'payouts/pending',
   REFUNDS_PENDING:          'refunds/pending',
+  ORDER_FORCE_CANCEL:       'orders/:orderId/force-cancel',
   ORDER_RETRY_PAYOUT:       'orders/:orderId/retry-payout',
   ORDER_COMPLETE_PAYOUT:    'orders/:orderId/complete-payout',
   AUTH_LOGIN:               'auth/login',

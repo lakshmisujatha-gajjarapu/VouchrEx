@@ -36,9 +36,40 @@ jobs:
       - name: Test
         run: yarn test
 
+  changes:
+    name: Detect changed apps
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+    outputs:
+      api: ${{ steps.filter.outputs.api }}
+      admin: ${{ steps.filter.outputs.admin }}
+      mobile: ${{ steps.filter.outputs.mobile }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            api:
+              - 'apps/api/**'
+              - 'package.json'
+              - 'yarn.lock'
+              - 'tsconfig.base.json'
+            admin:
+              - 'apps/admin/**'
+              - 'package.json'
+              - 'yarn.lock'
+              - 'tsconfig.base.json'
+            mobile:
+              - 'apps/mobile/**'
+              - 'package.json'
+              - 'yarn.lock'
+              - 'tsconfig.base.json'
+
   docker:
     name: Build & push ${{ matrix.app }} (${{ matrix.platform }})
-    needs: check
+    needs: [check, changes]
     if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
     strategy:
       fail-fast: false
@@ -52,28 +83,51 @@ jobs:
             runner: ubuntu-24.04-arm
     runs-on: ${{ matrix.runner }}
     steps:
+      - name: Check if build needed
+        id: gate
+        run: |
+          app="${{ matrix.app }}"
+          is_tag="${{ startsWith(github.ref, 'refs/tags/v') }}"
+          if [ "$is_tag" = "true" ]; then
+            echo "build=true" >> "$GITHUB_OUTPUT"
+          elif [ "$app" = "api"    ] && [ "${{ needs.changes.outputs.api }}"    = "true" ]; then
+            echo "build=true" >> "$GITHUB_OUTPUT"
+          elif [ "$app" = "admin"  ] && [ "${{ needs.changes.outputs.admin }}"  = "true" ]; then
+            echo "build=true" >> "$GITHUB_OUTPUT"
+          elif [ "$app" = "mobile" ] && [ "${{ needs.changes.outputs.mobile }}" = "true" ]; then
+            echo "build=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "build=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/checkout@v4
+        if: steps.gate.outputs.build == 'true'
 
       - name: Prepare platform pair
         id: prep
+        if: steps.gate.outputs.build == 'true'
         run: |
           platform="${{ matrix.platform }}"
           echo "pair=${platform//\//-}" >> "$GITHUB_OUTPUT"
 
       - uses: docker/login-action@v3
+        if: steps.gate.outputs.build == 'true'
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - uses: docker/setup-buildx-action@v3
+        if: steps.gate.outputs.build == 'true'
 
       - uses: docker/metadata-action@v5
         id: meta
+        if: steps.gate.outputs.build == 'true'
         with:
           images: ${{ secrets.DOCKERHUB_USERNAME }}/vouchrex-${{ matrix.app }}
 
       - name: Resolve build args
         id: buildargs
+        if: steps.gate.outputs.build == 'true'
         run: |
           if [ "${{ matrix.app }}" = "mobile" ]; then
             echo "args=EXPO_PUBLIC_API_BASE_URL=${{ secrets.MOBILE_API_BASE_URL }}" >> "$GITHUB_OUTPUT"
@@ -83,6 +137,7 @@ jobs:
 
       - name: Build and push by digest
         id: build
+        if: steps.gate.outputs.build == 'true'
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -95,12 +150,14 @@ jobs:
           cache-to: type=gha,mode=max,scope=${{ matrix.app }}-${{ steps.prep.outputs.pair }}
 
       - name: Export digest
+        if: steps.gate.outputs.build == 'true'
         run: |
           mkdir -p /tmp/digests
           digest="${{ steps.build.outputs.digest }}"
           touch "/tmp/digests/${digest#sha256:}"
 
       - uses: actions/upload-artifact@v4
+        if: steps.gate.outputs.build == 'true'
         with:
           name: digests-${{ matrix.app }}-${{ steps.prep.outputs.pair }}
           path: /tmp/digests/*
@@ -109,7 +166,7 @@ jobs:
 
   docker-merge:
     name: Merge & push multi-arch manifest (${{ matrix.app }})
-    needs: docker
+    needs: [docker, changes]
     if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     strategy:
@@ -117,21 +174,42 @@ jobs:
       matrix:
         app: [api, admin, mobile]
     steps:
+      - name: Check if build needed
+        id: gate
+        run: |
+          app="${{ matrix.app }}"
+          is_tag="${{ startsWith(github.ref, 'refs/tags/v') }}"
+          if [ "$is_tag" = "true" ]; then
+            echo "build=true" >> "$GITHUB_OUTPUT"
+          elif [ "$app" = "api"    ] && [ "${{ needs.changes.outputs.api }}"    = "true" ]; then
+            echo "build=true" >> "$GITHUB_OUTPUT"
+          elif [ "$app" = "admin"  ] && [ "${{ needs.changes.outputs.admin }}"  = "true" ]; then
+            echo "build=true" >> "$GITHUB_OUTPUT"
+          elif [ "$app" = "mobile" ] && [ "${{ needs.changes.outputs.mobile }}" = "true" ]; then
+            echo "build=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "build=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/download-artifact@v4
+        if: steps.gate.outputs.build == 'true'
         with:
           path: /tmp/digests
           pattern: digests-${{ matrix.app }}-*
           merge-multiple: true
 
       - uses: docker/login-action@v3
+        if: steps.gate.outputs.build == 'true'
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - uses: docker/setup-buildx-action@v3
+        if: steps.gate.outputs.build == 'true'
 
       - uses: docker/metadata-action@v5
         id: meta
+        if: steps.gate.outputs.build == 'true'
         with:
           images: ${{ secrets.DOCKERHUB_USERNAME }}/vouchrex-${{ matrix.app }}
           tags: |
@@ -140,11 +218,13 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
 
       - name: Create and push manifest list
+        if: steps.gate.outputs.build == 'true'
         working-directory: /tmp/digests
         run: |
           docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
             $(printf '${{ secrets.DOCKERHUB_USERNAME }}/vouchrex-${{ matrix.app }}@sha256:%s ' *)
 
       - name: Inspect image
+        if: steps.gate.outputs.build == 'true'
         run: |
           docker buildx imagetools inspect ${{ secrets.DOCKERHUB_USERNAME }}/vouchrex-${{ matrix.app }}:${{ steps.meta.outputs.version }}

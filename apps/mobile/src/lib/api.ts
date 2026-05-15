@@ -26,6 +26,14 @@ export type UserStats = {
   readonly payoutHoldUntil: string | null;
 };
 
+export type SellerPublicStats = {
+  readonly trustScore: number;
+  readonly tier: 'GOLD' | 'SILVER' | 'BRONZE' | 'BLOCKED';
+  readonly nextTierAt: number | null;
+  readonly totalSales: number;
+  readonly disputesAgainst: number;
+};
+
 export type OtpRequestResult = {
   readonly phone: string;
   readonly expiresAt: string;
@@ -526,6 +534,9 @@ export const api = {
   },
   getMyStats(sessionToken: string) {
     return apiRequest<UserStats>(USERS.ME_STATS, { sessionToken });
+  },
+  getSellerPublicStats(sellerId: string) {
+    return apiRequest<SellerPublicStats>(USERS.SELLER_PUBLIC_STATS(sellerId));
   },
   registerPushToken(
     sessionToken: string,

@@ -292,13 +292,25 @@ export default function ListingDetailScreen() {
             </View>
 
             {/* ── Seller snapshot ── */}
-            <View style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              paddingHorizontal: theme.spacing[2],
-              marginBottom: theme.spacing[8],
-            }}>
+            <Pressable
+              onPress={() => {
+                router.push({
+                  pathname: '/seller/[id]',
+                  params: {
+                    id: listing.seller.id,
+                    name: listing.seller.name,
+                    tier: listing.seller.trustTier ?? 'bronze',
+                  },
+                });
+              }}
+              style={({ pressed }) => ({
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                paddingHorizontal: theme.spacing[2],
+                marginBottom: theme.spacing[8],
+                opacity: pressed ? 0.7 : 1,
+              })}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[3] }}>
                 <View style={{
                   width: 40, height: 40, borderRadius: 20,
@@ -316,7 +328,8 @@ export default function ListingDetailScreen() {
                   </Text>
                 </View>
               </View>
-            </View>
+              <Ionicons name="chevron-forward" size={16} color={theme.colors.inkMuted} />
+            </Pressable>
 
                   {listing.minimumOrderValue ? (
                     <View style={{
