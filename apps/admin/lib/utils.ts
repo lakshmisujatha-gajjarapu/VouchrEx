@@ -14,25 +14,42 @@ export function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
-export function formatDate(date: Date | string): string {
+const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] as const;
+
+function pad2(value: number): string {
+  return String(value).padStart(2, '0');
+}
+
+function getIstParts(date: Date | string) {
   const d = typeof date === 'string' ? new Date(date) : date;
-  return new Intl.DateTimeFormat('en-IN', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  }).format(d);
+  const istDate = new Date(d.getTime() + IST_OFFSET_MS);
+  const hour24 = istDate.getUTCHours();
+  const hour12 = hour24 % 12 || 12;
+
+  return {
+    day: istDate.getUTCDate(),
+    month: MONTHS[istDate.getUTCMonth()],
+    year: istDate.getUTCFullYear(),
+    hour: pad2(hour12),
+    minute: pad2(istDate.getUTCMinutes()),
+    meridiem: hour24 >= 12 ? 'PM' : 'AM',
+  };
+}
+
+export function formatDate(date: Date | string): string {
+  const p = getIstParts(date);
+  return `${String(p.day)} ${p.month} ${String(p.year)}`;
 }
 
 export function formatDateTime(date: Date | string): string {
-  const d = typeof date === 'string' ? new Date(date) : date;
-  return new Intl.DateTimeFormat('en-IN', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-  }).format(d);
+  const p = getIstParts(date);
+  return `${String(p.day)} ${p.month} ${String(p.year)}, ${p.hour}:${p.minute} ${p.meridiem}`;
+}
+
+export function formatDateTimeShort(date: Date | string): string {
+  const p = getIstParts(date);
+  return `${String(p.day)} ${p.month}, ${p.hour}:${p.minute} ${p.meridiem}`;
 }
 
 export function formatPhone(phone: string): string {
@@ -55,16 +72,5 @@ export function formatShortId(uuid: string, prefix: string = ''): string {
 
 export function getRelativeTime(date: Date | string): string {
   const d = typeof date === 'string' ? new Date(date) : date;
-  const now = new Date();
-  const diffMs = now.getTime() - d.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-
-  if (diffMins < 1) return 'just now';
-  if (diffMins < 60) return `${String(diffMins)} min${diffMins > 1 ? 's' : ''} ago`;
-  if (diffHours < 24) return `${String(diffHours)} hour${diffHours > 1 ? 's' : ''} ago`;
-  if (diffDays < 7) return `${String(diffDays)} day${diffDays > 1 ? 's' : ''} ago`;
-
-  return formatDate(d);
+  return formatDateTime(d);
 }

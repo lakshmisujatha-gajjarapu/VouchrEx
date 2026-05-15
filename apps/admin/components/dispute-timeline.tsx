@@ -1,5 +1,7 @@
 'use client';
 
+import { formatDateTimeShort } from '@/lib/utils';
+
 interface Props {
   readonly orderCreatedAt: string;
   readonly codeRevealedAt: string | null;
@@ -8,9 +10,7 @@ interface Props {
 }
 
 function fmt(iso: string): string {
-  return new Date(iso).toLocaleString('en-IN', {
-    day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
-  });
+  return formatDateTimeShort(iso);
 }
 
 function delta(fromIso: string, toIso: string): string {

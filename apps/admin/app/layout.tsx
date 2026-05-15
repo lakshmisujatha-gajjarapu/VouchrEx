@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Manrope, Work_Sans, JetBrains_Mono } from "next/font/google";
 import { Suspense } from "react";
 import "./globals.css";
@@ -30,7 +30,19 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "VouchrEx Admin",
   description: "Admin console for VouchrEx operations",
+  manifest: "/manifest.webmanifest",
+  applicationName: "VouchrEx Admin",
+  appleWebApp: {
+    capable: true,
+    title: "VouchrEx Admin",
+    statusBarStyle: "black-translucent",
+  },
+  formatDetection: { telephone: false },
   robots: { index: false, follow: false },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0D0B1E",
 };
 
 export const dynamic = 'force-dynamic';

@@ -9,5 +9,5 @@ export function PageWrapper({ children }: { children: React.ReactNode }) {
   const fullWidthPages = [ROUTES.LOGIN, ROUTES.HOME];
   const isFullWidth = fullWidthPages.some((page) => page === pathname);
 
-  return <main className={isFullWidth ? '' : 'ml-60'}>{children}</main>;
+  return <main className={isFullWidth ? '' : 'pb-20 md:ml-60 md:pb-0'}>{children}</main>;
 }

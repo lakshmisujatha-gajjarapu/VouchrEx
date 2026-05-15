@@ -23,6 +23,7 @@ type ActionType = 'mark-paid' | 'retry';
 export default function PayoutsView({ payouts }: PayoutsViewProps) {
   const router = useRouter();
   const [confirm, setConfirm] = useState<{ payout: PendingPayout; action: ActionType } | null>(null);
+  const [selectedPayout, setSelectedPayout] = useState<PendingPayout | null>(null);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState('');
   const [utrRef, setUtrRef] = useState('');
@@ -74,7 +75,156 @@ export default function PayoutsView({ payouts }: PayoutsViewProps) {
 
   return (
     <>
-      <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: 'var(--color-card)', boxShadow: '0 0 40px rgba(26,27,33,0.06)' }}>
+      <div className="space-y-3 md:hidden">
+        {payouts.map((p) => {
+          const isFailed = p.payment.payoutStatus === 'FAILED';
+          return (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => { setSelectedPayout(p); }}
+              className="grid w-full grid-cols-[1fr_auto] gap-3 rounded-2xl px-4 py-3.5 text-left transition-opacity active:opacity-80"
+              style={{
+                backgroundColor: 'var(--color-card)',
+                border: '1px solid var(--color-surface-high)',
+                boxShadow: '0 8px 24px rgba(26,27,33,0.05)',
+              }}
+            >
+              <div className="min-w-0">
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="truncate text-sm font-semibold" style={{ color: 'var(--color-foreground)', fontFamily: 'var(--font-body)' }}>
+                    {p.listing.brand.name}
+                  </span>
+                  <span className="shrink-0 text-[11px]" style={{ color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-mono)' }}>
+                    {formatShortId(p.id)}
+                  </span>
+                </div>
+                <div className="mt-1 flex min-w-0 items-center gap-2 text-xs" style={{ color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}>
+                  <span className="truncate">{p.seller.name ?? formatPhone(p.seller.phone)}</span>
+                  <span className="shrink-0">·</span>
+                  <span className="truncate" style={{ fontFamily: 'var(--font-mono)' }}>
+                    {p.seller.payoutAccount?.upiId ?? 'No account'}
+                  </span>
+                </div>
+              </div>
+              <div className="flex shrink-0 flex-col items-end gap-1">
+                <span className="text-sm font-bold tabular-nums" style={{ color: 'var(--color-primary)', fontFamily: 'var(--font-mono)' }}>
+                  {formatCurrency(p.sellerPayout)}
+                </span>
+                <span
+                  className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide"
+                  style={{
+                    backgroundColor: isFailed ? 'var(--color-destructive-soft)' : 'var(--color-warning-soft)',
+                    color: isFailed ? 'var(--color-destructive)' : 'var(--color-warning)',
+                    fontFamily: 'var(--font-body)',
+                  }}
+                >
+                  {isFailed ? 'Failed' : 'Pending'}
+                </span>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {selectedPayout && (
+        <Dialog open onOpenChange={(open) => { if (!open) setSelectedPayout(null); }}>
+          <DialogContent className="bottom-0 top-auto max-h-[88vh] translate-y-0 overflow-y-auto rounded-b-none rounded-t-[1.75rem] border-0 p-0 shadow-2xl sm:top-1/2 sm:max-w-md sm:-translate-y-1/2 sm:rounded-[1.75rem]">
+            <div className="sticky top-0 z-10 rounded-t-[1.75rem] px-5 pb-4 pt-3" style={{ backgroundColor: 'var(--color-card)', borderBottom: '1px solid var(--color-surface-high)', paddingRight: '3.75rem' }}>
+              <div className="mx-auto mb-3 h-1 w-10 rounded-full" style={{ backgroundColor: 'var(--color-surface-highest)' }} />
+              <div>
+                <DialogTitle className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}>
+                  Manual payout
+                </DialogTitle>
+                <DialogDescription className="sr-only">
+                  Payout details and manual settlement actions.
+                </DialogDescription>
+                <p className="mt-1 text-2xl font-bold tabular-nums" style={{ color: 'var(--color-primary)', fontFamily: 'var(--font-mono)' }}>
+                  {formatCurrency(selectedPayout.sellerPayout)}
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-3 px-5 py-5">
+              <div className="rounded-2xl px-4 py-3" style={{ backgroundColor: 'var(--color-surface-raised)' }}>
+                <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}>
+                  Send to UPI
+                </p>
+                <p className="mt-0.5 select-all break-all font-semibold" style={{ color: selectedPayout.seller.payoutAccount?.upiId ? 'var(--color-foreground)' : 'var(--color-warning)', fontFamily: 'var(--font-mono)' }}>
+                  {selectedPayout.seller.payoutAccount?.upiId ?? 'No account'}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-sm" style={{ fontFamily: 'var(--font-body)' }}>
+                <div className="rounded-2xl px-4 py-3" style={{ backgroundColor: 'var(--color-surface-raised)' }}>
+                  <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: 'var(--color-muted-foreground)' }}>
+                    Seller
+                  </p>
+                  <p className="mt-0.5 truncate font-semibold" style={{ color: 'var(--color-foreground)' }}>
+                    {selectedPayout.seller.name ?? formatPhone(selectedPayout.seller.phone)}
+                  </p>
+                  <p className="text-xs" style={{ color: 'var(--color-muted-foreground)' }}>
+                    {formatPhone(selectedPayout.seller.phone)}
+                  </p>
+                </div>
+                <div className="rounded-2xl px-4 py-3" style={{ backgroundColor: 'var(--color-surface-raised)' }}>
+                  <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: 'var(--color-muted-foreground)' }}>
+                    Order
+                  </p>
+                  <p className="mt-0.5 font-semibold" style={{ color: 'var(--color-foreground)', fontFamily: 'var(--font-mono)' }}>
+                    {formatShortId(selectedPayout.id)}
+                  </p>
+                  <p className="text-xs" style={{ color: 'var(--color-muted-foreground)' }}>
+                    {formatDate(selectedPayout.createdAt)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-2xl px-4 py-3 text-sm" style={{ backgroundColor: 'var(--color-surface-raised)', fontFamily: 'var(--font-body)' }}>
+                <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: 'var(--color-muted-foreground)' }}>
+                  Voucher
+                </p>
+                <p className="mt-0.5 font-semibold" style={{ color: 'var(--color-foreground)' }}>
+                  {selectedPayout.listing.brand.name}
+                </p>
+              </div>
+
+              {selectedPayout.payment.payoutStatus === 'FAILED' && selectedPayout.payment.payoutFailureReason && (
+                <p className="rounded-2xl px-4 py-3 text-xs" style={{ backgroundColor: 'var(--color-destructive-soft)', color: 'var(--color-destructive)', fontFamily: 'var(--font-body)' }}>
+                  {selectedPayout.payment.payoutFailureReason}
+                </p>
+              )}
+
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                {selectedPayout.payment.payoutStatus === 'FAILED' && (
+                  <Button
+                    variant="outline"
+                    className="h-11"
+                    onClick={() => {
+                      setConfirm({ payout: selectedPayout, action: 'retry' });
+                      setSelectedPayout(null);
+                    }}
+                  >
+                    Retry
+                  </Button>
+                )}
+                <Button
+                  variant="success"
+                  className={selectedPayout.payment.payoutStatus === 'FAILED' ? 'h-11' : 'col-span-2 h-11'}
+                  onClick={() => {
+                    setConfirm({ payout: selectedPayout, action: 'mark-paid' });
+                    setSelectedPayout(null);
+                  }}
+                >
+                  Mark Paid
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      <div className="hidden overflow-hidden rounded-2xl md:block" style={{ backgroundColor: 'var(--color-card)', boxShadow: '0 0 40px rgba(26,27,33,0.06)' }}>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>

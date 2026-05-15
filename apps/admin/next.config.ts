@@ -4,6 +4,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   output: "standalone",
   outputFileTracingRoot: path.join(__dirname, "../.."),
+  allowedDevOrigins: ["192.168.0.116"],
   typescript: {
     ignoreBuildErrors: false,
   },

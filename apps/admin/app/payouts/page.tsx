@@ -30,9 +30,9 @@ export default async function PayoutsPage({ searchParams }: PageProps) {
   const pageTotal = payouts.reduce((sum, p) => sum + p.sellerPayout, 0);
 
   return (
-    <div className="p-8 animate-slide-up">
-      <header className="mb-8">
-        <h1 style={{ fontFamily: 'var(--font-headline)', fontSize: '2rem', fontWeight: 800, letterSpacing: '-0.04em', color: 'var(--color-foreground)', marginBottom: '0.25rem' }}>
+    <div className="animate-slide-up px-4 py-5 sm:px-6 md:p-8">
+      <header className="mb-5 md:mb-8">
+        <h1 className="text-[1.75rem] md:text-[2rem]" style={{ fontFamily: 'var(--font-headline)', fontWeight: 800, color: 'var(--color-foreground)', marginBottom: '0.25rem' }}>
           Pending Payouts
         </h1>
         <p style={{ color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)', fontSize: '0.9375rem' }}>

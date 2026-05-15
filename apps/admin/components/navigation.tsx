@@ -26,6 +26,7 @@ import {
   LogOut,
   ShieldCheck,
   Settings,
+  MoreHorizontal,
 } from 'lucide-react';
 
 const baseNavItems = [
@@ -62,7 +63,7 @@ export function Navigation({ isSuperAdmin = false }: NavigationProps) {
 
   return (
     <>
-      <aside className="fixed left-0 top-0 w-60 h-screen flex flex-col z-50"
+      <aside className="fixed left-0 top-0 hidden h-screen w-60 flex-col md:flex z-50"
         style={{ backgroundColor: 'var(--color-card)', borderRight: '1px solid var(--color-surface-high)' }}>
 
         {/* Logo */}
@@ -148,6 +149,41 @@ export function Navigation({ isSuperAdmin = false }: NavigationProps) {
           </button>
         </div>
       </aside>
+
+      <nav
+        className="fixed inset-x-0 bottom-0 z-50 grid h-16 grid-cols-5 border-t px-1.5 md:hidden"
+        style={{
+          backgroundColor: 'var(--color-card)',
+          borderColor: 'var(--color-surface-high)',
+          paddingBottom: 'env(safe-area-inset-bottom)',
+        }}
+        aria-label="Admin mobile navigation"
+      >
+        {[
+          { name: 'Home', href: ROUTES.DASHBOARD, icon: LayoutDashboard },
+          { name: 'Orders', href: ROUTES.ORDERS, icon: ClipboardList },
+          { name: 'Payouts', href: ROUTES.PAYOUTS, icon: Wallet },
+          { name: 'Disputes', href: ROUTES.DISPUTES, icon: MessageSquareWarning },
+          { name: 'More', href: ROUTES.USERS, icon: MoreHorizontal },
+        ].map((item) => {
+          const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+          const Icon = item.icon;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl text-[11px] font-semibold"
+              style={{
+                color: isActive ? 'var(--color-primary)' : 'var(--color-muted-foreground)',
+                fontFamily: 'var(--font-body)',
+              }}
+            >
+              <Icon className="h-5 w-5" />
+              <span className="truncate">{item.name}</span>
+            </Link>
+          );
+        })}
+      </nav>
 
       <Dialog open={logoutDialogOpen} onOpenChange={setLogoutDialogOpen}>
         <DialogContent className="sm:max-w-md">
