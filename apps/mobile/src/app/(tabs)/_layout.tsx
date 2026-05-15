@@ -42,23 +42,18 @@ export default function TabsLayout() {
   const theme = useTheme();
   const { unreadCount } = useNotificationCenter();
   const insets = useSafeAreaInsets();
-  const bottomOffset = Math.max(insets.bottom, 8);
   const tabBarStyle = {
-    position: 'absolute' as const,
-    left: 14,
-    right: 14,
-    bottom: bottomOffset + 6,
-    height: 62,
-    paddingTop: 4,
-    paddingBottom: 4,
-    borderTopWidth: 0,
-    borderRadius: 20,
+    height: 64 + insets.bottom,
+    paddingTop: 10,
+    paddingBottom: Math.max(insets.bottom, 10),
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.borderHair,
     backgroundColor: theme.colors.surface,
     shadowColor: theme.colors.shadowStrong,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 1,
-    shadowRadius: 24,
-    elevation: 8,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 16,
   };
   const tabBarLabelStyle = {
     fontWeight: '700' as const,

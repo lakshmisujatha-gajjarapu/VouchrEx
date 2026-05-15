@@ -25,12 +25,12 @@ import Animated, {
   FadeOut,
   LinearTransition,
   interpolate,
-  runOnJS,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -38,7 +38,6 @@ import { useColorScheme } from 'nativewind';
 
 import { useAsyncResource } from '@/hooks/use-async-resource';
 import { useListingsSocket } from '@/hooks/use-listings-socket';
-import { useTabBarClearance } from '@/hooks/use-tab-bar-clearance';
 import { api } from '@/lib/api';
 import { useTheme } from '@/theme/theme-context';
 
@@ -90,7 +89,7 @@ function DiscountSlider({
       
       translateX.value = reducedMotion ? snappedX : withSpring(snappedX, { damping: 20, stiffness: 150 });
       thumbScale.value = withSpring(1);
-      runOnJS(onChange)(v);
+      scheduleOnRN(onChange, v);
     });
 
   const tapGesture = Gesture.Tap()
@@ -100,7 +99,7 @@ function DiscountSlider({
       const snappedX = (v / DISCOUNT_MAX) * width.value;
 
       translateX.value = reducedMotion ? snappedX : withSpring(snappedX, { damping: 20, stiffness: 150 });
-      runOnJS(onChange)(v);
+      scheduleOnRN(onChange, v);
     });
 
   const trackStyle = useAnimatedStyle(() => ({
@@ -193,8 +192,6 @@ export default function ShopScreen() {
   const theme = useTheme();
   const { colorScheme } = useColorScheme();
   const reducedMotion = useReducedMotion();
-  const tabBarClearance = useTabBarClearance();
-
   const [query, setQuery] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
   const [category, setCategory] = useState<string | undefined>();
@@ -280,7 +277,7 @@ export default function ShopScreen() {
         <ScrollView
           stickyHeaderIndices={[1]}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: tabBarClearance }}
+          contentContainerStyle={{ paddingBottom: 32 }}
         >
 
           {/* ── Hero ── */}

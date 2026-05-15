@@ -24,6 +24,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import Toast from 'react-native-toast-message';
 
 import { LoadingScreen } from '@/components/loading-screen';
+import { toastConfig } from '@/components/toast-config';
 import { AuthProvider, useAuth } from '@/hooks/use-auth';
 import { ConfigProvider } from '@/hooks/use-config';
 import { NotificationCenterProvider } from '@/hooks/use-notification-center';
@@ -62,7 +63,7 @@ function InnerApp() {
             <PushRegistrar>
               <NotificationCenterProvider>
                 <AppStack />
-                <Toast />
+                <Toast config={toastConfig} topOffset={56} />
               </NotificationCenterProvider>
             </PushRegistrar>
           </ConfigProvider>

@@ -25,7 +25,6 @@ import { ProfileAvatar } from '@/components/profile-avatar';
 import { useAuth } from '@/hooks/use-auth';
 import { useAsyncResource } from '@/hooks/use-async-resource';
 import { useConfig } from '@/hooks/use-config';
-import { useTabBarClearance } from '@/hooks/use-tab-bar-clearance';
 import { api, type PayoutAccount } from '@/lib/api';
 import { searchBrandfetchBrands } from '@/lib/brandfetch';
 import { useTheme } from '@/theme/theme-context';
@@ -54,7 +53,6 @@ export default function SellScreen() {
   const router = useRouter();
   const { listingMaxPriceInr } = useConfig();
   const reducedMotion = useReducedMotion();
-  const tabBarClearance = useTabBarClearance();
 
   // ── Payout account gate ──────────────────────────────────────────
   const [payoutAccount, setPayoutAccount]   = useState<PayoutAccount | null>(null);
@@ -236,7 +234,7 @@ export default function SellScreen() {
           ) : !payoutAccount?.registered ? (
             /* ── Payout gate: UPI registration ── */
             <ScrollView
-              contentContainerStyle={{ flexGrow: 1, paddingHorizontal: theme.spacing[5], paddingBottom: tabBarClearance, justifyContent: 'center' }}
+              contentContainerStyle={{ flexGrow: 1, paddingHorizontal: theme.spacing[5], paddingBottom: 32, justifyContent: 'center' }}
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}>
               <View style={{ alignItems: 'center', marginBottom: 32 }}>
@@ -343,7 +341,7 @@ export default function SellScreen() {
           ) : (
           /* ── Main listing form (payout account exists) ── */
           <ScrollView
-            contentContainerStyle={{ paddingBottom: tabBarClearance }}
+            contentContainerStyle={{ paddingBottom: 32 }}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}>
             <View style={{ paddingHorizontal: theme.spacing[5], gap: theme.spacing[6] }}>
