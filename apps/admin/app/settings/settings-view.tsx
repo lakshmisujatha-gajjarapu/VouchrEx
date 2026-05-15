@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { AppConfigRow } from '@/lib/types';
+import { clientFetch } from '@/lib/client-fetch';
 import { formatDate } from '@/lib/utils';
 
 interface SettingsViewProps {
@@ -138,7 +139,7 @@ export default function SettingsView({ rows }: SettingsViewProps) {
         if (notify.enabled) {
           body.notify = { title: notify.title.trim(), message: notify.message.trim() };
         }
-        const res = await fetch(`/api/config/${encodeURIComponent(key)}`, {
+        const res = await clientFetch(`/api/config/${encodeURIComponent(key)}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),

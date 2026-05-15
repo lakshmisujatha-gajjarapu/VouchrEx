@@ -1,4 +1,5 @@
 import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 import { API_CONFIG, ADMIN_HEADER, AUTH_CONFIG } from './constants';
 import type {
   AdminListing,
@@ -37,6 +38,10 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
         : (options?.headers as Record<string, string> | undefined)),
     },
   });
+
+  if (res.status === 401) {
+    redirect('/login');
+  }
 
   if (!res.ok) {
     const text = await res.text().catch(() => res.statusText);

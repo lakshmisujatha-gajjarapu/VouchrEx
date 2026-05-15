@@ -10,7 +10,8 @@ export default tseslint.config(
       '**/.next/**',
       '.yarn/**',
       'eslint.config.mjs',
-      'apps/api/test/**'
+      'apps/api/test/**',
+      'apps/mobile/src/lib/msg91.ts'
     ]
   },
   js.configs.recommended,

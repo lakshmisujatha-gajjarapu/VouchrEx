@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import type { PendingRefund } from '@/lib/types';
+import { clientFetch } from '@/lib/client-fetch';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -37,7 +38,7 @@ export default function RefundsView({ refunds }: RefundsViewProps) {
             ? `/api/orders/${confirm.refund.id}/retry-refund`
             : `/api/orders/${confirm.refund.id}/complete-refund`;
 
-        const res = await fetch(endpoint, { method: 'POST' });
+        const res = await clientFetch(endpoint, { method: 'POST' });
 
         if (!res.ok) {
           const d = (await res.json()) as { error?: string };

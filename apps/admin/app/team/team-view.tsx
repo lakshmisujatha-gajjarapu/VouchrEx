@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff } from 'lucide-react';
 import type { AdminTeamMember } from '@/lib/types';
+import { clientFetch } from '@/lib/client-fetch';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -94,7 +95,7 @@ export default function TeamView({ team, currentAdminId }: TeamViewProps) {
     }
     setError('');
     startTransition(async () => {
-      const res = await fetch('/api/team', {
+      const res = await clientFetch('/api/team', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: newName.trim(), email: newEmail.trim(), password: newPassword, role: newRole }),
@@ -112,7 +113,7 @@ export default function TeamView({ team, currentAdminId }: TeamViewProps) {
     if (!pwMember) return;
     setError('');
     startTransition(async () => {
-      const res = await fetch(`/api/team/${pwMember.id}/set-password`, {
+      const res = await clientFetch(`/api/team/${pwMember.id}/set-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password: newPw }),
@@ -132,7 +133,7 @@ export default function TeamView({ team, currentAdminId }: TeamViewProps) {
       ? `/api/team/${toggleMember.id}/deactivate`
       : `/api/team/${toggleMember.id}/activate`;
     startTransition(async () => {
-      const res = await fetch(endpoint, { method: 'POST' });
+      const res = await clientFetch(endpoint, { method: 'POST' });
       const data = (await res.json()) as { error?: string };
       if (!res.ok) { setError(data.error ?? 'Failed.'); return; }
       setToggleMember(null);

@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import type { AdminUser } from '@/lib/types';
+import { clientFetch } from '@/lib/client-fetch';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -62,7 +63,7 @@ export default function UsersView({ users }: UsersViewProps) {
     startTransition(async () => {
       try {
         const endpoint = `/api/users/${confirm.user.id}/${confirm.action}`;
-        const res = await fetch(endpoint, { method: 'POST' });
+        const res = await clientFetch(endpoint, { method: 'POST' });
 
         if (!res.ok) {
           const d = (await res.json()) as { error?: string };

@@ -3,6 +3,7 @@
 import { useState, useTransition, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Dispute } from '@/lib/types';
+import { clientFetch } from '@/lib/client-fetch';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
 
@@ -32,7 +33,7 @@ export function DisputeActions({ dispute }: DisputeActionsProps) {
   useEffect(() => {
     if (dispute.evidenceUrls.length === 0) return;
     setLoadingEvidence(true);
-    void fetch(`/api/disputes/${dispute.id}/evidence-url`)
+    void clientFetch(`/api/disputes/${dispute.id}/evidence-url`)
       .then((r) => r.json())
       .then((data: { signedUrls: string[] }) => { setEvidenceUrls(data.signedUrls); })
       .catch(() => { setEvidenceUrls([]); })
@@ -43,7 +44,7 @@ export function DisputeActions({ dispute }: DisputeActionsProps) {
     setError('');
     startTransition(async () => {
       try {
-        const res = await fetch(`/api/disputes/${dispute.id}/resolve`, {
+        const res = await clientFetch(`/api/disputes/${dispute.id}/resolve`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ resolution }),

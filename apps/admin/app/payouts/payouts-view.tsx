@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import type { PendingPayout } from '@/lib/types';
+import { clientFetch } from '@/lib/client-fetch';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -39,7 +40,7 @@ export default function PayoutsView({ payouts }: PayoutsViewProps) {
             ? `/api/orders/${confirm.payout.id}/retry-payout`
             : `/api/orders/${confirm.payout.id}/complete-payout`;
 
-        const res = await fetch(endpoint, {
+        const res = await clientFetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: confirm.action === 'mark-paid' ? JSON.stringify({ utrRef: utrRef.trim() || undefined }) : undefined,
