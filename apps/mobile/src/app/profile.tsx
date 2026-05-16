@@ -1,4 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
+import * as Device from 'expo-device';
+import * as MailComposer from 'expo-mail-composer';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
@@ -249,6 +252,39 @@ export default function ProfileScreen() {
   function cycleAppearance() {
     const idx = appearanceOrder.indexOf(preference);
     void themePrefs.setPreference(appearanceOrder[(idx + 1) % appearanceOrder.length]);
+  }
+
+  async function handleContactSupport() {
+    const isAvailable = await MailComposer.isAvailableAsync();
+    if (!isAvailable) {
+      await Clipboard.setStringAsync('support@vouchrex.com');
+      Alert.alert(
+        'Mail App Not Found',
+        'We have copied our support email (support@vouchrex.com) to your clipboard. You can paste it into any mail app manually.'
+      );
+      return;
+    }
+
+    const body = `
+Hi VouchrEx Team,
+
+[Please describe your issue here]
+
+
+--- Technical Info ---
+User ID: ${user?.id ?? 'Unknown'}
+Name: ${user?.name ?? 'Unknown'}
+Phone: ${user?.phone ?? 'Unknown'}
+App Version: 0.1.0
+Device: ${Device.brand ?? ''} ${Device.modelName ?? ''}
+OS: ${Device.osName ?? ''} ${Device.osVersion ?? ''}
+    `.trim();
+
+    await MailComposer.composeAsync({
+      recipients: ['support@vouchrex.com'],
+      subject: 'VouchrEx Support Request',
+      body,
+    });
   }
 
   return (
@@ -550,6 +586,11 @@ export default function ProfileScreen() {
 
           {/* ── Account ── */}
           <Section title="Account">
+            <Row
+              icon="help-buoy-outline"
+              label="Contact Support"
+              onPress={() => { void handleContactSupport(); }}
+            />
             <Row
               icon="shield-checkmark-outline"
               label="Security"
