@@ -32,8 +32,8 @@ export async function registerForPush(sessionToken: string): Promise<void> {
   }
   if (!granted) return;
 
-  const projectId =
-    (Constants.expoConfig?.extra?.eas?.projectId as string | undefined) ?? '';
+  const extra = Constants.expoConfig?.extra as { eas?: { projectId?: string } } | undefined;
+  const projectId = extra?.eas?.projectId ?? '';
   const tokenResult = await Notifications.getExpoPushTokenAsync({ projectId });
   const deviceId = await getDeviceId();
 
@@ -77,7 +77,7 @@ export function safeDeepLink(link: unknown): string | null {
 
 export function subscribeToNotificationTaps(onTap: (link: string) => void): () => void {
   const sub = Notifications.addNotificationResponseReceivedListener((response) => {
-    const link = safeDeepLink(response.notification.request.content.data.link);
+    const link = safeDeepLink(response.notification.request.content.data?.link);
     if (link) onTap(link);
   });
   return () => { sub.remove(); };
