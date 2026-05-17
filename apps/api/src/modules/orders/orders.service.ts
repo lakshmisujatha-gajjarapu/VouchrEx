@@ -2038,11 +2038,23 @@ export class OrdersService {
       status: ListingStatus.SOLD
     });
 
-    // Increment seller totalSales counter
+    // Increment seller totalSales counter and totalEarned
     await this.prisma.user.update({
       where: { id: order.sellerId },
-      data: { totalSales: { increment: 1 } }
+      data: { 
+        totalSales: { increment: 1 },
+        totalEarned: { increment: order.sellerPayout }
+      }
     });
+
+    // Increment buyer totalSaved
+    const savings = Math.max(0, order.listing.faceValue - order.amount);
+    if (savings > 0) {
+      await this.prisma.user.update({
+        where: { id: order.buyerId },
+        data: { totalSaved: { increment: savings } }
+      });
+    }
 
     // Attempt automatic payout via Razorpay after the transaction commits
     const payoutAccount = order.seller.payoutAccount;

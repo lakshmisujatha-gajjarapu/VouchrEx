@@ -139,3 +139,37 @@ export async function getListings(query: ListQuery & { verificationStatus?: stri
 export async function getAppConfig(): Promise<AppConfigRow[]> {
   return apiFetch<AppConfigRow[]>('/admin/config');
 }
+
+export type Promotion = {
+  id: string;
+  name: string;
+  startTime: string;
+  endTime: string;
+  category: string | null;
+  minInventory: number;
+  pushMessage: string;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export async function getDealAvailability(): Promise<{ category: string; count: number }[]> {
+  return apiFetch<{ category: string; count: number }[]>('/marketing/deal-availability');
+}
+
+export async function getPromotions(): Promise<Promotion[]> {
+  return apiFetch<Promotion[]>('/marketing/promotions');
+}
+
+export async function createPromotion(data: Record<string, unknown>): Promise<Promotion> {
+  return apiFetch<Promotion>('/marketing/promotions', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deletePromotion(id: string): Promise<unknown> {
+  return apiFetch<unknown>(`/marketing/promotions/${id}`, {
+    method: 'DELETE',
+  });
+}

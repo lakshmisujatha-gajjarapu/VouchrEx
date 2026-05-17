@@ -18,8 +18,12 @@ export class ListingsController {
   ) {}
 
   @Get()
-  findActive(@Query() query: QueryListingsDto) {
-    return this.listingsService.findActive(query);
+  async findActive(
+    @Query() query: QueryListingsDto,
+    @Headers(sessionHeaderName) sessionToken?: string
+  ) {
+    const user = await this.authService.getSessionUser(sessionToken);
+    return this.listingsService.findActive(query, user?.id);
   }
 
   @ApiHeader({
@@ -31,6 +35,11 @@ export class ListingsController {
   async findMine(@Headers(sessionHeaderName) sessionToken?: string) {
     const seller = await this.authService.requireSessionUser(sessionToken);
     return this.listingsService.findMine(seller.id);
+  }
+
+  @Get(LISTINGS_ROUTES.DEAL_OF_DAY)
+  getDealOfDay() {
+    return this.listingsService.getDealOfDay();
   }
 
   @Get(LISTINGS_ROUTES.BY_ID)

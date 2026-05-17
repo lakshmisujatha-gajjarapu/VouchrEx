@@ -11,6 +11,8 @@ export type SessionUser = {
   readonly status: string;
   readonly tier: 'GOLD' | 'SILVER' | 'BRONZE';
   readonly totalSales: number;
+  readonly totalEarned: number;
+  readonly totalSaved: number;
 };
 
 export type UserStats = {
@@ -18,12 +20,23 @@ export type UserStats = {
   readonly tier: 'GOLD' | 'SILVER' | 'BRONZE' | 'BLOCKED';
   readonly nextTierAt: number | null;
   readonly totalSales: number;
+  readonly totalEarned: number;
+  readonly totalSaved: number;
   readonly purchases: number;
   readonly disputesAgainst: number;
   readonly disputesRaised: number;
   readonly sellerStrikes: number;
   readonly buyerStrikes: number;
   readonly payoutHoldUntil: string | null;
+};
+
+export type BrandAlert = {
+  readonly id: string;
+  readonly userId: string;
+  readonly brandId: string;
+  readonly active: boolean;
+  readonly createdAt: string;
+  readonly brand: Brand;
 };
 
 export type SellerPublicStats = {
@@ -314,16 +327,23 @@ export const api = {
       readonly listingMaxPriceInr: number;
     }>(CONFIG.PUBLIC);
   },
-  listListings(input: {
-    readonly q?: string;
-    readonly category?: string;
-    readonly sort?: string;
-    readonly maxPrice?: number;
-    readonly minDiscount?: number;
-  }) {
+  listListings(
+    input: {
+      readonly q?: string;
+      readonly category?: string;
+      readonly sort?: string;
+      readonly maxPrice?: number;
+      readonly minDiscount?: number;
+    },
+    sessionToken?: string | null
+  ) {
     return apiRequest<readonly Listing[]>(LISTINGS.LIST, {
-      query: input
+      query: input,
+      ...(sessionToken ? { sessionToken } : {}),
     });
+  },
+  getDealOfDay() {
+    return apiRequest<Listing | null>(LISTINGS.DEAL_OF_DAY);
   },
   getListing(id: string) {
     return apiRequest<Listing>(LISTINGS.BY_ID(id));
@@ -552,8 +572,28 @@ export const api = {
       body: input,
     });
   },
-  unregisterPushToken(sessionToken: string, deviceId: string) {
+  async unregisterPushToken(sessionToken: string, deviceId: string) {
     return apiRequest<unknown>(USERS.PUSH_TOKEN_BY_DEVICE(deviceId), {
+      method: 'DELETE',
+      sessionToken,
+    });
+  },
+
+  // ─── Watchlist / Alerts ───────────────────────────────────────────────────
+
+  async listAlerts(sessionToken: string) {
+    return apiRequest<BrandAlert[]>('/alerts', { sessionToken });
+  },
+
+  async createAlert(sessionToken: string, brandId: string) {
+    return apiRequest<BrandAlert>(`/alerts/${brandId}`, {
+      method: 'POST',
+      sessionToken,
+    });
+  },
+
+  async removeAlert(sessionToken: string, brandId: string) {
+    return apiRequest<unknown>(`/alerts/${brandId}`, {
       method: 'DELETE',
       sessionToken,
     });

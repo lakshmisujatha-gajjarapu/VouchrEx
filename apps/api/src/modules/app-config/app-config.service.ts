@@ -31,6 +31,12 @@ const SEED_ROWS: readonly SeedRow[] = [
     value: '1000',
     valueType: 'number',
     description: 'Maximum allowed voucher faceValue in INR. Listings above this are rejected.'
+  },
+  {
+    key: 'deal_of_day',
+    value: '',
+    valueType: 'string',
+    description: 'Listing ID pinned as Deal of the Day. Shown at the top of the shop. Rotate daily via admin console.'
   }
 ];
 
@@ -140,6 +146,11 @@ export class AppConfigService implements OnModuleInit {
     }
 
     return result;
+  }
+
+  async getString(key: string, fallback: string): Promise<string> {
+    const raw = await this.getRaw(key);
+    return raw !== null && raw !== '' ? raw : fallback;
   }
 
   async getNumber(key: string, fallback: number): Promise<number> {

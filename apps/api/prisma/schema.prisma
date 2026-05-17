@@ -140,6 +140,8 @@ model User {
   buyerStrikes    Int                  @default(0)
   payoutHoldUntil DateTime?
   totalSales      Int                  @default(0) // incremented on each confirmed/auto-confirmed sale
+  totalEarned     Int                  @default(0)
+  totalSaved      Int                  @default(0)
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
   listings        VoucherListing[]     @relation("SellerListings")
@@ -150,6 +152,7 @@ model User {
   notifications   Notification[]
   payoutAccount   SellerPayoutAccount?
   pushTokens      PushToken[]
+  brandAlerts     BrandAlert[]
 }
 
 model Brand {
@@ -165,6 +168,33 @@ model Brand {
   createdAt               DateTime         @default(now())
   updatedAt               DateTime         @updatedAt
   listings                VoucherListing[]
+  alerts                  BrandAlert[]
+}
+
+model BrandAlert {
+  id        String   @id @default(cuid())
+  userId    String
+  brandId   String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  brand     Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, brandId])
+  @@index([brandId, active])
+}
+
+model PromotionWindow {
+  id           String   @id @default(cuid())
+  name         String
+  startTime    String   // e.g. "17:15"
+  endTime      String   // e.g. "21:00"
+  category     String?
+  minInventory Int      @default(2)
+  pushMessage  String
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 model VoucherListing {

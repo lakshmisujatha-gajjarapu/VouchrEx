@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { useFocusEffect, useRouter } from 'expo-router';
-import React, { useCallback, useDeferredValue, useEffect, useState } from 'react';
+import React, { useCallback, useDeferredValue, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -37,6 +37,7 @@ type Suggestion = {
   readonly name: string;
   readonly meta: string;
   readonly source: 'local' | 'brandfetch';
+  readonly avgDiscountPercent?: number;
 };
 
 function defaultExpiryDateString() {
@@ -84,6 +85,9 @@ export default function SellScreen() {
   const [sellerNotes, setSellerNotes]             = useState('');
 
   const [currentStep, setCurrentStep] = useState(1);
+  const [isListed, setIsListed] = useState(false);
+  const [selectedBrandAvg, setSelectedBrandAvg] = useState(0);
+  const navTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Reset form each time this screen comes into focus
   useFocusEffect(
@@ -101,6 +105,11 @@ export default function SellScreen() {
       setMinimumOrderValue('');
       setSellerNotes('');
       setCurrentStep(1);
+      setIsListed(false);
+      setSelectedBrandAvg(0);
+      return () => {
+        if (navTimerRef.current) clearTimeout(navTimerRef.current);
+      };
     }, [])
   );
 
@@ -114,7 +123,7 @@ export default function SellScreen() {
       );
       const seen = new Set(localBrands.map((brand) => normalizeBrandName(brand.name)));
       const suggestions: Suggestion[] = localBrands.map((brand) => ({
-        name: brand.name, meta: brand.category, source: 'local',
+        name: brand.name, meta: brand.category, source: 'local', avgDiscountPercent: brand.avgDiscountPercent,
       }));
       for (const brand of externalBrands) {
         const key = normalizeBrandName(brand.name);
@@ -169,7 +178,10 @@ export default function SellScreen() {
         ...(minimumOrderValue ? { minimumOrderValue: Number(minimumOrderValue) } : {}),
         ...(sellerNotes.trim() ? { sellerNotes: sellerNotes.trim() } : {}),
       });
-      router.replace('/(tabs)/listings');
+      setIsListed(true);
+      navTimerRef.current = setTimeout(() => {
+        router.replace('/(tabs)/listings');
+      }, 2500);
     } catch (e) {
       setFeedback(e instanceof Error ? e.message : 'Could not create listing.');
     } finally {
@@ -196,7 +208,33 @@ export default function SellScreen() {
   return (
     <Animated.View entering={reducedMotion ? undefined : FadeIn.duration(400)} style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <SafeAreaView style={{ flex: 1 }} edges={['top', 'left', 'right']}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+        {isListed ? (
+          <Animated.View entering={reducedMotion ? undefined : FadeIn} style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: theme.spacing[8], gap: theme.spacing[6] }}>
+            <View style={{ width: 100, height: 100, borderRadius: 50, backgroundColor: theme.colors.successSoft, alignItems: 'center', justifyContent: 'center' }}>
+              <Ionicons name="checkmark" size={60} color={theme.colors.success} />
+            </View>
+            <View style={{ gap: theme.spacing[2], alignItems: 'center' }}>
+              <Text style={{ fontFamily: theme.fontFamily.headlineExtra, fontSize: 32, textAlign: 'center', color: theme.colors.ink }}>
+                {brandName} is live! 🎉
+              </Text>
+              <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 16, textAlign: 'center', color: theme.colors.inkSecondary, lineHeight: 24 }}>
+                Your voucher is now visible to buyers. Average sell time for this brand: ~4 hours.
+              </Text>
+              <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 14, textAlign: 'center', color: theme.colors.inkMuted, marginTop: theme.spacing[1] }}>
+                We'll notify you the moment it sells.
+              </Text>
+            </View>
+            <InteractivePressable
+              onPress={() => {
+                if (navTimerRef.current) clearTimeout(navTimerRef.current);
+                router.replace('/(tabs)/listings');
+              }}
+              style={{ backgroundColor: theme.colors.surfaceRaised, paddingHorizontal: theme.spacing[6], paddingVertical: theme.spacing[3], borderRadius: theme.radius.pill }}>
+              <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 14, color: theme.colors.brand }}>View My Listings</Text>
+            </InteractivePressable>
+          </Animated.View>
+        ) : (
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
 
           {/* ── Header ── */}
           <View style={{
@@ -206,7 +244,7 @@ export default function SellScreen() {
             paddingHorizontal: theme.spacing[5],
             paddingVertical: theme.spacing[4],
           }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[4] }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[4], flex: 1 }}>
               <Pressable
                 onPress={() => { 
                   if (currentStep > 1) {
@@ -218,15 +256,22 @@ export default function SellScreen() {
                 style={{ width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' }}>
                 <Ionicons name={currentStep > 1 ? "arrow-back" : "close"} size={24} color={theme.colors.ink} />
               </Pressable>
-              <Text style={{
-                fontFamily: theme.fontFamily.headline,
-                fontSize: 26,
-                fontWeight: '700',
-                letterSpacing: -0.5,
-                color: theme.colors.ink,
-              }}>
-                {currentStep === 1 ? 'Sell a Voucher' : currentStep === 2 ? 'Security Details' : 'Pricing & Terms'}
-              </Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{
+                  fontFamily: theme.fontFamily.headline,
+                  fontSize: 26,
+                  fontWeight: '700',
+                  letterSpacing: -0.5,
+                  color: theme.colors.ink,
+                }}>
+                  {currentStep === 1 ? 'Sell' : currentStep === 2 ? 'Security Details' : 'Pricing & Terms'}
+                </Text>
+                {currentStep === 1 && (
+                  <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 13, color: theme.colors.inkSecondary }}>
+                    Turn unused vouchers into cash in 5 minutes
+                  </Text>
+                )}
+              </View>
             </View>
             <ProfileAvatar />
           </View>
@@ -266,7 +311,7 @@ export default function SellScreen() {
                       <FieldLabel>Brand</FieldLabel>
                       <SubmergedInput
                         value={brandName}
-                        onChangeText={setBrandName}
+                        onChangeText={(t) => { setBrandName(t); setSelectedBrandAvg(0); }}
                         placeholder="Search brands (e.g. Amazon, Starbucks)"
                         rightIcon={
                           suggestionsResource.loading
@@ -280,7 +325,7 @@ export default function SellScreen() {
                             <FilterChip
                               key={`${s.source}:${s.name}`}
                               label={s.name}
-                              onPress={() => { setBrandName(s.name); }}
+                              onPress={() => { setBrandName(s.name); setSelectedBrandAvg(s.avgDiscountPercent ?? 0); }}
                               selected={normalizeBrandName(s.name) === normalizeBrandName(brandName)}
                             />
                           ))}
@@ -404,19 +449,51 @@ export default function SellScreen() {
                       <Text style={{ fontFamily: theme.fontFamily.headlineExtra, fontSize: 24, fontWeight: '800', letterSpacing: -0.5, color: theme.colors.ink }}>
                         Pricing & Terms
                       </Text>
-                      <View style={{ backgroundColor: theme.colors.surfaceTray, padding: 20, borderRadius: 20, gap: 12, borderLeftWidth: 4, borderLeftColor: theme.colors.success }}>
+                      <View style={{ backgroundColor: theme.colors.surfaceTray, padding: 20, borderRadius: 20, gap: 12, borderLeftWidth: 4, borderLeftColor: discount === 0 ? theme.colors.border : discount >= 10 ? theme.colors.success : theme.colors.warning }}>
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                           <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 15, color: theme.colors.inkSecondary }}>You will receive</Text>
                           <Text style={{ fontFamily: theme.fontFamily.headlineExtra, fontSize: 28, color: theme.colors.ink }}>₹{sellingPrice || '0'}</Text>
                         </View>
                         <View style={{ height: 1, backgroundColor: theme.colors.borderHair }} />
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 14, color: theme.colors.inkSecondary }}>Buyer savings</Text>
+                          <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 14, color: theme.colors.inkSecondary }}>Buyer saves</Text>
                           <View style={{ backgroundColor: theme.colors.successSoft, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }}>
                             <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 14, fontWeight: '700', color: theme.colors.success }}>{discount}% OFF</Text>
                           </View>
                         </View>
+                        {discount > 0 ? (
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                            <Ionicons
+                              name={discount >= 20 ? 'flame' : discount >= 10 ? 'checkmark-circle' : 'alert-circle'}
+                              size={16}
+                              color={discount >= 20 ? theme.colors.warning : discount >= 10 ? theme.colors.success : theme.colors.inkMuted}
+                            />
+                            <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 13, color: discount >= 20 ? theme.colors.warning : discount >= 10 ? theme.colors.success : theme.colors.inkMuted }}>
+                              {discount >= 20 ? 'Great deal — will sell quickly' : discount >= 10 ? 'Priced to sell fast' : 'Price a bit low — buyers may not notice'}
+                            </Text>
+                          </View>
+                        ) : null}
                       </View>
+                      {selectedBrandAvg > 0 && parsedFaceValue > 0 ? (() => {
+                        const suggestedPrice = Math.round(parsedFaceValue * (1 - (selectedBrandAvg + 2) / 100));
+                        return suggestedPrice > 0 ? (
+                          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: theme.colors.brandSoft, borderRadius: theme.radius.md, paddingHorizontal: theme.spacing[4], paddingVertical: theme.spacing[3], gap: theme.spacing[3] }}>
+                            <View style={{ flex: 1, gap: 2 }}>
+                              <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 12, color: theme.colors.brand }}>
+                                {brandName} vouchers sell at avg {selectedBrandAvg}% off
+                              </Text>
+                              <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 12, color: theme.colors.inkSecondary }}>
+                                Price at ₹{String(suggestedPrice)} to sell faster
+                              </Text>
+                            </View>
+                            <Pressable
+                              onPress={() => { setSellingPrice(String(suggestedPrice)); }}
+                              style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1, backgroundColor: theme.colors.brand, paddingHorizontal: theme.spacing[3], paddingVertical: theme.spacing[2], borderRadius: theme.radius.pill })}>
+                              <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 12, color: theme.colors.surface }}>Use</Text>
+                            </Pressable>
+                          </View>
+                        ) : null;
+                      })() : null}
                     </View>
 
                     <View style={{ flexDirection: 'row', gap: theme.spacing[3] }}>
@@ -486,7 +563,8 @@ export default function SellScreen() {
             </View>
           )}
         </KeyboardAvoidingView>
-      </SafeAreaView>
-    </Animated.View>
+      )}
+    </SafeAreaView>
+  </Animated.View>
   );
 }

@@ -8,6 +8,7 @@ export const ROUTES = {
   USERS: '/users',
   PAYOUTS: '/payouts',
   REFUNDS: '/refunds',
+  MARKETING: '/marketing',
   TEAM: '/team',
   SETTINGS: '/settings',
 };

@@ -1,6 +1,12 @@
 import * as Application from 'expo-application';
 import Constants from 'expo-constants';
-import * as Notifications from 'expo-notifications';
+import {
+  addNotificationResponseReceivedListener,
+  getExpoPushTokenAsync,
+  getPermissionsAsync,
+  requestPermissionsAsync,
+  setNotificationHandler,
+} from 'expo-notifications';
 import { Platform } from 'react-native';
 
 import { api } from './api';
@@ -23,18 +29,18 @@ async function getDeviceId(): Promise<string> {
 export async function registerForPush(sessionToken: string): Promise<void> {
   if (Platform.OS === 'web') return;
 
-  const settings = await Notifications.getPermissionsAsync();
+  const settings = await getPermissionsAsync();
   let granted = settings.granted;
 
   if (!granted) {
-    const ask = await Notifications.requestPermissionsAsync();
+    const ask = await requestPermissionsAsync();
     granted = ask.granted;
   }
   if (!granted) return;
 
   const extra = Constants.expoConfig?.extra as { eas?: { projectId?: string } } | undefined;
   const projectId = extra?.eas?.projectId ?? '';
-  const tokenResult = await Notifications.getExpoPushTokenAsync({ projectId });
+  const tokenResult = await getExpoPushTokenAsync({ projectId });
   const deviceId = await getDeviceId();
 
   await api.registerPushToken(sessionToken, {
@@ -54,7 +60,7 @@ export async function unregisterFromPush(sessionToken: string): Promise<void> {
 }
 
 export function configureForegroundBehavior(): void {
-  Notifications.setNotificationHandler({
+  setNotificationHandler({
     handleNotification: () => Promise.resolve({
       shouldShowBanner: false,
       shouldShowList: true,
@@ -76,7 +82,7 @@ export function safeDeepLink(link: unknown): string | null {
 }
 
 export function subscribeToNotificationTaps(onTap: (link: string) => void): () => void {
-  const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+  const sub = addNotificationResponseReceivedListener((response) => {
     const link = safeDeepLink(response.notification.request.content.data?.link);
     if (link) onTap(link);
   });

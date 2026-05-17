@@ -64,6 +64,16 @@ export class BrandsService {
       .slice(0, take);
   }
 
+  async findOne(id: string): Promise<Brand> {
+    const brand = await this.prisma.brand.findUnique({
+      where: { id, active: true }
+    });
+    if (!brand) {
+      throw new NotFoundException(`Brand ${id} was not found.`);
+    }
+    return brand;
+  }
+
   async seedDefaults() {
     await this.prisma.$transaction(
       starterCatalog.map((brand) => {

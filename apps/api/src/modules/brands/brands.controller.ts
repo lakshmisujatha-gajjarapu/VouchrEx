@@ -1,4 +1,4 @@
-import { Controller, Get, Headers, Post, Query } from '@nestjs/common';
+import { Controller, Get, Headers, Param, Post, Query } from '@nestjs/common';
 import { ApiHeader, ApiQuery, ApiTags } from '@nestjs/swagger';
 
 import { AdminAccessService } from '../admin/admin-access.service';
@@ -45,6 +45,11 @@ export class BrandsController {
     }
 
     return this.brandsService.findAll(input);
+  }
+
+  @Get(':id')
+  async findOne(@Param('id') id: string) {
+    return this.brandsService.findOne(id);
   }
 
   @ApiHeader({

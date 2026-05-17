@@ -30,6 +30,7 @@ import {
   SELLER_MAX_LISTINGS_PER_HOUR_DEFAULT
 } from './listings.constants';
 import { CodeVaultService } from './services/code-vault.service';
+import { PushService } from '../push/push.service';
 import { computeTier } from '../users/trust-tier';
 
 const editableStatuses: readonly ListingStatus[] = [
@@ -46,11 +47,12 @@ export class ListingsService {
     private readonly notificationsService: NotificationsService,
     private readonly brandsService: BrandsService,
     private readonly payoutAccountsService: PayoutAccountsService,
+    private readonly pushService: PushService,
     private readonly eventEmitter: EventEmitter2,
     private readonly appConfigService: AppConfigService
   ) {}
 
-  findActive(query: QueryListingsDto) {
+  findActive(query: QueryListingsDto, excludeSellerId?: string) {
     const sort = query.sort ?? 'latest';
     const orderBy =
       sort === 'best-discount'
@@ -64,12 +66,17 @@ export class ListingsService {
     return this.prisma.voucherListing.findMany({
       where: {
         status: ListingStatus.ACTIVE,
-        expiryDate: { gt: new Date() },
+        expiryDate: { 
+          gt: new Date(),
+          ...(query.maxExpiryDate ? { lte: new Date(query.maxExpiryDate) } : {})
+        },
         // Hide listings from BLOCKED-tier sellers (trustScore < 30) per HLD/07.
         seller: { trustScore: { gte: 30 } },
+        ...(excludeSellerId ? { NOT: { sellerId: excludeSellerId } } : {}),
         ...(query.brandId ? { brandId: query.brandId } : {}),
         ...(query.minDiscount ? { discountPercent: { gte: query.minDiscount } } : {}),
         ...(query.maxPrice ? { sellingPrice: { lte: query.maxPrice } } : {}),
+        ...(query.minCreatedAt ? { createdAt: { gte: new Date(query.minCreatedAt) } } : {}),
         ...(query.category
           ? {
               brand: {
@@ -138,6 +145,23 @@ export class ListingsService {
         createdAt: 'desc'
       }
     });
+  }
+
+  async getDealOfDay() {
+    const listingId = await this.appConfigService.getString('deal_of_day', '');
+    if (!listingId) return null;
+
+    const listing = await this.prisma.voucherListing.findUnique({
+      where: { id: listingId, status: 'ACTIVE' },
+      include: {
+        brand: true,
+        seller: { select: { id: true, name: true, trustScore: true } }
+      }
+    });
+
+    if (!listing) return null;
+    const { seller, ...rest } = listing;
+    return { ...rest, seller: { id: seller.id, name: seller.name } };
   }
 
   async findOne(id: string) {
@@ -310,6 +334,24 @@ export class ListingsService {
         brandId: createdListing.brandId,
         status: createdListing.status
       });
+
+      // Trigger brand alerts for interested buyers
+      const alerts = await this.prisma.brandAlert.findMany({
+        where: { brandId: brand.id, active: true },
+        select: { userId: true }
+      });
+
+      for (const alert of alerts) {
+        if (alert.userId === seller.id) continue;
+        await this.pushService.sendToUser(alert.userId, {
+          title: 'Voucher Alert',
+          body: `New ${brand.name} voucher just listed at ${String(Math.round(discountPercent))}% off!`,
+          link: `/(tabs)/shop?q=${brand.name}`,
+          eventType: 'brand.alert',
+          entityId: createdListing.id,
+          dedupeKey: `alert:${brand.id}:${alert.userId}:${createdListing.id}`
+        }).catch(() => {});
+      }
 
       return createdListing;
     } catch (error) {

@@ -11,6 +11,7 @@ import { PrimaryButton } from '@/components/primary-button';
 import { ProfileAvatar } from '@/components/profile-avatar';
 import React, { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Alert,
   Pressable,
   ScrollView,
   Text,
@@ -37,8 +38,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useColorScheme } from 'nativewind';
 
 import { useAsyncResource } from '@/hooks/use-async-resource';
+import { useAuth } from '@/hooks/use-auth';
 import { useListingsSocket } from '@/hooks/use-listings-socket';
 import { api } from '@/lib/api';
+import { formatCurrency } from '@/lib/format';
+import { readTrustBannerDismissed, writeTrustBannerDismissed } from '@/lib/storage';
 import { useTheme } from '@/theme/theme-context';
 
 const SORT_OPTIONS = ['latest', 'best-discount', 'expiring', 'price-low'] as const;
@@ -54,6 +58,33 @@ function snapDiscount(raw: number) {
 
 function sortLabel(o: SortOption) {
   return o === 'price-low' ? 'Price ↑' : o === 'best-discount' ? 'Best deal' : o === 'expiring' ? 'Expiring' : 'Latest';
+}
+
+function getTimeBasedConfig() {
+  const hour = new Date().getHours();
+  const day = new Date().getDay();
+  const isWeekend = day === 0 || day === 6;
+
+  if (isWeekend) return { title: 'Weekend vibes', category: undefined, icon: 'sparkles-outline' as const };
+  if (hour >= 7 && hour < 9) return { title: 'Morning picks', category: 'Coffee & Breakfast', icon: 'cafe-outline' as const };
+  if (hour >= 12 && hour < 14) return { title: 'Lunch break deals', category: 'Food', icon: 'fast-food-outline' as const };
+  if (hour >= 17 && hour < 21) return { title: 'Dinner tonight', category: 'Food', icon: 'pizza-outline' as const };
+  if (hour >= 22 || hour < 0) return { title: 'Night owl', category: 'Entertainment', icon: 'moon-outline' as const };
+  
+  return { title: 'Featured deals', category: undefined, icon: 'flame-outline' as const };
+}
+
+function SectionHeader({ title, icon, subtitle }: { title: string; icon?: keyof typeof Ionicons.glyphMap; subtitle?: string }) {
+  const theme = useTheme();
+  return (
+    <View style={{ paddingHorizontal: theme.spacing[5], marginBottom: theme.spacing[3] }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[2] }}>
+        {icon && <Ionicons name={icon} size={20} color={theme.colors.brand} />}
+        <Text style={{ fontFamily: theme.fontFamily.headline, fontSize: 18, color: theme.colors.ink }}>{title}</Text>
+      </View>
+      {subtitle && <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 13, color: theme.colors.inkSecondary }}>{subtitle}</Text>}
+    </View>
+  );
 }
 
 function DiscountSlider({
@@ -190,6 +221,7 @@ function GlassyBackdrop({ animatedIndex, style, onClose }: BottomSheetBackdropPr
 export default function ShopScreen() {
   const router = useRouter();
   const theme = useTheme();
+  const { sessionToken, user } = useAuth();
   const { colorScheme } = useColorScheme();
   const reducedMotion = useReducedMotion();
   const [query, setQuery] = useState('');
@@ -242,9 +274,9 @@ export default function ShopScreen() {
           ...(appliedFilters.minDiscount > 0 ? { minDiscount: appliedFilters.minDiscount } : {}),
           sort: appliedFilters.sort,
         };
-        return api.listListings(params);
+        return api.listListings(params, sessionToken);
       },
-      [category, deferredQuery, appliedFilters],
+      [category, deferredQuery, appliedFilters, sessionToken],
     ),
     { enabled: true },
   );
@@ -257,16 +289,77 @@ export default function ShopScreen() {
     return ['All', ...Array.from(new Set(raw))];
   }, [brandsResource.data]);
 
-  const avgDiscount = useMemo(() => {
-    const ls = listingsResource.data ?? [];
-    return ls.length > 0
-      ? Math.round(ls.reduce((s, l) => s + l.discountPercent, 0) / ls.length)
-      : 0;
-  }, [listingsResource.data]);
-
   const activeFilterCount =
     (appliedFilters.sort !== 'best-discount' ? 1 : 0) +
     (appliedFilters.minDiscount > 0 ? 1 : 0);
+
+  async function handleSetAlert(brandName: string) {
+    if (!sessionToken) {
+      Alert.alert('Sign in required', 'Please sign in to set brand alerts.');
+      return;
+    }
+    try {
+      const brands = await api.listBrands({ q: brandName, limit: 1 });
+      if (brands.length > 0) {
+        await api.createAlert(sessionToken, brands[0].id);
+        Alert.alert('Alert Set!', `We'll notify you when a new ${brands[0].name} voucher is listed.`);
+      } else {
+        Alert.alert('Not available', 'This brand is not yet in our catalog for alerts.');
+      }
+    } catch (_e) {
+      // silent fail
+    }
+
+  }
+
+  const [trustBannerDismissed, setTrustBannerDismissed] = useState(true);
+  useEffect(() => {
+    if (!user || (user.totalSaved > 0)) return;
+    void readTrustBannerDismissed().then((dismissed) => {
+      setTrustBannerDismissed(dismissed);
+    });
+  }, [user]);
+
+  function dismissTrustBanner() {
+    setTrustBannerDismissed(true);
+    void writeTrustBannerDismissed();
+  }
+
+  const dealResource = useAsyncResource(useCallback(() => api.getDealOfDay(), []), { enabled: true });
+
+  const timeBasedConfig = useMemo(() => getTimeBasedConfig(), []);
+
+  const sections = useMemo(() => {
+    if (!listingsResource.data) return { expiringSoon: [], newThisHour: [], bestDeals: [], timeBased: [] };
+
+    const now = Date.now();
+    const seen = new Set<string>();
+    if (dealResource.data) seen.add(dealResource.data.id);
+
+    const timeBased = timeBasedConfig.category
+      ? listingsResource.data.filter(l => l.brand.category === timeBasedConfig.category)
+      : [];
+    timeBased.forEach(l => { seen.add(l.id); });
+
+    const expiringSoon = listingsResource.data.filter(l =>
+      !seen.has(l.id) && (new Date(l.expiryDate).getTime() - now) < 48 * 60 * 60 * 1000
+    );
+    expiringSoon.forEach(l => { seen.add(l.id); });
+
+    const newThisHour = listingsResource.data.filter(l =>
+      !seen.has(l.id) && (now - new Date(l.createdAt).getTime()) < 2 * 60 * 60 * 1000
+    );
+    newThisHour.forEach(l => { seen.add(l.id); });
+
+    const bestDeals = [...listingsResource.data]
+      .filter(l => !seen.has(l.id))
+      .sort((a, b) => b.discountPercent - a.discountPercent)
+      .slice(0, 5);
+
+    return { expiringSoon, newThisHour, bestDeals, timeBased };
+  }, [listingsResource.data, timeBasedConfig]);
+
+  const isFiltering = !!deferredQuery || !!category || activeFilterCount > 0;
 
   return (
     <Animated.View 
@@ -284,104 +377,198 @@ export default function ShopScreen() {
           <View style={{ paddingHorizontal: theme.spacing[5], paddingTop: theme.spacing[2], gap: theme.spacing[4], paddingBottom: theme.spacing[4] }}>
             <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginTop: theme.spacing[2] }}>
               <View style={{ gap: theme.spacing[1], flex: 1, paddingRight: theme.spacing[3] }}>
-                <Text style={{
-                  fontFamily: theme.fontFamily.headlineExtra,
-                  fontSize: 32,
-                  lineHeight: 36,
-                  letterSpacing: -0.8,
-                  color: theme.colors.ink,
-                }}>
-                  Shop
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[2] }}>
+                  <Ionicons name={timeBasedConfig.icon} size={28} color={theme.colors.brand} />
+                  <Text style={{
+                    fontFamily: theme.fontFamily.headlineExtra,
+                    fontSize: 32,
+                    lineHeight: 36,
+                    letterSpacing: -0.8,
+                    color: theme.colors.ink,
+                  }}>
+                    {timeBasedConfig.title}
+                  </Text>
+                </View>
                 <Text style={{
                   fontFamily: theme.fontFamily.body,
                   fontSize: 15,
                   color: theme.colors.inkSecondary,
                 }}>
-                  {(listingsResource.data?.length ?? 0) > 0
-                    ? `${String(listingsResource.data?.length)} listings · avg ${String(avgDiscount)}% off`
-                    : 'Discover premium secondary market vouchers.'}
+                  {user && user.totalSaved > 0 
+                    ? `🎉 You've saved ${formatCurrency(user.totalSaved)} total on Vouchrex!`
+                    : 'Save up to 35% on your favorite food, travel, and shopping brands.'}
                 </Text>
               </View>
               <ProfileAvatar marginTop={6} />
             </View>
           </View>
 
-          {/* ── Sticky Glassy Search Bar ── */}
-          <View style={{ backgroundColor: 'transparent' }}>
-            <BlurView
-              intensity={theme.blurIntensity.mid}
-              tint={colorScheme === 'dark' ? 'dark' : 'light'}
+          {/* ── Trust Banner (first-time buyers only, dismissible) ── */}
+          {!trustBannerDismissed && (
+            <Animated.View
+              entering={reducedMotion ? undefined : FadeInDown.duration(300)}
+              exiting={reducedMotion ? undefined : FadeOut.duration(200)}
               style={{
-                paddingHorizontal: theme.spacing[5],
-                paddingVertical: theme.spacing[3],
-                borderBottomWidth: 1,
-                borderBottomColor: theme.colors.borderHair,
+                marginHorizontal: theme.spacing[5],
+                marginBottom: theme.spacing[4],
+                backgroundColor: theme.colors.brandSoft,
+                borderRadius: theme.radius.md,
+                borderWidth: 1,
+                borderColor: theme.colors.pillBrandBorder,
+                padding: theme.spacing[4],
+                flexDirection: 'row',
+                alignItems: 'flex-start',
+                gap: theme.spacing[3],
               }}
             >
-              <View style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                borderRadius: theme.radius.sm,
-                borderWidth: 1,
-                paddingHorizontal: theme.spacing[3],
-                gap: theme.spacing[2],
-                minHeight: 48,
-                backgroundColor: theme.colors.surfaceTray,
-                borderColor: searchFocused ? theme.colors.brand : theme.colors.border,
-              }}>
-                <Ionicons color={searchFocused ? theme.colors.brand : theme.colors.inkMuted} name="search-outline" size={18} />
-                <TextInput
-                  cursorColor={theme.colors.brand}
-                  onBlur={() => { setSearchFocused(false); }}
-                  onChangeText={setQuery}
-                  onFocus={() => { setSearchFocused(true); }}
-                  placeholder="Search brand or category"
-                  placeholderTextColor={theme.colors.inkMuted}
-                  style={{
-                    flex: 1, fontFamily: theme.fontFamily.body,
-                    fontSize: 15, color: theme.colors.ink, letterSpacing: 0,
-                  }}
-                  value={query}
-                />
-                {query ? (
-                  <Pressable onPress={() => { setQuery(''); }} accessibilityLabel="Clear search">
-                    <Ionicons color={theme.colors.inkMuted} name="close-circle" size={18} />
-                  </Pressable>
-                ) : null}
-                <View style={{ width: 1, height: 18, backgroundColor: theme.colors.border }} />
-                <Pressable
-                  onPress={openSheet}
-                  style={({ pressed }) => ({
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 5,
-                    minHeight: 32,
-                    paddingHorizontal: 10,
-                    borderRadius: theme.radius.pill,
-                    borderWidth: 1,
-                    backgroundColor: activeFilterCount > 0 ? theme.colors.brandSoft : theme.colors.surfaceRaised,
-                    borderColor: activeFilterCount > 0 ? theme.colors.pillBrandBorder : theme.colors.border,
-                    opacity: pressed ? 0.8 : 1,
-                  })}>
-                  <Ionicons
-                    name="options-outline"
-                    size={16}
-                    color={activeFilterCount > 0 ? theme.colors.brand : theme.colors.inkMuted}
-                  />
-                  {activeFilterCount > 0 ? (
-                    <Text style={{
-                      fontFamily: theme.fontFamily.labelSemi,
-                      fontSize: 12,
-                      color: theme.colors.brand,
-                    }}>
-                      {String(activeFilterCount)}
-                    </Text>
-                  ) : null}
-                </Pressable>
+              <Ionicons name="shield-checkmark-outline" size={20} color={theme.colors.brand} style={{ marginTop: 2 }} />
+              <View style={{ flex: 1, gap: theme.spacing[1] }}>
+                <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 13, color: theme.colors.brand }}>
+                  Your money is protected
+                </Text>
+                <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 13, color: theme.colors.inkSecondary, lineHeight: 18 }}>
+                  Vouchrex uses escrow — your money only releases when you confirm the voucher works. You cannot lose.
+                </Text>
               </View>
-            </BlurView>
+              <Pressable
+                onPress={dismissTrustBanner}
+                hitSlop={8}
+                accessibilityLabel="Dismiss"
+              >
+                <Ionicons name="close" size={16} color={theme.colors.inkMuted} />
+              </Pressable>
+            </Animated.View>
+          )}
+
+          {/* ── Sticky Search Bar ── */}
+          <View style={{
+            backgroundColor: theme.colors.background,
+            paddingHorizontal: theme.spacing[5],
+            paddingVertical: theme.spacing[3],
+            borderBottomWidth: 1,
+            borderBottomColor: theme.colors.borderHair,
+          }}>
+            <View style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              borderRadius: theme.radius.sm,
+              borderWidth: 1,
+              paddingHorizontal: theme.spacing[3],
+              gap: theme.spacing[2],
+              minHeight: 48,
+              backgroundColor: theme.colors.surfaceTray,
+              borderColor: searchFocused ? theme.colors.brand : theme.colors.border,
+            }}>
+              <Ionicons color={searchFocused ? theme.colors.brand : theme.colors.inkMuted} name="search-outline" size={18} />
+              <TextInput
+                cursorColor={theme.colors.brand}
+                onBlur={() => { setSearchFocused(false); }}
+                onChangeText={setQuery}
+                onFocus={() => { setSearchFocused(true); }}
+                placeholder="Search brand or category"
+                placeholderTextColor={theme.colors.inkMuted}
+                style={{
+                  flex: 1, fontFamily: theme.fontFamily.body,
+                  fontSize: 15, color: theme.colors.ink, letterSpacing: 0,
+                }}
+                value={query}
+              />
+              {query ? (
+                <Pressable onPress={() => { setQuery(''); }} accessibilityLabel="Clear search">
+                  <Ionicons color={theme.colors.inkMuted} name="close-circle" size={18} />
+                </Pressable>
+              ) : null}
+              <View style={{ width: 1, height: 18, backgroundColor: theme.colors.border }} />
+              <Pressable
+                onPress={openSheet}
+                style={({ pressed }) => ({
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 5,
+                  minHeight: 32,
+                  paddingHorizontal: 10,
+                  borderRadius: theme.radius.pill,
+                  borderWidth: 1,
+                  backgroundColor: activeFilterCount > 0 ? theme.colors.brandSoft : theme.colors.surfaceRaised,
+                  borderColor: activeFilterCount > 0 ? theme.colors.pillBrandBorder : theme.colors.border,
+                  opacity: pressed ? 0.8 : 1,
+                })}>
+                <Ionicons
+                  name="options-outline"
+                  size={16}
+                  color={activeFilterCount > 0 ? theme.colors.brand : theme.colors.inkMuted}
+                />
+                {activeFilterCount > 0 ? (
+                  <Text style={{
+                    fontFamily: theme.fontFamily.labelSemi,
+                    fontSize: 12,
+                    color: theme.colors.brand,
+                  }}>
+                    {String(activeFilterCount)}
+                  </Text>
+                ) : null}
+              </Pressable>
+            </View>
           </View>
+
+          {/* ── Dynamic Sections (Hidden when searching/filtering) ── */}
+          {!isFiltering && listingsResource.data ? (
+            <View style={{ marginTop: theme.spacing[6], gap: theme.spacing[8] }}>
+
+              {dealResource.data && (
+                <View>
+                  <SectionHeader title="Deal of the Day" icon="star-outline" subtitle="Admin-picked — today only" />
+                  <View style={{ paddingHorizontal: theme.spacing[5] }}>
+                    <ListingCard listing={dealResource.data} onPress={() => { router.push(`/listings/${String(dealResource.data?.id)}`); }} />
+                  </View>
+                </View>
+              )}
+
+              {sections.timeBased.length > 0 && (
+                <View style={{ gap: theme.spacing[3] }}>
+                  <SectionHeader title={timeBasedConfig.title} icon={timeBasedConfig.icon} subtitle={`Top picks for your ${timeBasedConfig.title.toLowerCase()}`} />
+                  <View style={{ paddingHorizontal: theme.spacing[5], gap: theme.spacing[3] }}>
+                    {sections.timeBased.slice(0, 3).map(l => (
+                      <ListingCard key={l.id} listing={l} onPress={() => { router.push(`/listings/${l.id}`); }} />
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {sections.expiringSoon.length > 0 && (
+                <View style={{ gap: theme.spacing[3] }}>
+                  <SectionHeader title="Expiring Soon" icon="time-outline" subtitle="Last chance to grab these deals" />
+                  <View style={{ paddingHorizontal: theme.spacing[5], gap: theme.spacing[3] }}>
+                    {sections.expiringSoon.slice(0, 3).map(l => (
+                      <ListingCard key={l.id} listing={l} onPress={() => { router.push(`/listings/${l.id}`); }} />
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {sections.newThisHour.length > 0 && (
+                <View style={{ gap: theme.spacing[3] }}>
+                  <SectionHeader title="New This Hour" icon="flash-outline" subtitle="Fresh inventory just listed" />
+                  <View style={{ paddingHorizontal: theme.spacing[5], gap: theme.spacing[3] }}>
+                    {sections.newThisHour.slice(0, 3).map(l => (
+                      <ListingCard key={l.id} listing={l} onPress={() => { router.push(`/listings/${l.id}`); }} />
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {sections.bestDeals.length > 0 && (
+                <View style={{ gap: theme.spacing[3] }}>
+                  <SectionHeader title="Best Deals" icon="trending-up-outline" subtitle="Highest discounts available now" />
+                  <View style={{ paddingHorizontal: theme.spacing[5], gap: theme.spacing[3] }}>
+                    {sections.bestDeals.slice(0, 3).map(l => (
+                      <ListingCard key={l.id} listing={l} onPress={() => { router.push(`/listings/${l.id}`); }} />
+                    ))}
+                  </View>
+                </View>
+              )}
+            </View>
+          ) : null}
 
           {/* ── Category chips ── */}
           <View>
@@ -395,8 +582,12 @@ export default function ShopScreen() {
             ) : null}
           </View>
 
-          {/* ── Listings ── */}
+          {/* ── All Listings ── */}
           <View style={{ paddingHorizontal: theme.spacing[5], gap: theme.spacing[5], marginTop: theme.spacing[5] }}>
+            {!isFiltering && listingsResource.data && (
+              <Text style={{ fontFamily: theme.fontFamily.headline, fontSize: 18, color: theme.colors.ink, marginBottom: theme.spacing[2] }}>All Listings</Text>
+            )}
+            
             {listingsResource.loading && !listingsResource.data ? (
               <>
                 <ListingCardSkeleton />
@@ -426,9 +617,28 @@ export default function ShopScreen() {
             ))}
 
             {!listingsResource.loading && listingsResource.data?.length === 0 ? (
-              <View style={{ alignItems: 'center', paddingVertical: 40 }}>
-                <Text style={{ fontFamily: theme.fontFamily.headline, fontSize: 18, color: theme.colors.inkMuted }}>No matches</Text>
-                <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 14, color: theme.colors.inkMuted, marginTop: 4 }}>Try another brand or category</Text>
+              <View style={{ alignItems: 'center', paddingVertical: 40, gap: 16 }}>
+                <View style={{ gap: 4, alignItems: 'center' }}>
+                  <Text style={{ fontFamily: theme.fontFamily.headline, fontSize: 18, color: theme.colors.inkMuted }}>No matches</Text>
+                  <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 14, color: theme.colors.inkMuted, textAlign: 'center' }}>Try another brand or category</Text>
+                </View>
+                {deferredQuery.length > 2 && (
+                  <Pressable 
+                    onPress={() => { void handleSetAlert(deferredQuery); }}
+                    style={({ pressed }) => ({
+                      backgroundColor: theme.colors.brandSoft,
+                      paddingHorizontal: 20,
+                      paddingVertical: 10,
+                      borderRadius: theme.radius.pill,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 8,
+                      opacity: pressed ? 0.7 : 1
+                    })}>
+                    <Ionicons name="notifications-outline" size={18} color={theme.colors.brand} />
+                    <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 14, color: theme.colors.brand }}>Alert me when listed</Text>
+                  </Pressable>
+                )}
               </View>
             ) : null}
           </View>

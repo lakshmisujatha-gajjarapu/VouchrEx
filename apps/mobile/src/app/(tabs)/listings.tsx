@@ -279,6 +279,31 @@ function ListingDetailSheet({
             </View>
           ) : null}
 
+          {/* ── Reprice Nudge ── */}
+          {urgency === 'danger' && editable && (
+            <View style={{
+              backgroundColor: theme.colors.warningSoft,
+              borderRadius: theme.radius.md,
+              padding: 16,
+              gap: 12,
+              borderWidth: 1,
+              borderColor: theme.colors.pillWarnBorder
+            }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Ionicons name="trending-down" size={20} color={theme.colors.warning} />
+                <Text style={{ fontFamily: theme.fontFamily.headline, fontSize: 16, color: theme.colors.ink }}>Sell it faster!</Text>
+              </View>
+              <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 14, color: theme.colors.inkSecondary, lineHeight: 20 }}>
+                This voucher expires soon. Drop the price by 5% to attract buyers now.
+              </Text>
+              <Pressable 
+                onPress={onEdit}
+                style={{ backgroundColor: theme.colors.warning, paddingVertical: 10, borderRadius: theme.radius.pill, alignItems: 'center' }}>
+                <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 14, color: '#FFFFFF' }}>Reprice Now</Text>
+              </Pressable>
+            </View>
+          )}
+
           {/* ── Actions — edit (primary gradient) + compact danger delete ── */}
           {(editable || deletable) ? (
             <View style={{ flexDirection: 'row', gap: theme.spacing[3], alignItems: 'center' }}>
@@ -351,7 +376,7 @@ function ListingDetailSheet({
 
 export default function ListingsScreen() {
   const router = useRouter();
-  const { sessionToken } = useAuth();
+  const { sessionToken, user } = useAuth();
   const theme = useTheme();
   const [tab, setTab] = useState<ListingTab>('live');
   const [searchQuery, setSearchQuery] = useState('');
@@ -439,6 +464,28 @@ export default function ListingsScreen() {
         eyebrow="Listings"
         subtitle="Tap any card for details and actions."
         title="Inventory">
+
+        {/* ── Total Earnings Strip ── */}
+        {Boolean(user?.totalEarned) && (
+          <View style={{
+            backgroundColor: theme.colors.brand,
+            borderRadius: theme.radius.md,
+            padding: 16,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: 20
+          }}>
+            <View>
+              <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 12, color: 'rgba(255,255,255,0.8)', textTransform: 'uppercase', letterSpacing: 1 }}>Total Earned</Text>
+              <Text style={{ fontFamily: theme.fontFamily.headlineExtra, fontSize: 26, color: '#FFFFFF', marginTop: 2 }}>{formatCurrency(user?.totalEarned ?? 0)}</Text>
+            </View>
+            <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' }}>
+              <Ionicons name="sparkles" size={24} color="#FFFFFF" />
+            </View>
+          </View>
+        )}
+
         {/* Search + tab toggle */}
         <View
           style={[

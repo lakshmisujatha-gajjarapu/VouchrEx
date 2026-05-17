@@ -1,10 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Text, View } from 'react-native';
+import { Image, Text, View } from 'react-native';
 import { InteractivePressable } from '@/components/interactive-pressable';
-import { TrustBadge } from '@/components/trust-badge';
 import type { Listing } from '@/lib/api';
 import { formatCurrency, formatDate } from '@/lib/format';
 import { useTheme } from '@/theme/theme-context';
+import React from 'react';
 
 type Props = {
   readonly listing: Listing;
@@ -13,6 +13,15 @@ type Props = {
 
 export function ListingCard({ listing, onPress }: Props) {
   const theme = useTheme();
+
+  const expiryDate = new Date(listing.expiryDate).getTime();
+  const createdAt = new Date(listing.createdAt).getTime();
+  const now = Date.now();
+
+  const isNew = now - createdAt < 2 * 60 * 60 * 1000;
+  const daysToExpiry = Math.ceil((expiryDate - now) / (24 * 60 * 60 * 1000));
+  const isExpiringSoon = daysToExpiry <= 7;
+  const isCritical = daysToExpiry <= 2;
 
   return (
     <InteractivePressable
@@ -27,92 +36,90 @@ export function ListingCard({ listing, onPress }: Props) {
         shadowRadius: 40,
         elevation: 2,
       }}>
-      <View style={{ 
-        position: 'absolute', 
-        left: 0, 
-        top: theme.spacing[6], 
-        bottom: theme.spacing[6], 
-        width: 6, 
-        backgroundColor: theme.colors.brand, 
-        borderTopRightRadius: 6, 
-        borderBottomRightRadius: 6 
+      {/* Left accent bar */}
+      <View style={{
+        position: 'absolute',
+        left: 0,
+        top: theme.spacing[4],
+        bottom: theme.spacing[4],
+        width: 4,
+        backgroundColor: isCritical ? theme.colors.danger : theme.colors.brand,
+        borderTopRightRadius: 4,
+        borderBottomRightRadius: 4,
       }} />
-      <View style={{ padding: theme.spacing[5] }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: theme.spacing[3] }}>
-          <View style={{ 
-            width: 48, 
-            height: 48, 
-            borderRadius: theme.radius.sm, 
-            backgroundColor: theme.colors.surfaceRaised, 
-            alignItems: 'center', 
-            justifyContent: 'center' 
-          }}>
-            <Text style={{ fontFamily: theme.fontFamily.headlineExtra, fontSize: 18, color: theme.colors.brand }}>
+
+      <View style={{ paddingVertical: theme.spacing[4], paddingLeft: theme.spacing[5], paddingRight: theme.spacing[4], flexDirection: 'row', gap: theme.spacing[3], alignItems: 'center' }}>
+        {/* Brand logo */}
+        <View style={{
+          width: 40,
+          height: 40,
+          borderRadius: theme.radius.sm,
+          backgroundColor: theme.colors.surfaceRaised,
+          alignItems: 'center',
+          justifyContent: 'center',
+          overflow: 'hidden',
+          flexShrink: 0,
+        }}>
+          {listing.brand.logoUrl ? (
+            <Image source={{ uri: listing.brand.logoUrl }} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
+          ) : (
+            <Text style={{ fontFamily: theme.fontFamily.headlineExtra, fontSize: 16, color: theme.colors.brand }}>
               {listing.brand.name.charAt(0).toUpperCase()}
             </Text>
-          </View>
-          <View style={{ 
-            flexDirection: 'row', 
-            alignItems: 'center', 
-            gap: theme.spacing[1], 
-            backgroundColor: theme.colors.brandSoft, 
-            paddingHorizontal: theme.spacing[2], 
-            paddingVertical: theme.spacing[1], 
-            borderRadius: theme.radius.pill 
-          }}>
-            <Ionicons name="checkmark-circle" size={12} color={theme.colors.brand} />
-            <Text style={{ 
-              fontFamily: theme.fontFamily.labelSemi, 
-              fontSize: 10, 
-              fontWeight: '700', 
-              color: theme.colors.brand, 
-              textTransform: 'uppercase', 
-              letterSpacing: 0.6 
-            }}>
-              Verified
+          )}
+        </View>
+
+        {/* Main info */}
+        <View style={{ flex: 1, gap: theme.spacing[1] }}>
+          {/* Brand + Verified + New */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[2] }}>
+            <Text style={{ fontFamily: theme.fontFamily.headline, fontSize: 16, color: theme.colors.ink, flex: 1 }} numberOfLines={1}>
+              {listing.brand.name}
             </Text>
-          </View>
-        </View>
-        <Text style={{ 
-          fontFamily: theme.fontFamily.headline, 
-          fontSize: 20, 
-          fontWeight: '700', 
-          color: theme.colors.ink, 
-          marginBottom: theme.spacing[1] 
-        }}>
-          {listing.brand.name}
-        </Text>
-        <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: theme.spacing[2], marginBottom: theme.spacing[4] }}>
-          <Text style={{ fontFamily: theme.fontFamily.mono, fontSize: 24, fontWeight: '700', color: theme.colors.ink }}>
-            {formatCurrency(listing.sellingPrice)}
-          </Text>
-          <Text style={{ fontFamily: theme.fontFamily.mono, fontSize: 13, color: theme.colors.inkMuted, textDecorationLine: 'line-through' }}>
-            {formatCurrency(listing.faceValue)}
-          </Text>
-          <View style={{ backgroundColor: theme.colors.successSoft, paddingHorizontal: theme.spacing[2], paddingVertical: 2, borderRadius: theme.radius.pill }}>
-            <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 11, fontWeight: '700', color: theme.colors.success }}>
-              {String(Math.round(listing.discountPercent))}% off
-            </Text>
-          </View>
-        </View>
-        <View style={{ borderTopWidth: 1, borderTopColor: theme.colors.border, borderStyle: 'solid', marginBottom: theme.spacing[2] }} />
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[1], backgroundColor: theme.colors.successSoft, paddingHorizontal: theme.spacing[2], paddingVertical: theme.spacing[1], borderRadius: theme.radius.pill, alignSelf: 'flex-start', marginBottom: theme.spacing[2] }}>
-          <Ionicons name="lock-closed" size={11} color={theme.colors.success} />
-          <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 10, fontWeight: '700', color: theme.colors.success, textTransform: 'uppercase', letterSpacing: 0.6 }}>
-            100% Escrow Protected
-          </Text>
-        </View>
-        <View style={{ gap: theme.spacing[1] }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-            <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 12, color: theme.colors.inkMuted }}>Expiry</Text>
-            <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 12, fontWeight: '600', color: theme.colors.ink }}>{formatDate(listing.expiryDate)}</Text>
-          </View>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 12, color: theme.colors.inkMuted }}>Seller</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[1] }}>
-              <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 12, fontWeight: '600', color: theme.colors.ink }}>{listing.seller.name}</Text>
-              {listing.seller.trustTier ? <TrustBadge tier={listing.seller.trustTier} /> : null}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[1], backgroundColor: theme.colors.brandSoft, paddingHorizontal: theme.spacing[2], paddingVertical: 2, borderRadius: theme.radius.pill }}>
+              <Ionicons name="checkmark-circle" size={10} color={theme.colors.brand} />
+              <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 9, color: theme.colors.brand, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                Verified
+              </Text>
             </View>
+            {isNew && (
+              <View style={{ backgroundColor: theme.colors.successSoft, paddingHorizontal: theme.spacing[2], paddingVertical: 2, borderRadius: theme.radius.pill }}>
+                <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 9, color: theme.colors.success, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                  New
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {/* Price row */}
+          <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: theme.spacing[2] }}>
+            <Text style={{ fontFamily: theme.fontFamily.mono, fontSize: 18, fontWeight: '700', color: theme.colors.ink }}>
+              {formatCurrency(listing.sellingPrice)}
+            </Text>
+            <Text style={{ fontFamily: theme.fontFamily.mono, fontSize: 12, color: theme.colors.inkMuted, textDecorationLine: 'line-through' }}>
+              {formatCurrency(listing.faceValue)}
+            </Text>
+            <View style={{ backgroundColor: theme.colors.successSoft, paddingHorizontal: theme.spacing[2], paddingVertical: 2, borderRadius: theme.radius.pill }}>
+              <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 11, fontWeight: '700', color: theme.colors.success }}>
+                {String(Math.round(listing.discountPercent))}% off
+              </Text>
+            </View>
+          </View>
+
+          {/* Expiry row */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[2] }}>
+            {isExpiringSoon ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: theme.colors.dangerSoft, paddingHorizontal: theme.spacing[2], paddingVertical: 2, borderRadius: theme.radius.pill }}>
+                <Ionicons name="time" size={10} color={theme.colors.danger} />
+                <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 10, color: theme.colors.danger }}>
+                  {daysToExpiry <= 0 ? 'Expires today' : `${String(daysToExpiry)}d left`}
+                </Text>
+              </View>
+            ) : (
+              <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 11, color: theme.colors.inkMuted }}>
+                Expires {formatDate(listing.expiryDate)}
+              </Text>
+            )}
           </View>
         </View>
       </View>

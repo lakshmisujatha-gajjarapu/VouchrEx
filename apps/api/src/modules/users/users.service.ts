@@ -13,6 +13,8 @@ const meSelect = {
   status: true,
   tier: true,
   totalSales: true,
+  totalEarned: true,
+  totalSaved: true,
 } as const;
 
 @Injectable()
@@ -70,6 +72,8 @@ export class UsersService {
           trustScore: true,
           tier: true,
           totalSales: true,
+          totalEarned: true,
+          totalSaved: true,
           disputeCount: true,
           sellerStrikes: true,
           buyerStrikes: true,
@@ -94,6 +98,8 @@ export class UsersService {
       tier,
       nextTierAt,
       totalSales: user.totalSales,
+      totalEarned: user.totalEarned,
+      totalSaved: user.totalSaved,
       purchases,
       disputesAgainst: user.disputeCount,
       disputesRaised,

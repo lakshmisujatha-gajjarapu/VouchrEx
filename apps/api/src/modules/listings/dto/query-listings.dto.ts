@@ -14,6 +14,8 @@ const QueryListingsSchema = z.object({
     .optional()
     .describe('Minimum discount percentage'),
   maxPrice: z.coerce.number().int().min(1).optional().describe('Maximum listing price in INR'),
+  minCreatedAt: z.string().datetime().optional().describe('Filter listings created after this timestamp'),
+  maxExpiryDate: z.string().datetime().optional().describe('Filter listings expiring before this timestamp'),
   sort: z
     .enum(listingSortOptions)
     .optional()

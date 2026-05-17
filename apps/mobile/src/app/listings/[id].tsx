@@ -3,6 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Linking,
   Pressable,
   ScrollView,
   Text,
@@ -29,6 +30,7 @@ export default function ListingDetailScreen() {
   const { buyerFeeRate } = useConfig();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isAlerted, setIsAlerted] = useState(false);
 
   const listingResource = useAsyncResource(
     useCallback(() => {
@@ -102,6 +104,27 @@ export default function ListingDetailScreen() {
   const buyerFee = Math.round(listing.sellingPrice * buyerFeeRate);
   const totalDue = listing.sellingPrice + buyerFee;
 
+  async function handleToggleAlert() {
+    if (!sessionToken || !listing.brandId) return;
+    try {
+      if (isAlerted) {
+        await api.removeAlert(sessionToken, listing.brandId);
+      } else {
+        await api.createAlert(sessionToken, listing.brandId);
+      }
+      setIsAlerted(!isAlerted);
+    } catch (_e) {
+      // silent fail
+    }
+  }
+
+  function handleShare() {
+    const message = `Check out this ${listing.brand.name} voucher on Vouchrex! ₹${String(listing.faceValue)} for only ₹${String(listing.sellingPrice)} (${String(savings)}% off). 
+    
+Download Vouchrex: https://vouchrex.com/download`;
+    void Linking.openURL(`whatsapp://send?text=${encodeURIComponent(message)}`);
+  }
+
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <SafeAreaView style={{ flex: 1 }} edges={['top', 'left', 'right']}>
@@ -131,15 +154,18 @@ export default function ListingDetailScreen() {
               VOUCHER DETAIL
             </Text>
           </View>
-          <Text style={{
-            fontFamily: theme.fontFamily.headline,
-            fontSize: 20,
-            fontWeight: '700',
-            letterSpacing: -0.3,
-            color: theme.colors.ink,
-          }}>
-            VouchrEx
-          </Text>
+          <View style={{ flexDirection: 'row', gap: 12 }}>
+            <Pressable
+              onPress={() => { void handleToggleAlert(); }}
+              style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: isAlerted ? theme.colors.brandSoft : theme.colors.surfaceTray, alignItems: 'center', justifyContent: 'center' }}>
+              <Ionicons name={isAlerted ? "notifications" : "notifications-outline"} size={20} color={isAlerted ? theme.colors.brand : theme.colors.inkMuted} />
+            </Pressable>
+            <Pressable
+              onPress={handleShare}
+              style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: theme.colors.surfaceTray, alignItems: 'center', justifyContent: 'center' }}>
+              <Ionicons name="share-social-outline" size={20} color={theme.colors.inkMuted} />
+            </Pressable>
+          </View>
         </View>
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: insets.bottom + theme.spacing[6] }}>

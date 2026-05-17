@@ -19,6 +19,7 @@ import { AuthModule } from './auth/auth.module';
 import { BrandsModule } from './brands/brands.module';
 import { HealthModule } from './health/health.module';
 import { ListingsModule } from './listings/listings.module';
+import { MarketingModule } from './marketing/marketing.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { OrdersModule } from './orders/orders.module';
 import { PrismaModule } from './prisma/prisma.module';
@@ -53,6 +54,7 @@ import { WebhooksModule } from './webhooks/webhooks.module';
     AppConfigModule,
     BrandsModule,
     ListingsModule,
+    MarketingModule,
     OrdersModule,
     NotificationsModule,
     PayoutsModule,

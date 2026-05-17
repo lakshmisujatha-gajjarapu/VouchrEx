@@ -121,3 +121,14 @@ export async function writeThemePreference(preference: ThemePreference) {
 
   await writePersistedValue(themePreferenceKey, preference);
 }
+
+const trustBannerDismissedKey = 'vouchrex.trust-banner-dismissed';
+
+export async function readTrustBannerDismissed(): Promise<boolean> {
+  const raw = await readPersistedValue(trustBannerDismissedKey);
+  return raw === 'true';
+}
+
+export async function writeTrustBannerDismissed() {
+  await writePersistedValue(trustBannerDismissedKey, 'true');
+}

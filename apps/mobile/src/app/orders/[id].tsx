@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColorScheme } from 'nativewind';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { PrimaryButton } from '@/components/primary-button';
 import { RevealCodeButton } from '@/components/reveal-code-button';
@@ -74,6 +75,7 @@ export default function OrderDetailScreen() {
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [showSuccessIntercept, setShowSuccessIntercept] = useState(false);
 
   const orderResource = useAsyncResource(
     useCallback(() => {
@@ -177,6 +179,7 @@ export default function OrderDetailScreen() {
     try {
       await api.confirmOrder(sessionToken, orderId);
       await reloadOrder();
+      setShowSuccessIntercept(true);
       setFeedback('Payment sent to the seller.');
     } catch (error_) {
       setFeedback(error_ instanceof Error ? error_.message : 'Could not confirm order.');
@@ -261,7 +264,7 @@ export default function OrderDetailScreen() {
           </Pressable>
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: theme.spacing[5] }}>
             <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 15, color: theme.colors.danger, textAlign: 'center' }}>
-              {orderResource.error ?? 'Order not found.'}
+              {orderResource.error}
             </Text>
           </View>
         </SafeAreaView>
@@ -277,6 +280,8 @@ export default function OrderDetailScreen() {
     : cardToneForStatus(order.status) === 'success'
       ? theme.colors.success
       : theme.colors.brand;
+
+  const savings = Math.max(0, order.listing.faceValue - order.amount);
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
@@ -914,6 +919,49 @@ export default function OrderDetailScreen() {
               style={({ pressed }) => ({ alignItems: 'center', paddingVertical: theme.spacing[3], opacity: pressed ? 0.6 : 1 })}>
               <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 15, color: theme.colors.inkMuted }}>Cancel</Text>
             </Pressable>
+          </View>
+        </Modal>
+
+        {/* ── Success Intercept Modal ── */}
+        <Modal animationType="fade" transparent visible={showSuccessIntercept} onRequestClose={() => { setShowSuccessIntercept(false); }}>
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+            <Animated.View entering={FadeInDown.duration(400).springify()} style={{ backgroundColor: theme.colors.surface, borderRadius: 32, padding: 32, width: '100%', gap: 24, alignItems: 'center' }}>
+              <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: theme.colors.successSoft, alignItems: 'center', justifyContent: 'center' }}>
+                <Ionicons name="sparkles" size={40} color={theme.colors.success} />
+              </View>
+              
+              <View style={{ alignItems: 'center', gap: 8 }}>
+                <Text style={{ fontFamily: theme.fontFamily.headlineExtra, fontSize: 28, textAlign: 'center', color: theme.colors.ink }}>
+                  You just saved {formatCurrency(savings)}!
+                </Text>
+                <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 16, textAlign: 'center', color: theme.colors.inkSecondary, lineHeight: 24 }}>
+                  Your {order.listing.brand.name} voucher is secured and ready to use.
+                </Text>
+              </View>
+
+              <View style={{ width: '100%', gap: 12 }}>
+                <PrimaryButton 
+                  label="Shop Again" 
+                  tone="brand" 
+                  onPress={() => {
+                    setShowSuccessIntercept(false);
+                    router.replace('/(tabs)/shop');
+                  }} 
+                />
+                <Pressable 
+                  onPress={() => {
+                    setShowSuccessIntercept(false);
+                    router.push('/(tabs)/sell');
+                  }}
+                  style={{ paddingVertical: 12, alignItems: 'center' }}>
+                  <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 15, color: theme.colors.inkMuted }}>Sell a Voucher</Text>
+                </Pressable>
+              </View>
+
+              <Pressable onPress={() => { setShowSuccessIntercept(false); }} style={{ position: 'absolute', top: 20, right: 20 }}>
+                <Ionicons name="close" size={24} color={theme.colors.inkMuted} />
+              </Pressable>
+            </Animated.View>
           </View>
         </Modal>
 
