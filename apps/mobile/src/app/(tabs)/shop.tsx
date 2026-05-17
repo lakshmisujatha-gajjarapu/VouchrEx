@@ -286,9 +286,9 @@ export default function ShopScreen() {
               <View style={{ gap: theme.spacing[1], flex: 1, paddingRight: theme.spacing[3] }}>
                 <Text style={{
                   fontFamily: theme.fontFamily.headlineExtra,
-                  fontSize: 56,
-                  lineHeight: 58,
-                  letterSpacing: -1.5,
+                  fontSize: 32,
+                  lineHeight: 36,
+                  letterSpacing: -0.8,
                   color: theme.colors.ink,
                 }}>
                   Shop
