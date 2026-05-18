@@ -8602,16 +8602,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"expo-web-browser@npm:~55.0.16":
-  version: 55.0.16
-  resolution: "expo-web-browser@npm:55.0.16"
-  peerDependencies:
-    expo: "*"
-    react-native: "*"
-  checksum: 10c0/0ead0f14d8252eb3c0cb2e2e3d7b466866083fbcfdb9d1e0b691e036708fa592aebff0ebbbefefaf9f59f6bc861ba1507c7cd578f75c6a9983bdc4fff60e3120
-  languageName: node
-  linkType: hard
-
 "expo@npm:~55.0.0":
   version: 55.0.24
   resolution: "expo@npm:55.0.24"
@@ -12851,6 +12841,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"react-native-razorpay@npm:^3.0.0":
+  version: 3.0.0
+  resolution: "react-native-razorpay@npm:3.0.0"
+  peerDependencies:
+    react: ">=16.8.0"
+    react-native: ">=0.66.0"
+  checksum: 10c0/0726844f172991759c486f824be9ded4a17aa912ec20657a1d80d82b4ac12b4cf7888f83b9f798461bc7a20a41ca06e0c53c878a12facfae87e92ad7ea612794
+  languageName: node
+  linkType: hard
+
 "react-native-reanimated@npm:4.2.1":
   version: 4.2.1
   resolution: "react-native-reanimated@npm:4.2.1"
@@ -15255,13 +15255,13 @@ __metadata:
     expo-status-bar: "npm:~55.0.6"
     expo-symbols: "npm:~55.0.8"
     expo-system-ui: "npm:~55.0.18"
-    expo-web-browser: "npm:~55.0.16"
     nativewind: "npm:^4.2.3"
     react: "npm:19.2.0"
     react-dom: "npm:19.2.0"
     react-native: "npm:0.83.6"
     react-native-country-flag: "npm:^2.0.2"
     react-native-gesture-handler: "npm:~2.30.0"
+    react-native-razorpay: "npm:^3.0.0"
     react-native-reanimated: "npm:4.2.1"
     react-native-safe-area-context: "npm:~5.6.2"
     react-native-screens: "npm:~4.23.0"

@@ -4,7 +4,7 @@ import { Image } from 'expo-image';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { openAuthSessionAsync } from 'expo-web-browser';
+import RazorpayCheckout from 'react-native-razorpay';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -27,44 +27,24 @@ import { TextField } from '@/components/text-field';
 import { useAuth } from '@/hooks/use-auth';
 import { useAsyncResource } from '@/hooks/use-async-resource';
 import { useOrderSocket } from '@/hooks/use-order-socket';
-import { api, apiBaseUrl, type Checkout, type RevealResult } from '@/lib/api';
+import { api, type RevealResult } from '@/lib/api';
 import { formatCountdown, formatCurrency, formatDate, formatStatus } from '@/lib/format';
 import { cardToneForStatus, escrowBadgeLabel, escrowBadgeColors, buildFlowSteps } from '@/lib/status';
 import { useTheme } from '@/theme/theme-context';
 
-function firstRouteParam(value?: string | string[]) {
-  return Array.isArray(value) ? value[0] : value;
-}
-
-function buildCheckoutFromRoute(params: {
-  readonly checkoutRazorpayOrderId?: string | string[];
-  readonly checkoutAmountPaise?: string | string[];
-  readonly checkoutCurrency?: string | string[];
-  readonly checkoutKeyId?: string | string[];
-}): Checkout | null {
-  const razorpayOrderId = firstRouteParam(params.checkoutRazorpayOrderId);
-  const amountPaiseStr = firstRouteParam(params.checkoutAmountPaise);
-  const currency = firstRouteParam(params.checkoutCurrency);
-  const keyId = firstRouteParam(params.checkoutKeyId);
-  if (!razorpayOrderId || !amountPaiseStr || !currency || !keyId) return null;
-  return { provider: 'RAZORPAY', razorpayOrderId, amountPaise: Number(amountPaiseStr), currency, keyId };
-}
-
 export default function OrderDetailScreen() {
   const params = useLocalSearchParams<{
     readonly id?: string | string[];
-    readonly checkoutRazorpayOrderId?: string | string[];
-    readonly checkoutAmountPaise?: string | string[];
-    readonly checkoutCurrency?: string | string[];
-    readonly checkoutKeyId?: string | string[];
   }>();
-  const orderId = useMemo(() => firstRouteParam(params.id), [params.id]);
+  const orderId = useMemo(
+    () => (Array.isArray(params.id) ? params.id[0] : params.id),
+    [params.id],
+  );
   const { sessionToken, user } = useAuth();
   const theme = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
-  const [checkout, setCheckout] = useState<Checkout | null>(() => buildCheckoutFromRoute(params));
   const [reveal, setReveal] = useState<RevealResult | null>(null);
   const [disputeOpen, setDisputeOpen] = useState(false);
   const [reason, setReason] = useState('voucher-invalid');
@@ -109,52 +89,35 @@ export default function OrderDetailScreen() {
     setBusyAction('payment');
     setFeedback(null);
     try {
-      let co = checkout;
-      if (!co) {
-        const result = await api.prepareCheckout(sessionToken, orderId);
-        co = result.checkout;
-        setCheckout(co);
-      }
-
-      const checkoutPageUrl = `${apiBaseUrl}/payments/checkout-page?${new URLSearchParams({
-        rzpOrderId: co.razorpayOrderId,
-        amountPaise: String(co.amountPaise),
+      const { checkout: co } = await api.prepareCheckout(sessionToken, orderId);
+      const payment = await RazorpayCheckout.open({
+        key: co.keyId,
+        amount: String(co.amountPaise),
         currency: co.currency,
-        keyId: co.keyId,
-        appOrderId: orderId,
-      }).toString()}`;
-
-      const result = await openAuthSessionAsync(checkoutPageUrl, 'vouchrex://payment-callback');
-
-      if (result.type !== 'success' || !result.url) {
-        setFeedback('Payment cancelled.');
-        setBusyAction(null);
-        return;
-      }
-
-      const callbackUrl = new URL(result.url);
-      const razorpayOrderId = callbackUrl.searchParams.get('razorpay_order_id');
-      const razorpayPaymentId = callbackUrl.searchParams.get('razorpay_payment_id');
-      const razorpaySignature = callbackUrl.searchParams.get('razorpay_signature');
-
-      if (!razorpayOrderId || !razorpayPaymentId || !razorpaySignature) {
-        setFeedback('Payment callback is incomplete. Pull down to check if your payment went through.');
-        setBusyAction(null);
-        return;
-      }
-
+        order_id: co.razorpayOrderId,
+        name: 'VouchrEx',
+        description: 'Secure voucher escrow',
+        prefill: {
+          contact: user?.phone ?? '',
+          name: user?.name ?? '',
+        },
+        theme: { color: '#6C47FF' },
+      });
       await api.verifyPayment(sessionToken, orderId, {
         method: 'razorpay',
-        razorpayOrderId,
-        razorpayPaymentId,
-        razorpaySignature,
+        razorpayOrderId: payment.razorpay_order_id,
+        razorpayPaymentId: payment.razorpay_payment_id,
+        razorpaySignature: payment.razorpay_signature,
       });
-
       await reloadOrder();
       setFeedback('Payment secured. You can now reveal the voucher.');
     } catch (error_) {
-      const message = error_ instanceof Error ? error_.message : '';
-      setFeedback(message || 'Payment failed. Please try again.');
+      const rzpError = error_ as { code?: number; description?: string };
+      if (rzpError.code === 0) {
+        setFeedback('Payment cancelled.');
+      } else {
+        setFeedback(rzpError.description ?? (error_ instanceof Error ? error_.message : 'Payment failed. Please try again.'));
+      }
     } finally {
       setBusyAction(null);
     }

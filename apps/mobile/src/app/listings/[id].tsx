@@ -55,13 +55,7 @@ export default function ListingDetailScreen() {
       const result = await api.createOrder(sessionToken, listingId);
       router.replace({
         pathname: '/orders/[id]',
-        params: {
-          id: result.order.id,
-          checkoutRazorpayOrderId: result.checkout.razorpayOrderId,
-          checkoutAmountPaise: String(result.checkout.amountPaise),
-          checkoutCurrency: result.checkout.currency,
-          checkoutKeyId: result.checkout.keyId,
-        },
+        params: { id: result.order.id },
       });
     } catch (error_) {
       setError(error_ instanceof Error ? error_.message : 'Could not reserve listing.');
