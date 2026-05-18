@@ -222,7 +222,6 @@ export default function ShopScreen() {
   const router = useRouter();
   const theme = useTheme();
   const { sessionToken, user } = useAuth();
-  const { colorScheme } = useColorScheme();
   const reducedMotion = useReducedMotion();
   const [query, setQuery] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
