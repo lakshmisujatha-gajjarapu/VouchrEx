@@ -598,4 +598,8 @@ export const api = {
       sessionToken,
     });
   },
+
+  getAlertCount(brandId: string) {
+    return apiRequest<{ readonly count: number }>(`/alerts/count/${brandId}`);
+  },
 };

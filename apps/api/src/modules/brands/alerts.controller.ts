@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Delete, Param, Headers } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Param, Headers, BadRequestException } from '@nestjs/common';
 import { ApiHeader, ApiTags } from '@nestjs/swagger';
 import { AuthService } from '../auth/auth.service';
 import { sessionHeaderName } from '../auth/auth.constants';
@@ -11,6 +11,14 @@ export class AlertsController {
     private readonly authService: AuthService,
     private readonly alertsService: AlertsService
   ) {}
+
+  @Get('count/:brandId')
+  async countForBrand(@Param('brandId') brandId: string) {
+    const trimmed = brandId.trim();
+    if (!trimmed) throw new BadRequestException('brandId is required');
+    const count = await this.alertsService.countForBrand(trimmed);
+    return { count };
+  }
 
   @ApiHeader({
     name: sessionHeaderName,

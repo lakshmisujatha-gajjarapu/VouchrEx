@@ -38,6 +38,7 @@ type Suggestion = {
   readonly meta: string;
   readonly source: 'local' | 'brandfetch';
   readonly avgDiscountPercent?: number;
+  readonly brandId?: string;
 };
 
 function defaultExpiryDateString() {
@@ -87,7 +88,12 @@ export default function SellScreen() {
   const [currentStep, setCurrentStep] = useState(1);
   const [isListed, setIsListed] = useState(false);
   const [selectedBrandAvg, setSelectedBrandAvg] = useState(0);
+  const [demandCount, setDemandCount] = useState(0);
   const navTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const selectedBrandIdRef = useRef<string | null>(null);
+
+  // Clipboard pre-fill state: null = not detected or dismissed
+  const [clipboardCode, setClipboardCode] = useState<string | null>(null);
 
   // Reset form each time this screen comes into focus
   useFocusEffect(
@@ -107,8 +113,20 @@ export default function SellScreen() {
       setCurrentStep(1);
       setIsListed(false);
       setSelectedBrandAvg(0);
+      setDemandCount(0);
+      setClipboardCode(null);
+
+      // Check clipboard for a plausible voucher code
+      void Clipboard.getStringAsync().then((text) => {
+        const trimmed = text.trim();
+        if (/^[a-zA-Z0-9]{8,20}$/.test(trimmed)) {
+          setClipboardCode(trimmed);
+        }
+      }).catch(() => {});
+
       return () => {
         if (navTimerRef.current) clearTimeout(navTimerRef.current);
+        setClipboardCode(null);
       };
     }, [])
   );
@@ -123,7 +141,7 @@ export default function SellScreen() {
       );
       const seen = new Set(localBrands.map((brand) => normalizeBrandName(brand.name)));
       const suggestions: Suggestion[] = localBrands.map((brand) => ({
-        name: brand.name, meta: brand.category, source: 'local', avgDiscountPercent: brand.avgDiscountPercent,
+        name: brand.name, meta: brand.category, source: 'local', avgDiscountPercent: brand.avgDiscountPercent, brandId: brand.id,
       }));
       for (const brand of externalBrands) {
         const key = normalizeBrandName(brand.name);
@@ -218,11 +236,21 @@ export default function SellScreen() {
                 {brandName} is live! 🎉
               </Text>
               <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 16, textAlign: 'center', color: theme.colors.inkSecondary, lineHeight: 24 }}>
-                Your voucher is now visible to buyers. Average sell time for this brand: ~4 hours.
+                {`Your voucher is now visible to buyers.`}
               </Text>
+              {selectedBrandAvg > 0 ? (
+                <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 15, textAlign: 'center', color: theme.colors.inkSecondary, lineHeight: 22 }}>
+                  {`Average sell time for this brand: ~${selectedBrandAvg < 10 ? '8' : selectedBrandAvg <= 20 ? '4' : '2'} hours.`}
+                </Text>
+              ) : null}
               <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 14, textAlign: 'center', color: theme.colors.inkMuted, marginTop: theme.spacing[1] }}>
                 We'll notify you the moment it sells.
               </Text>
+              {demandCount >= 2 ? (
+                <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 14, textAlign: 'center', color: theme.colors.brand, marginTop: theme.spacing[1] }}>
+                  {`We just notified ${String(demandCount)} buyers who were waiting for this.`}
+                </Text>
+              ) : null}
             </View>
             <InteractivePressable
               onPress={() => {
@@ -311,7 +339,7 @@ export default function SellScreen() {
                       <FieldLabel>Brand</FieldLabel>
                       <SubmergedInput
                         value={brandName}
-                        onChangeText={(t) => { setBrandName(t); setSelectedBrandAvg(0); }}
+                        onChangeText={(t) => { setBrandName(t); setSelectedBrandAvg(0); setDemandCount(0); selectedBrandIdRef.current = null; }}
                         placeholder="Search brands (e.g. Amazon, Starbucks)"
                         rightIcon={
                           suggestionsResource.loading
@@ -325,13 +353,36 @@ export default function SellScreen() {
                             <FilterChip
                               key={`${s.source}:${s.name}`}
                               label={s.name}
-                              onPress={() => { setBrandName(s.name); setSelectedBrandAvg(s.avgDiscountPercent ?? 0); }}
+                              onPress={() => {
+                                setBrandName(s.name);
+                                setSelectedBrandAvg(s.avgDiscountPercent ?? 0);
+                                setDemandCount(0);
+                                if (s.brandId) {
+                                  selectedBrandIdRef.current = s.brandId;
+                                  const targetBrandId = s.brandId;
+                                  void api.getAlertCount(targetBrandId).then((r) => {
+                                    if (selectedBrandIdRef.current === targetBrandId) setDemandCount(r.count);
+                                  }).catch(() => { setDemandCount(0); });
+                                }
+                              }}
                               selected={normalizeBrandName(s.name) === normalizeBrandName(brandName)}
                             />
                           ))}
                         </View>
                       ) : null}
                     </View>
+
+                    {demandCount >= 2 ? (
+                      <View
+                        accessible={true}
+                        accessibilityLabel={`${String(demandCount)} buyers are waiting for a ${brandName} voucher`}
+                        style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[3], backgroundColor: theme.colors.warningSoft, borderRadius: theme.radius.md, paddingHorizontal: theme.spacing[4], paddingVertical: theme.spacing[3] }}>
+                        <Text style={{ fontSize: 16 }}>🔥</Text>
+                        <Text style={{ flex: 1, fontFamily: theme.fontFamily.body, fontSize: 13, color: theme.colors.warning }}>
+                          {`${String(demandCount)} buyers are waiting for a ${brandName} voucher right now`}
+                        </Text>
+                      </View>
+                    ) : null}
 
                     <View>
                       <FieldLabel>Type</FieldLabel>
@@ -372,6 +423,36 @@ export default function SellScreen() {
                         Your details are encrypted instantly. Only the buyer can see them after payment.
                       </Text>
                     </View>
+
+                    {clipboardCode !== null && code === '' ? (
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: theme.spacing[3],
+                          backgroundColor: theme.colors.brandSoft,
+                          borderRadius: theme.radius.md,
+                          paddingHorizontal: theme.spacing[4],
+                          paddingVertical: theme.spacing[3],
+                        }}>
+                        <Pressable
+                          onPress={() => { setCode(clipboardCode); setClipboardCode(null); }}
+                          style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: theme.spacing[3] }}>
+                          <Text style={{ fontSize: 16 }}>📋</Text>
+                          <Text style={{ flex: 1, fontFamily: theme.fontFamily.body, fontSize: 13, color: theme.colors.brand }}>
+                            Looks like you have a code copied. Tap to use it.
+                          </Text>
+                        </Pressable>
+                        <Pressable
+                          onPress={() => { setClipboardCode(null); }}
+                          accessibilityRole="button"
+                          accessibilityLabel="Dismiss clipboard suggestion"
+                          hitSlop={8}
+                          style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
+                          <Ionicons name="close" size={18} color={theme.colors.brand} />
+                        </Pressable>
+                      </View>
+                    ) : null}
 
                     {voucherType === 'gift-card' ? (
                       <>

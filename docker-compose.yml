@@ -96,6 +96,40 @@ services:
       timeout: 5s
       retries: 5
 
+  minio:
+    image: minio/minio
+    volumes:
+      - miniodata:/data
+    command: server /data --console-address ":9001"
+    ports:
+      - "127.0.0.1:9000:9000"   # localhost only — proxy via Nginx for external access
+      - "127.0.0.1:9001:9001"   # MinIO console — localhost only
+    environment:
+      MINIO_ROOT_USER: change_me_user
+      MINIO_ROOT_PASSWORD: change_me_strong_password
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  minio-init:
+    image: minio/mc
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 change_me_user change_me_strong_password &&
+      mc mb --ignore-existing local/vouchrex-evidence
+      "
+    restart: on-failure
+
   prisma-studio:
     build:
       context: .
@@ -116,3 +150,4 @@ services:
 volumes:
   pgdata:
   redisdata:
+  miniodata:

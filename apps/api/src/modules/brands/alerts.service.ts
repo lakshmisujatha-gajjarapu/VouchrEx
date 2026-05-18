@@ -39,4 +39,14 @@ export class AlertsService {
       include: { brand: true }
     });
   }
+
+  async countForBrand(brandId: string): Promise<number> {
+    const brand = await this.prisma.brand.findUnique({ where: { id: brandId } });
+    if (!brand) {
+      throw new NotFoundException(`Brand ${brandId} not found.`);
+    }
+    return this.prisma.brandAlert.count({
+      where: { brandId, active: true }
+    });
+  }
 }

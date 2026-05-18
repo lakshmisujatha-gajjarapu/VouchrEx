@@ -30,6 +30,7 @@ import { CodeVaultService } from '../listings/services/code-vault.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PaymentsService } from '../payments/payments.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { PushService } from '../push/push.service';
 import { USER_TIERS } from '../users/users.constants';
 import { CreateDisputeDto } from './dto/create-dispute.dto';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -55,6 +56,7 @@ export class OrdersService {
     private readonly codeVaultService: CodeVaultService,
     private readonly notificationsService: NotificationsService,
     private readonly paymentsService: PaymentsService,
+    private readonly pushService: PushService,
     private readonly eventEmitter: EventEmitter2,
     private readonly disputeStrikes: DisputeStrikesService,
     private readonly appConfigService: AppConfigService,
@@ -1696,6 +1698,21 @@ export class OrdersService {
         data: { payoutStatus: PayoutStatus.COMPLETED, payoutCompletedAt: new Date() }
       });
       this.logger.log(`Payout completed: ${razorpayPayoutId} orderId=${payment.orderId}`);
+
+      const order = await this.prisma.order.findUnique({
+        where: { id: payment.orderId },
+        select: { sellerId: true, sellerPayout: true }
+      });
+      if (order) {
+        await this.pushService.sendToUser(order.sellerId, {
+          title: `₹${String(order.sellerPayout)} just landed in your account`,
+          body: 'Your Vouchrex payout is complete. List more and keep earning.',
+          link: '/(tabs)/sell',
+          eventType: 'payment.payout_completed',
+          entityId: payment.id,
+          dedupeKey: `payout-completed:${payment.id}`
+        }).catch((e: unknown) => { this.logger.warn(`Payout push failed: ${e instanceof Error ? e.message : String(e)}`); });
+      }
     } else {
       const reason = event === 'payout.reversed' ? 'reversed by bank' : 'payout failed';
       await this.prisma.payment.update({
@@ -1964,7 +1981,8 @@ export class OrdersService {
             id: true,
             name: true,
             payoutHoldUntil: true,
-            payoutAccount: true
+            payoutAccount: true,
+            totalEarned: true
           }
         }
       }
@@ -2041,11 +2059,30 @@ export class OrdersService {
     // Increment seller totalSales counter and totalEarned
     await this.prisma.user.update({
       where: { id: order.sellerId },
-      data: { 
+      data: {
         totalSales: { increment: 1 },
         totalEarned: { increment: order.sellerPayout }
       }
     });
+
+    // Check if seller crossed an earnings milestone and push if so
+    const MILESTONES = [500, 2000, 5000, 10000];
+    const previousEarned = order.seller.totalEarned;
+    const newEarned = previousEarned + order.sellerPayout;
+
+    for (const milestone of MILESTONES) {
+      if (previousEarned < milestone && newEarned >= milestone) {
+        await this.pushService.sendToUser(order.sellerId, {
+          title: `You've earned ₹${String(milestone)} on Vouchrex 🏆`,
+          body: `That's real cash from vouchers you weren't using. Keep going — list your next voucher now.`,
+          link: '/(tabs)/sell',
+          eventType: 'seller.milestone',
+          entityId: order.sellerId,
+          dedupeKey: `milestone:${order.sellerId}:${String(milestone)}`
+        }).catch((e: unknown) => { this.logger.warn(`Milestone push failed: ${e instanceof Error ? e.message : String(e)}`); });
+        break; // Only fire one milestone per order confirmation
+      }
+    }
 
     // Increment buyer totalSaved
     const savings = Math.max(0, order.listing.faceValue - order.amount);
