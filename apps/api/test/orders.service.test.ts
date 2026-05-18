@@ -91,6 +91,7 @@ test('OrdersService reveals a watermarked code and starts the verification timer
     codeVaultService,
     notificationsService,
     paymentsService,
+    null,
     eventEmitter
   );
 
@@ -142,6 +143,7 @@ test('executeAndRecordRefund uses a stable idempotency key regardless of refundA
     null as any,
     null as any,
     paymentsService,
+    null as any,
     null as any,
     null as any
   );
@@ -213,6 +215,7 @@ test('retryDisputeRefund adopts existing Razorpay refund without POSTing again',
     null as any,
     paymentsService,
     null as any,
+    null as any,
     null as any
   );
 
@@ -268,7 +271,7 @@ test('activateEscrow is idempotent: second call does not duplicate notifications
 
   const notifications: any = { createMany: async (n: any) => { notifyCalls.push(n); } };
   const eventEmitter: any = { emit: (...a: any) => { emits.push(a); } };
-  const svc: any = new OrdersService(prisma, null, notifications, null, eventEmitter, null);
+  const svc: any = new OrdersService(prisma, null, notifications, null, null, eventEmitter, null);
 
   await (svc as any).activateEscrow('order_1', { method: 'card' });
   await (svc as any).activateEscrow('order_1', { method: 'card' });
@@ -294,6 +297,7 @@ test('finalizeRelease is idempotent: second call does not duplicate executePayou
     seller: {
       id: 's',
       name: 'S',
+      totalEarned: 0,
       payoutHoldUntil: null,
       payoutAccount: {
         razorpayFundAccountId: 'fa_1',
@@ -347,8 +351,9 @@ test('finalizeRelease is idempotent: second call does not duplicate executePayou
 
   const notificationsService: any = { createMany: async () => {} };
   const eventEmitter: any = { emit: () => {} };
+  const pushService: any = { sendToUser: async () => {} };
 
-  const svc: any = new OrdersService(prisma, null, notificationsService, paymentsService, eventEmitter, null);
+  const svc: any = new OrdersService(prisma, null, notificationsService, paymentsService, pushService, eventEmitter, null);
 
   await (svc as any).finalizeRelease(orderId, 'CONFIRMED', new Date(), null);
   await (svc as any).finalizeRelease(orderId, 'CONFIRMED', new Date(), null);
@@ -371,6 +376,7 @@ test('finalizeRelease payout catch does not overwrite a successful payout state'
     seller: {
       id: 's',
       name: 'S',
+      totalEarned: 0,
       payoutHoldUntil: null,
       payoutAccount: {
         razorpayFundAccountId: 'fa_1',
@@ -430,8 +436,9 @@ test('finalizeRelease payout catch does not overwrite a successful payout state'
 
   const notificationsService: any = { createMany: async () => {} };
   const eventEmitter: any = { emit: () => {} };
+  const pushService: any = { sendToUser: async () => {} };
 
-  const svc: any = new OrdersService(prisma, null, notificationsService, paymentsService, eventEmitter, null);
+  const svc: any = new OrdersService(prisma, null, notificationsService, paymentsService, pushService, eventEmitter, null);
 
   await (svc as any).finalizeRelease(orderId, 'CONFIRMED', new Date(), null);
 
@@ -472,7 +479,7 @@ test('cancelExpiredEscrowOrders auto-executes a Razorpay refund when razorpayPay
   const notifications: any = { createMany: async () => {} };
   const eventEmitter: any = { emit: () => {} };
   const { OrdersService } = require('../src/modules/orders/orders.service');
-  const svc: any = new OrdersService(prisma, null, notifications, paymentsService, eventEmitter, null);
+  const svc: any = new OrdersService(prisma, null, notifications, paymentsService, null, eventEmitter, null);
 
   await svc.cancelExpiredEscrowOrders();
 
@@ -499,7 +506,7 @@ test('cancelExpiredEscrowOrders marks FAILED when payment has no razorpayPayment
   const notifications: any = { createMany: async () => {} };
   const eventEmitter: any = { emit: () => {} };
   const { OrdersService } = require('../src/modules/orders/orders.service');
-  const svc: any = new OrdersService(prisma, null, notifications, paymentsService, eventEmitter, null);
+  const svc: any = new OrdersService(prisma, null, notifications, paymentsService, null, eventEmitter, null);
 
   await svc.cancelExpiredEscrowOrders();
 
@@ -544,6 +551,7 @@ test('confirm throws BadRequest when order is not in CODE_REVEALED (race lost to
     null,
     { createMany: async () => {} },
     { isRazorpayXEnabled: () => false },
+    null,
     { emit: () => {} },
     null
   );
@@ -584,6 +592,7 @@ test('createDispute throws BadRequest when order is no longer CODE_REVEALED', as
     prisma,
     null,
     { createMany: async () => {} },
+    null,
     null,
     { emit: () => {} },
     null,
@@ -638,6 +647,7 @@ test('createDispute happy path: writes dispute row when order is CODE_REVEALED',
     null,
     { createMany: async () => {} },
     null,
+    null,
     { emit: () => {} },
     null,
     null,
@@ -686,6 +696,7 @@ test('resolveDispute is idempotent: concurrent REFUND_BUYER calls initiate refun
     null,
     { createMany: async () => {} },
     paymentsService,
+    null,
     { emit: () => {} },
     disputeStrikes
   );
@@ -727,6 +738,7 @@ test('initiateDisputeRefund (via resolveDispute) throws when order is no longer 
     null,
     { createMany: async () => {} },
     { executeRefund: async () => ({}), fetchRefundsForPayment: async () => [] },
+    null,
     { emit: () => {} },
     { applyDisputeStrike: async () => ({ role: 'seller', strikeNumber: 1, newTrustScore: 90 }) }
   );
@@ -772,6 +784,7 @@ test('orders.create rejects with friendly error when listing is no longer ACTIVE
     null,
     { createMany: async () => {} },
     { prepareCheckout: async () => ({ razorpayOrderId: 'rzp_1' }) },
+    null,
     { emit: () => {} },
     null,
     { getNumber: async (_k: string, f: number) => f }
@@ -810,6 +823,7 @@ test('orders.create translates Prisma P2002 to a friendly error', async () => {
     null,
     { createMany: async () => {} },
     { prepareCheckout: async () => ({}) },
+    null,
     { emit: () => {} },
     null,
     { getNumber: async (_k: string, f: number) => f }
@@ -828,7 +842,7 @@ test('handleRefundWebhook marks COMPLETED on processed', async () => {
     auditLog: { create: async (a: any) => { auditWrites.push(a); return {}; } }
   };
   const { OrdersService } = require('../src/modules/orders/orders.service');
-  const svc: any = new OrdersService(prisma, null, { createMany: async () => {} }, null, { emit: () => {} }, null);
+  const svc: any = new OrdersService(prisma, null, { createMany: async () => {} }, null, null, { emit: () => {} }, null);
   await svc.handleRefundWebhook({ orderId: 'order_1' }, { id: 'rfnd_1', status: 'processed' });
   assert.equal(updateArgs.data.refundStatus, 'COMPLETED');
   assert.equal(updateArgs.data.razorpayRefundId, 'rfnd_1');
@@ -845,7 +859,7 @@ test('handleRefundWebhook marks FAILED on failed', async () => {
     auditLog: { create: async () => ({}) }
   };
   const { OrdersService } = require('../src/modules/orders/orders.service');
-  const svc: any = new OrdersService(prisma, null, { createMany: async () => {} }, null, { emit: () => {} }, null);
+  const svc: any = new OrdersService(prisma, null, { createMany: async () => {} }, null, null, { emit: () => {} }, null);
   await svc.handleRefundWebhook({ orderId: 'order_1' }, { id: 'rfnd_x', status: 'failed', error_description: 'insufficient_funds' });
   assert.equal(updateArgs.data.refundStatus, 'FAILED');
   assert.equal(updateArgs.data.refundFailureReason, 'insufficient_funds');
@@ -858,7 +872,7 @@ test('handleRefundWebhook ignores when no notes.orderId', async () => {
     auditLog: { create: async () => ({}) }
   };
   const { OrdersService } = require('../src/modules/orders/orders.service');
-  const svc: any = new OrdersService(prisma, null, { createMany: async () => {} }, null, { emit: () => {} }, null);
+  const svc: any = new OrdersService(prisma, null, { createMany: async () => {} }, null, null, { emit: () => {} }, null);
   await svc.handleRefundWebhook(null, { id: 'rfnd_x', status: 'processed' });
   assert.equal(updateCalled, false);
 });
@@ -881,6 +895,7 @@ test('revealCode throws when payment is not CAPTURED', async () => {
     null,
     { createMany: async () => {} },
     null,
+    null,
     { emit: () => {} },
     null
   );
@@ -899,7 +914,7 @@ test('handleRefundWebhook does not downgrade an already-COMPLETED refund', async
     auditLog: { create: async () => ({}) }
   };
   const { OrdersService } = require('../src/modules/orders/orders.service');
-  const svc: any = new OrdersService(prisma, null, { createMany: async () => {} }, null, { emit: () => {} }, null);
+  const svc: any = new OrdersService(prisma, null, { createMany: async () => {} }, null, null, { emit: () => {} }, null);
   await svc.handleRefundWebhook({ orderId: 'order_1' }, { id: 'rfnd_x', status: 'failed', error_description: 'late_webhook' });
   assert.ok(whereSeen?.refundStatus?.not === 'COMPLETED', 'where clause must guard against downgrading COMPLETED');
 });
@@ -923,7 +938,7 @@ test('addDisputeEvidence throws when evidence window has closed', async () => {
   const { OrdersService } = require('../src/modules/orders/orders.service');
   const svc: any = new OrdersService(
     prisma, null, { createMany: async () => {} }, null,
-    { emit: () => {} }, null, null, null
+    null, { emit: () => {} }, null, null, null
   );
 
   const file: any = { mimetype: 'image/jpeg', size: 100, buffer: Buffer.from('x') };
@@ -963,7 +978,7 @@ test('addDisputeEvidence uploads file and appends key to dispute.evidenceUrls', 
   const { OrdersService } = require('../src/modules/orders/orders.service');
   const svc: any = new OrdersService(
     prisma, null, { createMany: async () => {} }, null,
-    { emit: () => {} }, null, null, storageService
+    null, { emit: () => {} }, null, null, storageService
   );
 
   const file: any = { mimetype: 'image/jpeg', size: 100, buffer: Buffer.from('x') };

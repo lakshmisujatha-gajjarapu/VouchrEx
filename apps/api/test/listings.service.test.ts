@@ -27,7 +27,8 @@ test('ListingsService.create emits listing.created with full payload', async () 
     },
     codeVault: {
       findUnique: async () => null
-    }
+    },
+    brandAlert: { findMany: async () => [] }
   };
 
   const codeVault: any = {
@@ -46,7 +47,7 @@ test('ListingsService.create emits listing.created with full payload', async () 
     }
   };
 
-  const service = new ListingsService(prisma, codeVault, notifications, brands, payouts, eventEmitter, { getNumber: async (_k: string, f: number) => f } as any);
+  const service = new ListingsService(prisma, codeVault, notifications, brands, payouts, null, eventEmitter, { getNumber: async (_k: string, f: number) => f } as any);
 
   await service.create(
     {
@@ -91,7 +92,7 @@ test('ListingsService.expire emits listing.updated with EXPIRED status', async (
     }
   };
 
-  const service = new ListingsService(prisma, codeVault, notifications, brands, payouts, eventEmitter, { getNumber: async (_k: string, f: number) => f } as any);
+  const service = new ListingsService(prisma, codeVault, notifications, brands, payouts, null, eventEmitter, { getNumber: async (_k: string, f: number) => f } as any);
 
   const count = await service.expireStaleListings();
 
@@ -133,7 +134,7 @@ test('ListingsService.expire skips emit when concurrent transition makes per-id 
     }
   };
 
-  const service = new ListingsService(prisma, codeVault, notifications, brands, payouts, eventEmitter, { getNumber: async (_k: string, f: number) => f } as any);
+  const service = new ListingsService(prisma, codeVault, notifications, brands, payouts, null, eventEmitter, { getNumber: async (_k: string, f: number) => f } as any);
 
   const count = await service.expireStaleListings();
 
@@ -161,7 +162,8 @@ function makeCapServiceMocks() {
       })
     },
     user: { findUnique: async () => ({ trustScore: 100 }) },
-    codeVault: { findUnique: async () => null }
+    codeVault: { findUnique: async () => null },
+    brandAlert: { findMany: async () => [] }
   };
   const codeVault: any = {
     hash: () => 'hash',
@@ -171,7 +173,7 @@ function makeCapServiceMocks() {
   const brands: any = { resolveForListing: async () => ({ id: 'brand_1', name: 'Amazon' }) };
   const payouts: any = { findByUserId: async () => ({ id: 'payout_1' }) };
   const eventEmitter: any = { emit: () => true };
-  return new ListingsService(prisma, codeVault, notifications, brands, payouts, eventEmitter, { getNumber: async (_k: string, f: number) => f } as any);
+  return new ListingsService(prisma, codeVault, notifications, brands, payouts, null, eventEmitter, { getNumber: async (_k: string, f: number) => f } as any);
 }
 
 // The cap value itself lives in AppConfig now; the mock returns the fallback (1000)
@@ -258,7 +260,7 @@ test('ListingsService.remove rejects when listing has an active order', async ()
   const payouts: any = {};
   const eventEmitter: any = {};
 
-  const service = new ListingsService(prisma, codeVault, notifications, brands, payouts, eventEmitter, { getNumber: async (_k: string, f: number) => f } as any);
+  const service = new ListingsService(prisma, codeVault, notifications, brands, payouts, null, eventEmitter, { getNumber: async (_k: string, f: number) => f } as any);
 
   await assert.rejects(
     () => service.remove('listing_1', { id: 'seller_1' }),
@@ -283,7 +285,8 @@ test('ListingsService.create forces redemptionMode=ONLINE for promo-code', async
       }
     },
     user: { findUnique: async () => ({ trustScore: 100 }) },
-    codeVault: { findUnique: async () => null }
+    codeVault: { findUnique: async () => null },
+    brandAlert: { findMany: async () => [] }
   };
 
   const codeVault: any = {
@@ -295,7 +298,7 @@ test('ListingsService.create forces redemptionMode=ONLINE for promo-code', async
   const payouts: any = { findByUserId: async () => ({ id: 'payout_1' }) };
   const eventEmitter: any = { emit: () => true };
 
-  const service = new ListingsService(prisma, codeVault, notifications, brands, payouts, eventEmitter, { getNumber: async (_k: string, f: number) => f } as any);
+  const service = new ListingsService(prisma, codeVault, notifications, brands, payouts, null, eventEmitter, { getNumber: async (_k: string, f: number) => f } as any);
 
   await service.create(
     {
@@ -327,7 +330,8 @@ test('ListingsService.create encrypts PIN and stores alongside code', async () =
       }
     },
     user: { findUnique: async () => ({ trustScore: 100 }) },
-    codeVault: { findUnique: async () => null }
+    codeVault: { findUnique: async () => null },
+    brandAlert: { findMany: async () => [] }
   };
 
   const codeVault: any = {
@@ -342,7 +346,7 @@ test('ListingsService.create encrypts PIN and stores alongside code', async () =
   const payouts: any = { findByUserId: async () => ({ id: 'payout_1' }) };
   const eventEmitter: any = { emit: () => true };
 
-  const service = new ListingsService(prisma, codeVault, notifications, brands, payouts, eventEmitter, { getNumber: async (_k: string, f: number) => f } as any);
+  const service = new ListingsService(prisma, codeVault, notifications, brands, payouts, null, eventEmitter, { getNumber: async (_k: string, f: number) => f } as any);
 
   await service.create(
     {
