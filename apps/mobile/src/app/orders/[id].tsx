@@ -14,6 +14,7 @@ import {
   Pressable,
   ScrollView,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -52,6 +53,9 @@ export default function OrderDetailScreen() {
   const [evidenceUris, setEvidenceUris] = useState<string[]>([]);
   const [evidenceUploading, setEvidenceUploading] = useState(false);
   const [evidenceSheetOpen, setEvidenceSheetOpen] = useState(false);
+  const [sellerResponseText, setSellerResponseText] = useState('');
+  const [sellerResponseUris, setSellerResponseUris] = useState<string[]>([]);
+  const [sellerResponseSheetOpen, setSellerResponseSheetOpen] = useState(false);
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -162,6 +166,21 @@ export default function OrderDetailScreen() {
     } finally { setBusyAction(null); }
   }
 
+  async function handleSellerResponse() {
+    if (!sessionToken || !order.dispute) return;
+    setBusyAction('sellerResponse');
+    try {
+      await api.submitSellerDisputeResponse(sessionToken, order.dispute.id, {
+        response: sellerResponseText,
+        evidenceUrls: sellerResponseUris.length > 0 ? sellerResponseUris : undefined,
+      });
+      await reloadOrder();
+      setFeedback('Your response has been recorded.');
+    } catch (error_) {
+      setFeedback(error_ instanceof Error ? error_.message : 'Could not submit response.');
+    } finally { setBusyAction(null); }
+  }
+
   async function compressImage(uri: string): Promise<{ uri: string; mimeType: string }> {
     const rendered = await ImageManipulator.ImageManipulator
       .manipulate(uri)
@@ -207,6 +226,43 @@ export default function OrderDetailScreen() {
     }
   }
 
+  async function pickImageForSellerResponse(source: 'camera' | 'gallery') {
+    if (!sessionToken || !orderId) return;
+    setSellerResponseSheetOpen(false);
+
+    let pickerResult: ImagePicker.ImagePickerResult;
+
+    if (source === 'camera') {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== ImagePicker.PermissionStatus.GRANTED) {
+        Alert.alert('Camera Access Denied', 'Enable it in Settings → Vouchrex to take photos.');
+        return;
+      }
+      pickerResult = await ImagePicker.launchCameraAsync({ quality: 1 });
+    } else {
+      pickerResult = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        quality: 1,
+        allowsMultipleSelection: false,
+      });
+    }
+
+    if (pickerResult.canceled || pickerResult.assets.length === 0) return;
+
+    setEvidenceUploading(true);
+    try {
+      const { uri, mimeType } = await compressImage(pickerResult.assets[0].uri);
+      // Reuse the evidence upload endpoint — seller screenshot lands in dispute.evidenceUrls
+      await api.uploadDisputeEvidence(sessionToken, orderId, uri, mimeType);
+      setSellerResponseUris((prev) => [...prev, uri]);
+      await reloadOrder();
+    } catch (error_) {
+      setFeedback(error_ instanceof Error ? error_.message : 'Upload failed.');
+    } finally {
+      setEvidenceUploading(false);
+    }
+  }
+
   // ── Loading / error states ──
   if (orderResource.loading && !orderResource.data) {
     return (
@@ -237,6 +293,7 @@ export default function OrderDetailScreen() {
 
   const order = orderResource.data;
   const isBuyer = order.buyerId === user?.id;
+  const isSeller = order.sellerId === user?.id;
   const badgeColors = escrowBadgeColors(order.status, theme);
   const accentColor = cardToneForStatus(order.status) === 'danger'
     ? theme.colors.danger
@@ -614,6 +671,101 @@ export default function OrderDetailScreen() {
                   </Text>
                 </View>
 
+                {/* Seller response section */}
+                {isSeller && order.dispute.status !== 'RESOLVED' ? (
+                  order.dispute.sellerResponse ? (
+                    <View style={{
+                      backgroundColor: theme.colors.surface,
+                      borderRadius: 16,
+                      borderWidth: 1,
+                      borderColor: theme.colors.border,
+                      padding: theme.spacing[5],
+                      gap: theme.spacing[2],
+                    }}>
+                      <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 13, fontWeight: '600', color: theme.colors.ink }}>
+                        Your Response Submitted
+                      </Text>
+                      <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 13, color: theme.colors.inkSecondary, lineHeight: 18 }}>
+                        The admin will review both sides before deciding.
+                      </Text>
+                    </View>
+                  ) : (
+                    <View style={{
+                      backgroundColor: theme.colors.surface,
+                      borderRadius: 16,
+                      borderWidth: 1,
+                      borderColor: theme.colors.border,
+                      padding: theme.spacing[5],
+                      gap: theme.spacing[3],
+                    }}>
+                      <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 13, fontWeight: '600', color: theme.colors.ink }}>
+                        Share Your Side
+                      </Text>
+                      <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 12, color: theme.colors.inkMuted, lineHeight: 17 }}>
+                        Sharing your side helps the admin decide fairly.
+                      </Text>
+                      <TextInput
+                        value={sellerResponseText}
+                        onChangeText={setSellerResponseText}
+                        placeholder="Explain what happened…"
+                        placeholderTextColor={theme.colors.inkMuted}
+                        multiline
+                        numberOfLines={4}
+                        maxLength={2000}
+                        style={{
+                          fontFamily: theme.fontFamily.body,
+                          fontSize: 14,
+                          color: theme.colors.ink,
+                          backgroundColor: theme.colors.background,
+                          borderRadius: theme.radius.md,
+                          borderWidth: 1,
+                          borderColor: theme.colors.border,
+                          padding: theme.spacing[3],
+                          minHeight: 96,
+                          textAlignVertical: 'top',
+                        }}
+                      />
+                      {sellerResponseUris.length > 0 ? (
+                        <View style={{ flexDirection: 'row', gap: theme.spacing[2] }}>
+                          {sellerResponseUris.map((uri, idx) => (
+                            <View key={idx} style={{ width: 64, height: 64, borderRadius: theme.radius.md, overflow: 'hidden' }}>
+                              <Image source={{ uri }} style={{ width: 64, height: 64 }} contentFit="cover" />
+                            </View>
+                          ))}
+                        </View>
+                      ) : null}
+                      <Pressable
+                        onPress={() => { setSellerResponseSheetOpen(true); }}
+                        style={({ pressed }) => ({
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: theme.spacing[2],
+                          opacity: pressed ? 0.6 : 1,
+                        })}>
+                        <Ionicons name="attach-outline" size={16} color={theme.colors.brand} />
+                        <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 13, color: theme.colors.brand }}>
+                          {sellerResponseUris.length > 0 ? `${sellerResponseUris.length} screenshot attached` : 'Attach a screenshot (optional)'}
+                        </Text>
+                      </Pressable>
+                      <Pressable
+                        onPress={() => { void handleSellerResponse(); }}
+                        disabled={sellerResponseText.length < 10 || busyAction === 'sellerResponse'}
+                        style={({ pressed }) => ({
+                          backgroundColor: theme.colors.brand,
+                          borderRadius: theme.radius.pill,
+                          paddingVertical: theme.spacing[3],
+                          alignItems: 'center',
+                          opacity: sellerResponseText.length < 10 || busyAction === 'sellerResponse' || pressed ? 0.5 : 1,
+                        })}>
+                        {busyAction === 'sellerResponse'
+                          ? <ActivityIndicator size="small" color={theme.colors.white} />
+                          : <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 14, fontWeight: '600', color: theme.colors.white }}>Submit Response</Text>}
+
+                      </Pressable>
+                    </View>
+                  )
+                ) : null}
+
                 {/* Evidence upload section — only shown while window is open */}
                 {isBuyer &&
                   order.dispute.evidenceDeadline &&
@@ -879,6 +1031,61 @@ export default function OrderDetailScreen() {
             </Pressable>
             <Pressable
               onPress={() => { setEvidenceSheetOpen(false); }}
+              style={({ pressed }) => ({ alignItems: 'center', paddingVertical: theme.spacing[3], opacity: pressed ? 0.6 : 1 })}>
+              <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 15, color: theme.colors.inkMuted }}>Cancel</Text>
+            </Pressable>
+          </View>
+        </Modal>
+
+        {/* ── Seller response image picker ── */}
+        <Modal
+          animationType="slide"
+          onRequestClose={() => { setSellerResponseSheetOpen(false); }}
+          transparent
+          visible={sellerResponseSheetOpen}>
+          <Pressable
+            onPress={() => { setSellerResponseSheetOpen(false); }}
+            style={{ flex: 1, backgroundColor: theme.colors.shadowStrong }}
+          />
+          <View style={{
+            backgroundColor: theme.colors.surface,
+            borderTopLeftRadius: 28,
+            borderTopRightRadius: 28,
+            paddingHorizontal: theme.spacing[6],
+            paddingTop: theme.spacing[3],
+            paddingBottom: Math.max(insets.bottom, theme.spacing[6]),
+            gap: theme.spacing[3],
+          }}>
+            <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: theme.colors.surfaceHighest, alignSelf: 'center' }} />
+            <Text style={{ fontFamily: theme.fontFamily.headline, fontSize: 17, fontWeight: '700', color: theme.colors.ink, textAlign: 'center' }}>
+              Add Screenshot
+            </Text>
+            <Pressable
+              onPress={() => { void pickImageForSellerResponse('camera'); }}
+              style={({ pressed }) => ({
+                flexDirection: 'row', alignItems: 'center', gap: theme.spacing[3],
+                backgroundColor: theme.colors.surfaceHigh,
+                borderRadius: theme.radius.lg,
+                padding: theme.spacing[4],
+                opacity: pressed ? 0.7 : 1,
+              })}>
+              <Ionicons name="camera-outline" size={22} color={theme.colors.ink} />
+              <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 15, color: theme.colors.ink }}>Take Photo</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => { void pickImageForSellerResponse('gallery'); }}
+              style={({ pressed }) => ({
+                flexDirection: 'row', alignItems: 'center', gap: theme.spacing[3],
+                backgroundColor: theme.colors.surfaceHigh,
+                borderRadius: theme.radius.lg,
+                padding: theme.spacing[4],
+                opacity: pressed ? 0.7 : 1,
+              })}>
+              <Ionicons name="images-outline" size={22} color={theme.colors.ink} />
+              <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 15, color: theme.colors.ink }}>Choose from Gallery</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => { setSellerResponseSheetOpen(false); }}
               style={({ pressed }) => ({ alignItems: 'center', paddingVertical: theme.spacing[3], opacity: pressed ? 0.6 : 1 })}>
               <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 15, color: theme.colors.inkMuted }}>Cancel</Text>
             </Pressable>

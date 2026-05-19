@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { DisputeResolution, UserStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { computeTier, strikeRuleFor, INDEFINITE_HOLD_UNTIL } from '../users/trust-tier';
+import { computeTier, strikeRuleFor } from '../users/trust-tier';
 
 export interface StrikeOutcome {
   readonly role: 'seller' | 'buyer' | null;
@@ -76,10 +76,7 @@ export class DisputeStrikesService {
 
       let newHoldUntil: Date | null = user.payoutHoldUntil;
       if (role === 'seller') {
-        const candidate =
-          rule.holdDays === 'indefinite'
-            ? INDEFINITE_HOLD_UNTIL
-            : new Date(Date.now() + rule.holdDays * 24 * 3600 * 1000);
+        const candidate = new Date(Date.now() + rule.holdDays * 24 * 3600 * 1000);
         newHoldUntil =
           user.payoutHoldUntil && user.payoutHoldUntil > candidate
             ? user.payoutHoldUntil

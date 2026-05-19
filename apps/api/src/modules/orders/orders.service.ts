@@ -24,6 +24,7 @@ import {
 } from '@prisma/client';
 
 import { ONE_HOUR_MS, ONE_MINUTE_MS } from '../../common/time.constants';
+import { computeTier } from '../users/trust-tier';
 import { AppConfigService } from '../app-config/app-config.service';
 import { StorageService } from '../storage/storage.service';
 import { CodeVaultService } from '../listings/services/code-vault.service';
@@ -751,8 +752,8 @@ export class OrdersService {
         listingId: order.listingId,
         channel: NotificationChannel.PUSH,
         eventType: 'dispute.created',
-        title: 'Buyer reported an issue',
-        message: `A dispute was raised for your ${order.listing.brand.name} voucher.`,
+        title: 'Dispute opened on your sale',
+        message: `A buyer has opened a dispute on your ${order.listing.brand.name} sale. Tap to share your side of the story.`,
         metadata: {
           disputeId: dispute.id
         }
@@ -857,7 +858,7 @@ export class OrdersService {
     };
   }
 
-  async resolveDispute(id: string, resolution: DisputeResolution, actorId: string | null) {
+  async resolveDispute(id: string, resolution: DisputeResolution, actorId: string | null, adminNotes?: string) {
     const dispute = await this.prisma.dispute.findUnique({
       where: { id },
       include: {
@@ -907,7 +908,20 @@ export class OrdersService {
     if (resolution === DisputeResolution.RELEASE_TO_SELLER) {
       await this.finalizeRelease(dispute.orderId, OrderStatus.CONFIRMED, new Date(), null);
     } else {
+      // REFUND_BUYER and NO_FAULT both refund the buyer
       await this.initiateDisputeRefund(dispute.id, dispute.orderId, actorId);
+    }
+
+    if (resolution === DisputeResolution.NO_FAULT) {
+      await this.prisma.auditLog.create({
+        data: {
+          entityType: 'dispute',
+          entityId: id,
+          action: 'dispute.resolved_no_fault',
+          actorId,
+          metadata: { disputeId: id, adminNotes: adminNotes ?? null }
+        }
+      });
     }
 
     const resolvedDispute = await this.prisma.dispute.findUnique({ where: { id } });
@@ -916,22 +930,48 @@ export class OrdersService {
       throw new NotFoundException(`Dispute ${id} disappeared during resolution.`);
     }
 
-    const outcome = await this.disputeStrikes.applyDisputeStrike(id, resolution, actorId);
     const brandName = dispute.order.listing.brand.name;
+
+    // NO_FAULT: buyer refunded, seller takes no penalty
+    if (resolution === DisputeResolution.NO_FAULT) {
+      await this.notificationsService.createMany([
+        {
+          userId: dispute.order.buyer.id,
+          orderId: dispute.order.id,
+          listingId: dispute.order.listingId,
+          channel: NotificationChannel.PUSH,
+          eventType: 'dispute.resolved',
+          title: 'Refund approved',
+          message: `Refund approved for your ${brandName} dispute.`,
+          metadata: { resolution }
+        },
+        {
+          userId: dispute.order.seller.id,
+          orderId: dispute.order.id,
+          listingId: dispute.order.listingId,
+          channel: NotificationChannel.PUSH,
+          eventType: 'dispute.resolved',
+          title: 'Dispute resolved',
+          message: `Dispute resolved — no penalty applied. The buyer has been refunded. This was recorded as a platform or brand issue.`,
+          metadata: { resolution }
+        }
+      ]);
+      return resolvedDispute;
+    }
+
+    const outcome = await this.disputeStrikes.applyDisputeStrike(id, resolution, actorId);
 
     const buyerMessage =
       resolution === DisputeResolution.REFUND_BUYER
         ? `Refund approved for ${brandName}.`
         : outcome.role === 'buyer'
-          ? `Your dispute was not upheld. Strike ${String(outcome.strikeNumber)}/3. Your account score is now ${String(outcome.newTrustScore)}.`
+          ? `Your dispute was reviewed and closed. Your account score has been updated.`
           : `Escrow was released to the seller for ${brandName}.`;
 
     const sellerMessage =
       resolution === DisputeResolution.RELEASE_TO_SELLER
         ? `Payout released for ${brandName}.`
-        : outcome.role === 'seller'
-          ? `Buyer refund approved for ${brandName}. Strike ${String(outcome.strikeNumber)}/3. Your seller score is now ${String(outcome.newTrustScore)}.`
-          : `Buyer refund approved for ${brandName}.`;
+        : `Dispute resolved on your ${brandName} sale. Your seller score has been updated.`;
 
     await this.notificationsService.createMany([
       {
@@ -956,7 +996,7 @@ export class OrdersService {
         title:
           resolution === DisputeResolution.RELEASE_TO_SELLER
             ? 'Escrow released'
-            : 'Dispute refunded',
+            : 'Dispute resolved',
         message: sellerMessage,
         metadata: { resolution }
       }
@@ -1291,8 +1331,8 @@ export class OrdersService {
           listingId: dispute.order.listingId,
           channel: NotificationChannel.PUSH,
           eventType: 'dispute.seller_reminder',
-          title: 'Pending dispute on your sale',
-          message: `Please respond to the dispute on your ${dispute.order.listing.brand.name} voucher to avoid admin escalation.`,
+          title: 'Response pending on a dispute',
+          message: `Your response is still pending on a dispute. Adding context helps the admin decide fairly.`,
           metadata: { disputeId: dispute.id }
         });
       }
@@ -1342,6 +1382,7 @@ export class OrdersService {
         where: { id: disputeId },
         data: {
           sellerResponse: response,
+          sellerRespondedAt: new Date(),
           status: DisputeStatus.UNDER_REVIEW
         }
       });
@@ -2201,6 +2242,60 @@ export class OrdersService {
     });
 
     return updatedOrder;
+  }
+
+  async recoverSellerScores(): Promise<number> {
+    const sellers = await this.prisma.user.findMany({
+      where: { sellerStrikes: { gt: 0 }, status: 'ACTIVE' },
+      select: { id: true, trustScore: true, tier: true, updatedAt: true }
+    });
+
+    let recovered = 0;
+
+    for (const seller of sellers) {
+      const [cleanOrders, priorBumps] = await Promise.all([
+        this.prisma.order.count({
+          where: {
+            sellerId: seller.id,
+            status: OrderStatus.CONFIRMED,
+            updatedAt: { gt: seller.updatedAt }
+          }
+        }),
+        this.prisma.auditLog.count({
+          where: { entityId: seller.id, action: 'user.score_recovery' }
+        })
+      ]);
+
+      const milestonesEarned = Math.floor(cleanOrders / 10);
+      const milestonesToApply = milestonesEarned - priorBumps;
+      if (milestonesToApply <= 0) continue;
+
+      const scoreGain = milestonesToApply * 5;
+      const newScore = Math.min(100, seller.trustScore + scoreGain);
+      const newTier = computeTier(newScore);
+
+      await this.prisma.$transaction(async (tx) => {
+        await tx.user.update({
+          where: { id: seller.id },
+          data: { trustScore: newScore, tier: newTier }
+        });
+        for (let i = 0; i < milestonesToApply; i++) {
+          await tx.auditLog.create({
+            data: {
+              entityType: 'user',
+              entityId: seller.id,
+              action: 'user.score_recovery',
+              actorId: null,
+              metadata: { scoreDelta: 5, scoreBefore: seller.trustScore + i * 5, scoreAfter: seller.trustScore + (i + 1) * 5 }
+            }
+          });
+        }
+      });
+
+      recovered++;
+    }
+
+    return recovered;
   }
 
   private async requireOrder(id: string) {

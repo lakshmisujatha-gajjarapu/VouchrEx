@@ -101,6 +101,7 @@ enum DisputeStatus {
 enum DisputeResolution {
   REFUND_BUYER
   RELEASE_TO_SELLER
+  NO_FAULT
 }
 
 enum NotificationChannel {
@@ -323,8 +324,9 @@ model Dispute {
   description    String
   evidenceUrls   String[]
   evidenceDeadline DateTime?
-  sellerResponse String?
-  resolution     DisputeResolution?
+  sellerResponse   String?
+  sellerRespondedAt DateTime?
+  resolution       DisputeResolution?
   status         DisputeStatus      @default(OPEN)
   resolvedAt     DateTime?
   resolvedById   String? // adminId of the admin who resolved this dispute (null for bootstrap token)

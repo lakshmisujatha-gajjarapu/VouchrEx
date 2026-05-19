@@ -27,6 +27,7 @@ export class OrdersScheduler {
   private reminderRunning = false;
   private recoveryRunning = false;
   private staleDisputeRunning = false;
+  private scoreRecoveryRunning = false;
 
   constructor(private readonly ordersService: OrdersService) {}
 
@@ -150,6 +151,29 @@ export class OrdersScheduler {
       this.logger.error(`handleStaleDisputes failed: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       this.staleDisputeRunning = false;
+    }
+  }
+
+  /**
+   * Award +5 trust score per 10 clean orders for sellers with prior strikes.
+   * Runs daily at 03:00.
+   */
+  @Cron('0 3 * * *')
+  async handleScoreRecovery() {
+    if (this.scoreRecoveryRunning) {
+      this.logger.warn('handleScoreRecovery still running — skipping tick.');
+      return;
+    }
+    this.scoreRecoveryRunning = true;
+    try {
+      const recovered = await this.ordersService.recoverSellerScores();
+      if (recovered > 0) {
+        this.logger.log(`Applied score recovery for ${String(recovered)} seller(s).`);
+      }
+    } catch (error) {
+      this.logger.error(`handleScoreRecovery failed: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      this.scoreRecoveryRunning = false;
     }
   }
 

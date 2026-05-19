@@ -182,7 +182,7 @@ export class OrdersController {
     @Headers(adminHeaderName) adminToken?: string
   ) {
     const identity = await this.adminAccessService.requireAdminAccess(adminToken);
-    return this.ordersService.resolveDispute(id, resolveDisputeDto.resolution, identity.adminId);
+    return this.ordersService.resolveDispute(id, resolveDisputeDto.resolution, identity.adminId, resolveDisputeDto.adminNotes);
   }
 
   @ApiHeader({
