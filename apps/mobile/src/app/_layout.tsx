@@ -1,5 +1,9 @@
 import '../../global.css';
 
+import { configureReanimatedLogger, ReanimatedLogLevel } from 'react-native-reanimated';
+
+configureReanimatedLogger({ level: ReanimatedLogLevel.warn, strict: false });
+
 import {
   Manrope_700Bold,
   Manrope_800ExtraBold,

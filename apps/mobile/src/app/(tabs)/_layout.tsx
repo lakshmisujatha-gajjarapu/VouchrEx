@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { type BottomTabBarButtonProps } from '@react-navigation/bottom-tabs';
 import { Redirect, Tabs } from 'expo-router';
+import { SymbolView } from 'expo-symbols';
 import React from 'react';
-import { Pressable, View } from 'react-native';
+import { Platform, PlatformColor, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { LoadingScreen } from '@/components/loading-screen';
@@ -75,8 +76,14 @@ export default function TabsLayout() {
       initialRouteName="shop"
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: theme.colors.brand,
-        tabBarInactiveTintColor: theme.colors.inkMuted,
+        tabBarActiveTintColor: Platform.select({
+          android: PlatformColor('?attr/colorPrimary') as unknown as string,
+          default: theme.colors.brand,
+        }),
+        tabBarInactiveTintColor: Platform.select({
+          android: PlatformColor('?attr/colorOnSurfaceVariant') as unknown as string,
+          default: theme.colors.inkMuted,
+        }),
         tabBarHideOnKeyboard: true,
         sceneStyle: { backgroundColor: theme.colors.transparent },
         tabBarStyle,
@@ -87,35 +94,71 @@ export default function TabsLayout() {
         name="shop"
         options={{
           title: 'Shop',
-          tabBarIcon: ({ color, size }) => <Ionicons color={color} name="search-outline" size={size} />,
+          tabBarIcon: ({ color, size, focused }) => (
+            <SymbolView
+              name="magnifyingglass"
+              size={size}
+              tintColor={color}
+              weight={focused ? 'semibold' : 'regular'}
+              fallback={<Ionicons color={color} name="search-outline" size={size} />}
+            />
+          ),
         }}
       />
       <Tabs.Screen
         name="listings"
         options={{
           title: 'Listings',
-          tabBarIcon: ({ color, size }) => <Ionicons color={color} name="albums-outline" size={size} />,
+          tabBarIcon: ({ color, size, focused }) => (
+            <SymbolView
+              name={focused ? 'square.stack.fill' : 'square.stack'}
+              size={size}
+              tintColor={color}
+              fallback={<Ionicons color={color} name={focused ? 'albums' : 'albums-outline'} size={size} />}
+            />
+          ),
         }}
       />
       <Tabs.Screen
         name="sell"
         options={{
           title: 'Sell',
-          tabBarIcon: ({ color, size }) => <Ionicons color={color} name="pricetag-outline" size={size} />,
+          tabBarIcon: ({ color, size, focused }) => (
+            <SymbolView
+              name={focused ? 'tag.fill' : 'tag'}
+              size={size}
+              tintColor={color}
+              fallback={<Ionicons color={color} name={focused ? 'pricetag' : 'pricetag-outline'} size={size} />}
+            />
+          ),
         }}
       />
       <Tabs.Screen
         name="orders"
         options={{
           title: 'Orders',
-          tabBarIcon: ({ color, size }) => <Ionicons color={color} name="receipt-outline" size={size} />,
+          tabBarIcon: ({ color, size, focused }) => (
+            <SymbolView
+              name={focused ? 'doc.text.fill' : 'doc.text'}
+              size={size}
+              tintColor={color}
+              fallback={<Ionicons color={color} name={focused ? 'receipt' : 'receipt-outline'} size={size} />}
+            />
+          ),
         }}
       />
       <Tabs.Screen
         name="inbox"
         options={{
           title: 'Inbox',
-          tabBarIcon: ({ color, size }) => <Ionicons color={color} name="notifications-outline" size={size} />,
+          tabBarIcon: ({ color, size, focused }) => (
+            <SymbolView
+              name={focused ? 'bell.fill' : 'bell'}
+              size={size}
+              tintColor={color}
+              fallback={<Ionicons color={color} name={focused ? 'notifications' : 'notifications-outline'} size={size} />}
+            />
+          ),
           tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
         }}
       />

@@ -104,7 +104,7 @@ function DiscountSlider({
     if (width.value > 0) {
       translateX.value = (value / DISCOUNT_MAX) * width.value;
     }
-  }, [value, width.value, translateX]);
+  }, [value, width, translateX]);
 
   const gesture = Gesture.Pan()
     .onBegin(() => {

@@ -539,6 +539,9 @@ export const api = {
   clearAllNotifications(sessionToken: string) {
     return apiRequest<undefined>(NOTIFICATIONS.CLEAR_ALL, { method: 'DELETE', sessionToken });
   },
+  clearNotification(sessionToken: string, notificationId: string) {
+    return apiRequest<undefined>(NOTIFICATIONS.BY_ID(notificationId), { method: 'DELETE', sessionToken });
+  },
   markNotificationRead(sessionToken: string, notificationId: string) {
     return apiRequest<NotificationItem>(NOTIFICATIONS.BY_ID_READ(notificationId), {
       method: 'POST',

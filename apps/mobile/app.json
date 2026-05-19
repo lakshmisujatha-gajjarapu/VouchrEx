@@ -56,9 +56,14 @@
     "runtimeVersion": {
       "policy": "sdkVersion"
     },
+    "updates": {
+      "enabled": true,
+      "useEmbeddedAssets": true
+    },
     "experiments": {
       "typedRoutes": true,
-      "reactCompiler": true
+      "reactCompiler": true,
+      "hermesExperimentalBytecodeMetadata": true
     },
     "extra": {
       "router": {},

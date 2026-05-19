@@ -25,6 +25,16 @@ export class NotificationsController {
     return this.notificationsService.listForUser(user.id);
   }
 
+  @Delete(NOTIFICATIONS_ROUTES.BY_ID)
+  async clearOne(
+    @Param('id') notificationId: string,
+    @Headers(sessionHeaderName) sessionToken?: string
+  ) {
+    const user = await this.authService.requireSessionUser(sessionToken);
+    await this.notificationsService.clearOne(notificationId, user.id);
+    return { success: true };
+  }
+
   @Delete()
   async clearAll(@Headers(sessionHeaderName) sessionToken?: string) {
     const user = await this.authService.requireSessionUser(sessionToken);

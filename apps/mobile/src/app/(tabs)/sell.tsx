@@ -92,9 +92,6 @@ export default function SellScreen() {
   const navTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const selectedBrandIdRef = useRef<string | null>(null);
 
-  // Clipboard pre-fill state: null = not detected or dismissed
-  const [clipboardCode, setClipboardCode] = useState<string | null>(null);
-
   // Reset form each time this screen comes into focus
   useFocusEffect(
     useCallback(() => {
@@ -114,19 +111,9 @@ export default function SellScreen() {
       setIsListed(false);
       setSelectedBrandAvg(0);
       setDemandCount(0);
-      setClipboardCode(null);
-
-      // Check clipboard for a plausible voucher code
-      void Clipboard.getStringAsync().then((text) => {
-        const trimmed = text.trim();
-        if (/^[a-zA-Z0-9]{8,20}$/.test(trimmed)) {
-          setClipboardCode(trimmed);
-        }
-      }).catch(() => {});
 
       return () => {
         if (navTimerRef.current) clearTimeout(navTimerRef.current);
-        setClipboardCode(null);
       };
     }, [])
   );
@@ -425,35 +412,6 @@ export default function SellScreen() {
                       </Text>
                     </View>
 
-                    {clipboardCode !== null && code === '' ? (
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          gap: theme.spacing[3],
-                          backgroundColor: theme.colors.brandSoft,
-                          borderRadius: theme.radius.md,
-                          paddingHorizontal: theme.spacing[4],
-                          paddingVertical: theme.spacing[3],
-                        }}>
-                        <Pressable
-                          onPress={() => { setCode(clipboardCode); setClipboardCode(null); }}
-                          style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: theme.spacing[3] }}>
-                          <Text style={{ fontSize: 16 }}>📋</Text>
-                          <Text style={{ flex: 1, fontFamily: theme.fontFamily.body, fontSize: 13, color: theme.colors.brand }}>
-                            Looks like you have a code copied. Tap to use it.
-                          </Text>
-                        </Pressable>
-                        <Pressable
-                          onPress={() => { setClipboardCode(null); }}
-                          accessibilityRole="button"
-                          accessibilityLabel="Dismiss clipboard suggestion"
-                          hitSlop={8}
-                          style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
-                          <Ionicons name="close" size={18} color={theme.colors.brand} />
-                        </Pressable>
-                      </View>
-                    ) : null}
 
                     {voucherType === 'gift-card' ? (
                       <>

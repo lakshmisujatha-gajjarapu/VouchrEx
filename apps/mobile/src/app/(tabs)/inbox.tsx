@@ -225,8 +225,9 @@ export default function InboxScreen() {
     );
   }
 
-  function handleClearOne(id: string) {
+  async function handleClearOne(id: string) {
     notificationsResource.setData((prev) => prev?.filter((item) => item.id !== id) ?? []);
+    if (sessionToken) await api.clearNotification(sessionToken, id);
   }
 
   async function handleMarkAllRead() {
@@ -312,7 +313,7 @@ export default function InboxScreen() {
                       label: 'Clear',
                       icon: 'trash-outline' as const,
                       backgroundColor: theme.colors.danger,
-                      onPress: () => { handleClearOne(notification.id); },
+                      onPress: () => { void handleClearOne(notification.id); },
                     },
                   ];
 

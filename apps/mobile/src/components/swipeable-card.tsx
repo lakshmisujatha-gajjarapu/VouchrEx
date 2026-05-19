@@ -1,8 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useImperativeHandle, useRef } from 'react';
-import { Text, View } from 'react-native';
-import { RectButton } from 'react-native-gesture-handler';
-import Swipeable from 'react-native-gesture-handler/Swipeable';
+import { Pressable, Text, View } from 'react-native';
+import ReanimatedSwipeable, { type SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 
 import { useTheme } from '@/theme/theme-context';
 
@@ -32,7 +31,7 @@ function SwipeableCardInner(
   ref: React.Ref<SwipeableCardRef>,
 ) {
   const theme = useTheme();
-  const swipeableRef = useRef<Swipeable>(null);
+  const swipeableRef = useRef<SwipeableMethods>(null);
 
   useImperativeHandle(ref, () => ({
     close() {
@@ -40,23 +39,27 @@ function SwipeableCardInner(
     },
   }));
 
-  function renderRightActions() {
+  function renderRightActions(
+    _progress: unknown,
+    _translation: unknown,
+    swipeableMethods: SwipeableMethods,
+  ) {
     return (
       <View style={{ flexDirection: 'row' }}>
         {actions.map((action) => (
-          <RectButton
+          <Pressable
             key={action.key}
             onPress={() => {
-              swipeableRef.current?.close();
+              swipeableMethods.close();
               action.onPress();
             }}
-            style={{
+            style={({ pressed }) => ({
               width: action.minWidth ?? 72,
-              backgroundColor: action.backgroundColor,
+              backgroundColor: pressed ? `${action.backgroundColor}cc` : action.backgroundColor,
               alignItems: 'center',
               justifyContent: 'center',
               gap: theme.spacing[1],
-            }}>
+            })}>
             <Ionicons name={action.icon} size={20} color="#FFFFFF" />
             <Text style={{
               fontFamily: theme.fontFamily.labelSemi,
@@ -66,14 +69,14 @@ function SwipeableCardInner(
             }}>
               {action.label}
             </Text>
-          </RectButton>
+          </Pressable>
         ))}
       </View>
     );
   }
 
   return (
-    <Swipeable
+    <ReanimatedSwipeable
       ref={swipeableRef}
       enabled={enabled ?? actions.length > 0}
       friction={2}
@@ -81,7 +84,7 @@ function SwipeableCardInner(
       renderRightActions={renderRightActions}
       rightThreshold={40}>
       {children}
-    </Swipeable>
+    </ReanimatedSwipeable>
   );
 }
 

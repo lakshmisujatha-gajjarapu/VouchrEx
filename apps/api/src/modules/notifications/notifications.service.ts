@@ -75,6 +75,16 @@ export class NotificationsService {
     });
   }
 
+  async clearOne(notificationId: string, userId: string) {
+    const notification = await this.prisma.notification.findFirst({
+      where: { id: notificationId, userId },
+    });
+    if (!notification) {
+      throw new NotFoundException(`Notification ${notificationId} was not found.`);
+    }
+    await this.prisma.notification.delete({ where: { id: notificationId } });
+  }
+
   async clearAll(userId: string) {
     await this.prisma.notification.deleteMany({ where: { userId } });
   }
