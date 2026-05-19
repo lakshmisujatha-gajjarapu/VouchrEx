@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useDeferredValue, useMemo, useState } from 'react';
+import React, { useCallback, useDeferredValue, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Modal,
@@ -17,6 +17,7 @@ import { KeylineRow } from '@/components/keyline-row';
 import { PrimaryButton } from '@/components/primary-button';
 import { AppShell } from '@/components/app-shell';
 import { StatusPill } from '@/components/status-pill';
+import { SwipeableCard, type SwipeAction, type SwipeableCardRef } from '@/components/swipeable-card';
 import { TicketCard } from '@/components/ticket-card';
 import { ListingCardSkeleton } from '@/components/listing-card-skeleton';
 import { useAuth } from '@/hooks/use-auth';
@@ -74,16 +75,19 @@ function ListingDetailSheet({
   onEdit,
   onDelete,
   onViewOrder,
+  onCancelDelete,
   deleting,
+  confirmingDelete,
 }: {
   readonly listing: Listing;
   readonly onClose: () => void;
   readonly onEdit: () => void;
   readonly onDelete: () => void;
   readonly onViewOrder: () => void;
+  readonly onCancelDelete: () => void;
   readonly deleting: boolean;
+  readonly confirmingDelete: boolean;
 }) {
-  const [confirmingDelete, setConfirmingDelete] = React.useState(false);
   const theme = useTheme();
   const urgency = getExpiryUrgency(listing.expiryDate);
   const hasActiveOrder = Boolean(listing.order);
@@ -94,8 +98,6 @@ function ListingDetailSheet({
     !listing.order &&
     new Date(listing.expiryDate).getTime() > Date.now()
   );
-
-  const deletable = editableStatuses.has(listing.status) && !listing.order;
 
   return (
     <View style={styles.sheetOverlay}>
@@ -304,121 +306,66 @@ function ListingDetailSheet({
             </View>
           )}
 
-          {/* ── Actions — edit (primary gradient) + compact danger delete ── */}
-          {(editable || deletable) ? (
-            confirmingDelete ? (
-              <View style={{
-                backgroundColor: theme.colors.dangerSoft,
-                borderRadius: theme.radius.md,
-                borderWidth: 1.5,
-                borderColor: theme.colors.pillDangerBorder,
-                padding: theme.spacing[4],
-                gap: theme.spacing[3],
+          {/* ── Delete confirmation — shown when swipe-delete was triggered ── */}
+          {confirmingDelete ? (
+            <View style={{
+              backgroundColor: theme.colors.dangerSoft,
+              borderRadius: theme.radius.md,
+              borderWidth: 1.5,
+              borderColor: theme.colors.pillDangerBorder,
+              padding: theme.spacing[4],
+              gap: theme.spacing[3],
+            }}>
+              <Text style={{
+                fontFamily: theme.fontFamily.labelSemi,
+                fontSize: 14,
+                color: theme.colors.danger,
+                textAlign: 'center',
               }}>
-                <Text style={{
-                  fontFamily: theme.fontFamily.labelSemi,
-                  fontSize: 14,
-                  color: theme.colors.danger,
-                  textAlign: 'center',
-                }}>
-                  Remove {listing.brand.name} from the bazaar?
-                </Text>
-                <View style={{ flexDirection: 'row', gap: theme.spacing[3] }}>
-                  <Pressable
-                    accessibilityLabel="Cancel delete"
-                    accessibilityRole="button"
-                    onPress={() => { setConfirmingDelete(false); }}
-                    style={({ pressed }) => ({
-                      flex: 1,
-                      height: 44,
-                      borderRadius: theme.radius.md,
-                      borderWidth: 1,
-                      borderColor: theme.colors.border,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      backgroundColor: pressed ? theme.colors.surfaceRaised : theme.colors.surface,
-                    })}>
-                    <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 15, color: theme.colors.ink }}>
-                      Cancel
-                    </Text>
-                  </Pressable>
-                  <Pressable
-                    accessibilityLabel="Confirm delete"
-                    accessibilityRole="button"
-                    disabled={deleting}
-                    onPress={onDelete}
-                    style={({ pressed }) => ({
-                      flex: 1,
-                      height: 44,
-                      borderRadius: theme.radius.md,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      backgroundColor: pressed ? theme.colors.danger : `${theme.colors.danger}CC`,
-                    })}>
-                    {deleting
-                      ? <ActivityIndicator size="small" color="#FFFFFF" />
-                      : (
-                          <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 15, color: '#FFFFFF' }}>
-                            Delete
-                          </Text>
-                        )}
-                  </Pressable>
-                </View>
+                Remove {listing.brand.name} from the bazaar?
+              </Text>
+              <View style={{ flexDirection: 'row', gap: theme.spacing[3] }}>
+                <Pressable
+                  accessibilityLabel="Cancel delete"
+                  accessibilityRole="button"
+                  onPress={onCancelDelete}
+                  style={({ pressed }) => ({
+                    flex: 1,
+                    height: 44,
+                    borderRadius: theme.radius.md,
+                    borderWidth: 1,
+                    borderColor: theme.colors.border,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: pressed ? theme.colors.surfaceRaised : theme.colors.surface,
+                  })}>
+                  <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 15, color: theme.colors.ink }}>
+                    Cancel
+                  </Text>
+                </Pressable>
+                <Pressable
+                  accessibilityLabel="Confirm delete"
+                  accessibilityRole="button"
+                  disabled={deleting}
+                  onPress={onDelete}
+                  style={({ pressed }) => ({
+                    flex: 1,
+                    height: 44,
+                    borderRadius: theme.radius.md,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: pressed ? theme.colors.danger : `${theme.colors.danger}CC`,
+                  })}>
+                  {deleting
+                    ? <ActivityIndicator size="small" color="#FFFFFF" />
+                    : (
+                        <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 15, color: '#FFFFFF' }}>
+                          Delete
+                        </Text>
+                      )}
+                </Pressable>
               </View>
-            ) : (
-              <View style={{ flexDirection: 'row', gap: theme.spacing[3], alignItems: 'center' }}>
-                {editable ? (
-                  <View style={{ flex: 1 }}>
-                    <PrimaryButton
-                      icon="create-outline"
-                      label="Edit listing"
-                      onPress={onEdit}
-                      tone="brand"
-                      variant="gradient"
-                    />
-                  </View>
-                ) : null}
-                {deletable ? (
-                  <Pressable
-                    accessibilityLabel="Delete listing"
-                    accessibilityRole="button"
-                    onPress={() => { setConfirmingDelete(true); }}
-                    style={({ pressed }) => ({
-                      width: editable ? 64 : undefined,
-                      flex: editable ? undefined : 1,
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: 3,
-                      height: 56,
-                      borderRadius: theme.radius.md,
-                      borderWidth: 1.5,
-                      borderColor: theme.colors.pillDangerBorder,
-                      backgroundColor: pressed ? theme.colors.dangerSoft : `${theme.colors.danger}0F`,
-                    })}>
-                    <Ionicons name="trash-outline" size={18} color={theme.colors.danger} />
-                    {editable ? (
-                      <Text style={{
-                        fontFamily: theme.fontFamily.labelSemi,
-                        fontSize: 10,
-                        color: theme.colors.danger,
-                        letterSpacing: 0.3,
-                      }}>
-                        Delete
-                      </Text>
-                    ) : (
-                      <Text style={{
-                        fontFamily: theme.fontFamily.labelSemi,
-                        fontSize: 15,
-                        color: theme.colors.danger,
-                      }}>
-                        Delete
-                      </Text>
-                    )}
-                  </Pressable>
-                ) : null}
-              </View>
-            )
+            </View>
           ) : null}
 
         </ScrollView>
@@ -436,10 +383,12 @@ export default function ListingsScreen() {
   const [tab, setTab] = useState<ListingTab>('live');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ ok: boolean; text: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
   const deferredQuery = useDeferredValue(searchQuery.trim().toLowerCase());
   const reducedMotion = useReducedMotion();
+  const swipeRefs = useRef<Map<string, SwipeableCardRef>>(new Map());
 
   const listingsResource = useAsyncResource(
     useCallback(() => {
@@ -465,6 +414,7 @@ export default function ListingsScreen() {
 
   function closeSheet() {
     setSelectedListing(null);
+    setConfirmingDeleteId(null);
   }
 
   function handleEdit(listing: Listing) {
@@ -477,6 +427,21 @@ export default function ListingsScreen() {
       closeSheet();
       router.push({ pathname: '/orders/[id]', params: { id: listing.order.id } });
     }
+  }
+
+  function handleSwipeEdit(listing: Listing) {
+    swipeRefs.current.get(listing.id)?.close();
+    router.push({ pathname: '/listings/edit/[id]', params: { id: listing.id } });
+  }
+
+  function handleSwipeDelete(listing: Listing) {
+    swipeRefs.current.get(listing.id)?.close();
+    setSelectedListing(listing);
+    setConfirmingDeleteId(listing.id);
+  }
+
+  function handleCancelDelete() {
+    setConfirmingDeleteId(null);
   }
 
   async function executeDelete(listing: Listing) {
@@ -503,7 +468,7 @@ export default function ListingsScreen() {
     <Animated.View entering={reducedMotion ? undefined : FadeIn.duration(400)} style={{ flex: 1 }}>
       <AppShell
         eyebrow="Listings"
-        subtitle="Tap any card for details and actions."
+        subtitle="Tap to view · Swipe left to edit or delete."
         title="Inventory">
 
         {/* ── Total Earnings Strip ── */}
@@ -602,18 +567,48 @@ export default function ListingsScreen() {
           </Text>
         ) : null}
 
-        {/* Compact listing cards — tap opens detail sheet */}
-        {visibleListings.map((listing) => (
-          <TicketCard
-            key={listing.id}
-            eyebrow={getCardEyebrow(listing)}
-            meta={`Expires ${formatDate(listing.expiryDate)}`}
-            onPress={() => { setSelectedListing(listing); }}
-            subtitle={`${formatCurrency(listing.sellingPrice)} • ${listing.voucherType}`}
-            title={listing.brand.name}
-            tone={getCardTone(listing)}
-          />
-        ))}
+        {/* Compact listing cards — tap opens detail sheet, swipe left for actions */}
+        {visibleListings.map((listing) => {
+          const expiryNotPassed = new Date(listing.expiryDate).getTime() > Date.now();
+          const isEditable = editableStatuses.has(listing.status) && !listing.order && expiryNotPassed;
+          const isDeletable = editableStatuses.has(listing.status) && !listing.order;
+
+          const actions: SwipeAction[] = [
+            ...(isEditable ? [{
+              key: 'edit',
+              label: 'Edit',
+              icon: 'create-outline' as const,
+              backgroundColor: theme.colors.brand,
+              onPress: () => { handleSwipeEdit(listing); },
+            }] : []),
+            ...(isDeletable ? [{
+              key: 'delete',
+              label: 'Delete',
+              icon: 'trash-outline' as const,
+              backgroundColor: theme.colors.danger,
+              onPress: () => { handleSwipeDelete(listing); },
+            }] : []),
+          ];
+
+          return (
+            <SwipeableCard
+              key={listing.id}
+              ref={(r) => {
+                if (r) swipeRefs.current.set(listing.id, r);
+                else swipeRefs.current.delete(listing.id);
+              }}
+              actions={actions}>
+              <TicketCard
+                eyebrow={getCardEyebrow(listing)}
+                meta={`Expires ${formatDate(listing.expiryDate)}`}
+                onPress={() => { setSelectedListing(listing); }}
+                subtitle={`${formatCurrency(listing.sellingPrice)} • ${listing.voucherType}`}
+                title={listing.brand.name}
+                tone={getCardTone(listing)}
+              />
+            </SwipeableCard>
+          );
+        })}
 
         {/* Empty state */}
         {!listingsResource.loading && !listingsResource.error && visibleListings.length === 0 ? (
@@ -643,8 +638,10 @@ export default function ListingsScreen() {
           onRequestClose={closeSheet}>
           {selectedListing ? (
             <ListingDetailSheet
+              confirmingDelete={confirmingDeleteId === selectedListing.id}
               deleting={deleting}
               listing={selectedListing}
+              onCancelDelete={handleCancelDelete}
               onClose={closeSheet}
               onDelete={() => { void executeDelete(selectedListing); }}
               onEdit={() => { handleEdit(selectedListing); }}

@@ -5,6 +5,7 @@ import { Pressable, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown, useReducedMotion } from 'react-native-reanimated';
 
 import { AppShell } from '@/components/app-shell';
+import { SwipeableCard, type SwipeAction } from '@/components/swipeable-card';
 import { TicketCard } from '@/components/ticket-card';
 import { useAuth } from '@/hooks/use-auth';
 import { useAsyncResource } from '@/hooks/use-async-resource';
@@ -224,6 +225,10 @@ export default function InboxScreen() {
     );
   }
 
+  function handleClearOne(id: string) {
+    notificationsResource.setData((prev) => prev?.filter((item) => item.id !== id) ?? []);
+  }
+
   async function handleMarkAllRead() {
     if (!sessionToken) return;
     await api.markAllNotificationsRead(sessionToken);
@@ -293,21 +298,40 @@ export default function InboxScreen() {
                   const isUnread = notification.status !== 'READ';
                   const tone = getTone(notification.title, isUnread);
                   const currentIndex = rowIndex++;
+
+                  const actions: SwipeAction[] = [
+                    ...(isUnread ? [{
+                      key: 'read',
+                      label: 'Mark read',
+                      icon: 'checkmark-done-outline' as const,
+                      backgroundColor: theme.colors.success,
+                      onPress: () => { void handleMarkRead(notification.id); },
+                    }] : []),
+                    {
+                      key: 'clear',
+                      label: 'Clear',
+                      icon: 'trash-outline' as const,
+                      backgroundColor: theme.colors.danger,
+                      onPress: () => { handleClearOne(notification.id); },
+                    },
+                  ];
+
                   return (
-                    <Animated.View
-                      key={notification.id}
-                      entering={reducedMotion
-                        ? undefined
-                        : FadeInDown.delay(currentIndex * 50).duration(300).springify()}>
-                      <TicketCard
-                        eyebrow={isUnread ? 'UNREAD' : undefined}
-                        meta={formatDateTime(notification.createdAt)}
-                        subtitle={notification.message}
-                        title={notification.title}
-                        tone={tone}
-                        onPress={() => { void handleMarkRead(notification.id); }}
-                      />
-                    </Animated.View>
+                    <SwipeableCard key={notification.id} actions={actions}>
+                      <Animated.View
+                        entering={reducedMotion
+                          ? undefined
+                          : FadeInDown.delay(currentIndex * 50).duration(300).springify()}>
+                        <TicketCard
+                          eyebrow={isUnread ? 'UNREAD' : undefined}
+                          meta={formatDateTime(notification.createdAt)}
+                          subtitle={notification.message}
+                          title={notification.title}
+                          tone={tone}
+                          onPress={() => { void handleMarkRead(notification.id); }}
+                        />
+                      </Animated.View>
+                    </SwipeableCard>
                   );
                 })}
               </View>
