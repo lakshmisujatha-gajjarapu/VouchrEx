@@ -249,7 +249,6 @@ function CalendarPopover({
 }
 
 function WebDateField({
-  label,
   value,
   onChange,
   minimumDate,
@@ -325,12 +324,7 @@ function WebDateField({
 
   return (
     <View ref={triggerRef}>
-      <Pressable
-        accessibilityLabel={label}
-        accessibilityRole="button"
-        onPress={openPicker}>
-        <View pointerEvents="none">{trigger}</View>
-      </Pressable>
+      {React.cloneElement(trigger as React.ReactElement<{ onPress?: () => void }>, { onPress: openPicker })}
       {portal}
     </View>
   );

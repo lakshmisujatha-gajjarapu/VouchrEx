@@ -3,7 +3,6 @@ import { useRouter } from 'expo-router';
 import React, { useCallback, useDeferredValue, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Modal,
   Pressable,
   ScrollView,
@@ -84,6 +83,7 @@ function ListingDetailSheet({
   readonly onViewOrder: () => void;
   readonly deleting: boolean;
 }) {
+  const [confirmingDelete, setConfirmingDelete] = React.useState(false);
   const theme = useTheme();
   const urgency = getExpiryUrgency(listing.expiryDate);
   const hasActiveOrder = Boolean(listing.order);
@@ -306,64 +306,119 @@ function ListingDetailSheet({
 
           {/* ── Actions — edit (primary gradient) + compact danger delete ── */}
           {(editable || deletable) ? (
-            <View style={{ flexDirection: 'row', gap: theme.spacing[3], alignItems: 'center' }}>
-              {editable ? (
-                <View style={{ flex: 1 }}>
-                  <PrimaryButton
-                    icon="create-outline"
-                    label="Edit listing"
-                    onPress={onEdit}
-                    tone="brand"
-                    variant="gradient"
-                  />
+            confirmingDelete ? (
+              <View style={{
+                backgroundColor: theme.colors.dangerSoft,
+                borderRadius: theme.radius.md,
+                borderWidth: 1.5,
+                borderColor: theme.colors.pillDangerBorder,
+                padding: theme.spacing[4],
+                gap: theme.spacing[3],
+              }}>
+                <Text style={{
+                  fontFamily: theme.fontFamily.labelSemi,
+                  fontSize: 14,
+                  color: theme.colors.danger,
+                  textAlign: 'center',
+                }}>
+                  Remove {listing.brand.name} from the bazaar?
+                </Text>
+                <View style={{ flexDirection: 'row', gap: theme.spacing[3] }}>
+                  <Pressable
+                    accessibilityLabel="Cancel delete"
+                    accessibilityRole="button"
+                    onPress={() => { setConfirmingDelete(false); }}
+                    style={({ pressed }) => ({
+                      flex: 1,
+                      height: 44,
+                      borderRadius: theme.radius.md,
+                      borderWidth: 1,
+                      borderColor: theme.colors.border,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: pressed ? theme.colors.surfaceRaised : theme.colors.surface,
+                    })}>
+                    <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 15, color: theme.colors.ink }}>
+                      Cancel
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    accessibilityLabel="Confirm delete"
+                    accessibilityRole="button"
+                    disabled={deleting}
+                    onPress={onDelete}
+                    style={({ pressed }) => ({
+                      flex: 1,
+                      height: 44,
+                      borderRadius: theme.radius.md,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: pressed ? theme.colors.danger : `${theme.colors.danger}CC`,
+                    })}>
+                    {deleting
+                      ? <ActivityIndicator size="small" color="#FFFFFF" />
+                      : (
+                          <Text style={{ fontFamily: theme.fontFamily.labelSemi, fontSize: 15, color: '#FFFFFF' }}>
+                            Delete
+                          </Text>
+                        )}
+                  </Pressable>
                 </View>
-              ) : null}
-              {deletable ? (
-                <Pressable
-                  accessibilityLabel="Delete listing"
-                  accessibilityRole="button"
-                  onPress={onDelete}
-                  style={({ pressed }) => ({
-                    width: editable ? 64 : undefined,
-                    flex: editable ? undefined : 1,
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 3,
-                    height: 56,
-                    borderRadius: theme.radius.md,
-                    borderWidth: 1.5,
-                    borderColor: theme.colors.pillDangerBorder,
-                    backgroundColor: pressed ? theme.colors.dangerSoft : `${theme.colors.danger}0F`,
-                  })}>
-                  {deleting
-                    ? <ActivityIndicator size="small" color={theme.colors.danger} />
-                    : (
-                        <>
-                          <Ionicons name="trash-outline" size={18} color={theme.colors.danger} />
-                          {editable ? (
-                            <Text style={{
-                              fontFamily: theme.fontFamily.labelSemi,
-                              fontSize: 10,
-                              color: theme.colors.danger,
-                              letterSpacing: 0.3,
-                            }}>
-                              Delete
-                            </Text>
-                          ) : (
-                            <Text style={{
-                              fontFamily: theme.fontFamily.labelSemi,
-                              fontSize: 15,
-                              color: theme.colors.danger,
-                            }}>
-                              Delete
-                            </Text>
-                          )}
-                        </>
-                      )}
-                </Pressable>
-              ) : null}
-            </View>
+              </View>
+            ) : (
+              <View style={{ flexDirection: 'row', gap: theme.spacing[3], alignItems: 'center' }}>
+                {editable ? (
+                  <View style={{ flex: 1 }}>
+                    <PrimaryButton
+                      icon="create-outline"
+                      label="Edit listing"
+                      onPress={onEdit}
+                      tone="brand"
+                      variant="gradient"
+                    />
+                  </View>
+                ) : null}
+                {deletable ? (
+                  <Pressable
+                    accessibilityLabel="Delete listing"
+                    accessibilityRole="button"
+                    onPress={() => { setConfirmingDelete(true); }}
+                    style={({ pressed }) => ({
+                      width: editable ? 64 : undefined,
+                      flex: editable ? undefined : 1,
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 3,
+                      height: 56,
+                      borderRadius: theme.radius.md,
+                      borderWidth: 1.5,
+                      borderColor: theme.colors.pillDangerBorder,
+                      backgroundColor: pressed ? theme.colors.dangerSoft : `${theme.colors.danger}0F`,
+                    })}>
+                    <Ionicons name="trash-outline" size={18} color={theme.colors.danger} />
+                    {editable ? (
+                      <Text style={{
+                        fontFamily: theme.fontFamily.labelSemi,
+                        fontSize: 10,
+                        color: theme.colors.danger,
+                        letterSpacing: 0.3,
+                      }}>
+                        Delete
+                      </Text>
+                    ) : (
+                      <Text style={{
+                        fontFamily: theme.fontFamily.labelSemi,
+                        fontSize: 15,
+                        color: theme.colors.danger,
+                      }}>
+                        Delete
+                      </Text>
+                    )}
+                  </Pressable>
+                ) : null}
+              </View>
+            )
           ) : null}
 
         </ScrollView>
@@ -424,21 +479,6 @@ export default function ListingsScreen() {
     }
   }
 
-  function handleDeletePress(listing: Listing) {
-    Alert.alert(
-      'Delete listing?',
-      `${listing.brand.name} will be permanently removed from the bazaar.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => { void executeDelete(listing); },
-        },
-      ],
-    );
-  }
-
   async function executeDelete(listing: Listing) {
     if (!sessionToken) return;
     setDeleting(true);
@@ -449,6 +489,7 @@ export default function ListingsScreen() {
       setFeedback({ ok: true, text: `${listing.brand.name} removed.` });
       await listingsResource.reload();
     } catch (error) {
+      closeSheet();
       setFeedback({
         ok: false,
         text: error instanceof Error ? error.message : 'Could not delete listing.',
@@ -605,7 +646,7 @@ export default function ListingsScreen() {
               deleting={deleting}
               listing={selectedListing}
               onClose={closeSheet}
-              onDelete={() => { handleDeletePress(selectedListing); }}
+              onDelete={() => { void executeDelete(selectedListing); }}
               onEdit={() => { handleEdit(selectedListing); }}
               onViewOrder={() => { handleViewOrder(selectedListing); }}
             />

@@ -81,7 +81,7 @@ export default function SellScreen() {
   const [codeCopied, setCodeCopied]     = useState(false);
   const [pin, setPin]                             = useState('');
   const [pinCopied, setPinCopied]                 = useState(false);
-  const [redemptionMode, setRedemptionMode]       = useState<'ONLINE' | 'IN_STORE' | 'BOTH' | null>(null);
+  const [redemptionMode, setRedemptionMode]       = useState<'ONLINE' | 'IN_STORE' | 'BOTH'>('BOTH');
   const [minimumOrderValue, setMinimumOrderValue] = useState('');
   const [sellerNotes, setSellerNotes]             = useState('');
 
@@ -107,7 +107,7 @@ export default function SellScreen() {
       setFeedback(null);
       setPin('');
       setPinCopied(false);
-      setRedemptionMode(null);
+      setRedemptionMode('BOTH');
       setMinimumOrderValue('');
       setSellerNotes('');
       setCurrentStep(1);
@@ -178,7 +178,7 @@ export default function SellScreen() {
     parsedSellingPrice > 0 &&
     parsedSellingPrice < parsedFaceValue &&
     !faceValueExceedsCap &&
-    (voucherType === 'gift-card' ? redemptionMode !== null : true);
+    true;
 
   async function handleCreateListing() {
     if (!sessionToken) return;
@@ -262,7 +262,7 @@ export default function SellScreen() {
             </InteractivePressable>
           </Animated.View>
         ) : (
-          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
 
           {/* ── Header ── */}
           <View style={{
@@ -320,6 +320,7 @@ export default function SellScreen() {
             <View style={{ flex: 1 }}>
               <StepIndicator step={currentStep} />
               <ScrollView
+                style={{ flex: 1 }}
                 contentContainerStyle={{ paddingBottom: 32 }}
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}>
