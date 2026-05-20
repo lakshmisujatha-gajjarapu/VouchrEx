@@ -69,7 +69,7 @@ export function DisputeActions({ dispute }: DisputeActionsProps) {
   return (
     <div className="space-y-4">
       {/* Evidence + Seller response — two column layout */}
-      {(dispute.evidenceUrls.length > 0 || dispute.sellerResponse !== undefined) && (
+      {(dispute.evidenceUrls.length > 0 || dispute.sellerResponse !== null) && (
         <section className="rounded-2xl p-6 space-y-4" style={{ backgroundColor: 'var(--color-card)', boxShadow: '0 0 40px rgba(26,27,33,0.06)' }}>
           <div className="grid grid-cols-2 gap-6">
             {/* Buyer evidence */}

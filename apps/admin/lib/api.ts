@@ -1,3 +1,5 @@
+'use server';
+
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { API_CONFIG, ADMIN_HEADER, AUTH_CONFIG } from './constants';

@@ -11,7 +11,8 @@ export default tseslint.config(
       '.yarn/**',
       'eslint.config.mjs',
       'apps/api/test/**',
-      'apps/mobile/src/lib/msg91.ts'
+      'apps/mobile/src/lib/msg91.ts',
+      'apps/mobile/ios/Pods/**'
     ]
   },
   js.configs.recommended,

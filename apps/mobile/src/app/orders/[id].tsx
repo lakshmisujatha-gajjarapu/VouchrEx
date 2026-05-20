@@ -744,7 +744,7 @@ export default function OrderDetailScreen() {
                         })}>
                         <Ionicons name="attach-outline" size={16} color={theme.colors.brand} />
                         <Text style={{ fontFamily: theme.fontFamily.body, fontSize: 13, color: theme.colors.brand }}>
-                          {sellerResponseUris.length > 0 ? `${sellerResponseUris.length} screenshot attached` : 'Attach a screenshot (optional)'}
+                          {sellerResponseUris.length > 0 ? `${String(sellerResponseUris.length)} screenshot attached` : 'Attach a screenshot (optional)'}
                         </Text>
                       </Pressable>
                       <Pressable

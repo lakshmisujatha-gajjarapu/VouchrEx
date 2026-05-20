@@ -179,7 +179,7 @@ export default function SellScreen() {
         expiryDate: new Date(`${expiryDate}T23:59:59.000Z`).toISOString(),
         code,
         ...(pin.trim() ? { pin: pin.trim() } : {}),
-        ...(redemptionMode ? { redemptionMode } : {}),
+        redemptionMode,
         ...(minimumOrderValue ? { minimumOrderValue: Number(minimumOrderValue) } : {}),
         ...(sellerNotes.trim() ? { sellerNotes: sellerNotes.trim() } : {}),
       });
