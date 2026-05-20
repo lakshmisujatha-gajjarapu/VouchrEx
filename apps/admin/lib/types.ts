@@ -133,6 +133,7 @@ export interface Dispute {
   evidenceUrls: string[];
   evidenceDeadline: string | null;
   sellerResponse: string | null;
+  sellerRespondedAt: string | null;
   resolution: string | null;
   resolvedAt: string | null;
   resolvedById: string | null;

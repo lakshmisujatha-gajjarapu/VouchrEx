@@ -133,6 +133,8 @@ export type Dispute = {
   readonly description: string;
   readonly evidenceUrls: readonly string[];
   readonly evidenceDeadline: string | null;
+  readonly sellerResponse: string | null;
+  readonly sellerRespondedAt: string | null;
   readonly status: string;
   readonly resolution?: string | null;
 };
@@ -517,6 +519,17 @@ export const api = {
     }
 
     return payload as { key: string; totalCount: number; deadlineAt: string | null };
+  },
+  submitSellerDisputeResponse(
+    sessionToken: string,
+    disputeId: string,
+    input: { readonly response: string; readonly evidenceUrls?: readonly string[] }
+  ) {
+    return apiRequest<Dispute>(ORDERS.DISPUTE_SELLER_RESPONSE(disputeId), {
+      method: 'POST',
+      sessionToken,
+      body: input
+    });
   },
   getPayoutAccount(sessionToken: string) {
     return apiRequest<PayoutAccount>(PAYOUTS.ME, { sessionToken });

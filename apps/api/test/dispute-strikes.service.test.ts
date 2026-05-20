@@ -25,7 +25,7 @@ function makePrisma({ user, dispute }: { user: any; dispute: any }) {
   return { prisma, audit, getUpdatedUser: () => updatedUser };
 }
 
-test('seller strike 1: -15 score, payoutHold = now+7d, no suspension', async () => {
+test('seller strike 1: -10 score, payoutHold = now+3d, no suspension', async () => {
   const user = {
     id: 'seller_1', trustScore: 30, tier: 'BRONZE', status: 'ACTIVE',
     sellerStrikes: 0, buyerStrikes: 0, payoutHoldUntil: null
@@ -41,11 +41,11 @@ test('seller strike 1: -15 score, payoutHold = now+7d, no suspension', async () 
 
   const updated = getUpdatedUser();
   assert.equal(updated.sellerStrikes, 1);
-  assert.equal(updated.trustScore, 15);
+  assert.equal(updated.trustScore, 20);
   assert.equal(updated.tier, 'BLOCKED');
   assert.equal(updated.status, 'ACTIVE');
   assert.ok(updated.payoutHoldUntil instanceof Date);
-  const expected = Date.now() + 7 * 24 * 3600 * 1000;
+  const expected = Date.now() + 3 * 24 * 3600 * 1000;
   assert.ok(Math.abs(updated.payoutHoldUntil.getTime() - expected) < 5000);
   assert.equal(audit.length, 1);
   assert.equal(audit[0].action, 'seller.strike_applied');
@@ -56,7 +56,7 @@ test('seller strike 1: -15 score, payoutHold = now+7d, no suspension', async () 
 test('seller strike 2: extends existing hold rather than shortening', async () => {
   const future = new Date(Date.now() + 30 * 24 * 3600 * 1000);
   const user = {
-    id: 'seller_1', trustScore: 15, tier: 'BLOCKED', status: 'ACTIVE',
+    id: 'seller_1', trustScore: 20, tier: 'BLOCKED', status: 'ACTIVE',
     sellerStrikes: 1, buyerStrikes: 0, payoutHoldUntil: future
   };
   const dispute = {
@@ -71,10 +71,11 @@ test('seller strike 2: extends existing hold rather than shortening', async () =
   const updated = getUpdatedUser();
   assert.equal(updated.sellerStrikes, 2);
   assert.equal(updated.trustScore, 0);
+  // Existing hold is 30d from now, new candidate is 7d — existing hold is longer, keep it
   assert.equal(updated.payoutHoldUntil.getTime(), future.getTime());
 });
 
-test('seller strike 3: status -> SUSPENDED, hold = indefinite (year 9999)', async () => {
+test('seller strike 3: status -> SUSPENDED, hold = now+14d (finite)', async () => {
   const user = {
     id: 'seller_1', trustScore: 0, tier: 'BLOCKED', status: 'ACTIVE',
     sellerStrikes: 2, buyerStrikes: 0, payoutHoldUntil: new Date()
@@ -91,7 +92,10 @@ test('seller strike 3: status -> SUSPENDED, hold = indefinite (year 9999)', asyn
   const updated = getUpdatedUser();
   assert.equal(updated.sellerStrikes, 3);
   assert.equal(updated.status, 'SUSPENDED');
-  assert.equal(updated.payoutHoldUntil.toISOString(), '9999-12-31T23:59:59.000Z');
+  // Hold is finite: 14 days from now (not year 9999)
+  const expected14d = Date.now() + 14 * 24 * 3600 * 1000;
+  assert.ok(Math.abs(updated.payoutHoldUntil.getTime() - expected14d) < 5000);
+  assert.notEqual(updated.payoutHoldUntil.toISOString(), '9999-12-31T23:59:59.000Z');
 });
 
 test('seller strike: score floors at 0, never negative', async () => {
@@ -111,7 +115,7 @@ test('seller strike: score floors at 0, never negative', async () => {
   assert.equal(getUpdatedUser().trustScore, 0);
 });
 
-test('buyer strike 1: -15 score, payoutHoldUntil remains null', async () => {
+test('buyer strike 1: -10 score, payoutHoldUntil remains null', async () => {
   const user = {
     id: 'buyer_1', trustScore: 30, tier: 'BRONZE', status: 'ACTIVE',
     sellerStrikes: 0, buyerStrikes: 0, payoutHoldUntil: null
@@ -127,7 +131,7 @@ test('buyer strike 1: -15 score, payoutHoldUntil remains null', async () => {
 
   const updated = getUpdatedUser();
   assert.equal(updated.buyerStrikes, 1);
-  assert.equal(updated.trustScore, 15);
+  assert.equal(updated.trustScore, 20);
   assert.equal(updated.status, 'ACTIVE');
   assert.equal(updated.payoutHoldUntil, null);
   assert.equal(audit[0].action, 'buyer.strike_applied');
@@ -174,7 +178,7 @@ test('REFUND_BUYER never un-suspends a SUSPENDED seller, strike count still incr
   const user = {
     id: 'seller_1', trustScore: 0, tier: 'BLOCKED', status: 'SUSPENDED',
     sellerStrikes: 3, buyerStrikes: 0,
-    payoutHoldUntil: new Date('9999-12-31T23:59:59.000Z')
+    payoutHoldUntil: new Date(Date.now() + 365 * 24 * 3600 * 1000)
   };
   const dispute = {
     id: 'd8', orderId: 'o8', raisedById: 'buyer_1',
