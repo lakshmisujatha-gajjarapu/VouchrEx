@@ -35,11 +35,8 @@ apps/mobile/dist/
 tokens_light/
 tokens_dark/
 
-# Terraform
-terraform/.terraform/
-terraform/*.tfstate
-terraform/*.tfstate.backup
-terraform/environments/secrets.*.tfvars
+# Terraform — managed outside git
+terraform/
 .worktrees/
 .env.homelab
 docs/
