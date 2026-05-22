@@ -58,7 +58,6 @@ export default function LoginView() {
 
         <div className="relative z-10">
           <div className="flex items-center gap-3 mb-10">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/icon.png" alt="VouchrEx" width={44} height={44} style={{ width: 44, height: 44, borderRadius: 10, flexShrink: 0 }} />
             <h1 className="text-white" style={{ fontFamily: 'var(--font-headline)', fontSize: '1.5rem', fontWeight: 800 }}>
               VouchrEx
@@ -98,7 +97,6 @@ export default function LoginView() {
           {/* Mobile logo */}
           <div className="flex items-center gap-3 mb-8 lg:hidden">
             <div className="w-9 h-9 rounded-xl overflow-hidden flex-shrink-0">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/icon.png" alt="VouchrEx" width={36} height={36} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             </div>
             <span className="font-bold text-lg" style={{ fontFamily: 'var(--font-headline)', color: 'var(--color-primary)' }}>

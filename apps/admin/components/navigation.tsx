@@ -71,7 +71,6 @@ export function Navigation({ isSuperAdmin = false }: NavigationProps) {
         {/* Logo */}
         <div className="px-6 py-6" style={{ borderBottom: '1px solid var(--color-surface-high)' }}>
           <div className="flex items-center gap-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/icon.png" alt="VouchrEx" width={36} height={36} style={{ width: 36, height: 36, borderRadius: 8, flexShrink: 0 }} />
             <div>
               <p className="font-bold text-base leading-tight" style={{ fontFamily: 'var(--font-headline)', color: 'var(--color-primary)' }}>
