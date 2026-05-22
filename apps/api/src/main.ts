@@ -19,10 +19,10 @@ const envSchema = z.object({
   RAZORPAY_KEY_ID:          z.string().min(1),
   RAZORPAY_KEY_SECRET:      z.string().min(1),
   RAZORPAY_WEBHOOK_SECRET:  z.string().min(1),
-  // RazorpayX — payouts to sellers (optional until onboarded)
-  RAZORPAY_X_KEY_ID:         z.string().min(1).optional(),
-  RAZORPAY_X_KEY_SECRET:     z.string().min(1).optional(),
-  RAZORPAY_X_ACCOUNT_NUMBER: z.string().min(1).optional(),
+  // RazorpayX — payouts to sellers (optional until onboarded; empty string treated as unset)
+  RAZORPAY_X_KEY_ID:         z.string().optional(),
+  RAZORPAY_X_KEY_SECRET:     z.string().optional(),
+  RAZORPAY_X_ACCOUNT_NUMBER: z.string().optional(),
   // Expo push notifications — optional; required only for production push delivery
   EXPO_ACCESS_TOKEN:         z.string().optional(),
 

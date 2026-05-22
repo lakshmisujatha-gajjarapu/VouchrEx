@@ -9,9 +9,9 @@ on:
         type: choice
         options: [staging, production]
       image_tag:
-        description: Image tag to deploy (git SHA or branch-latest)
+        description: Image tag to deploy (e.g. latest, v1.2.3)
         required: true
-        default: main-latest
+        default: latest
 
 permissions:
   contents: read
@@ -36,18 +36,11 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H "${{ secrets.API_HOST }}" >> ~/.ssh/known_hosts
 
-      - name: Run migrations
-        run: |
-          ssh -i ~/.ssh/deploy_key ec2-user@"${{ secrets.API_HOST }}" \
-            "cd /opt/vouchrex && \
-             IMAGE_TAG=${{ env.IMAGE_TAG }} docker compose pull && \
-             IMAGE_TAG=${{ env.IMAGE_TAG }} docker compose run --rm --no-deps api \
-               node node_modules/.bin/prisma migrate deploy"
-
       - name: Deploy
         run: |
           ssh -i ~/.ssh/deploy_key ec2-user@"${{ secrets.API_HOST }}" \
             "cd /opt/vouchrex && \
+             IMAGE_TAG=${{ env.IMAGE_TAG }} docker compose pull && \
              IMAGE_TAG=${{ env.IMAGE_TAG }} docker compose up -d --remove-orphans && \
              docker system prune -f"
 
