@@ -1,9 +1,17 @@
-import { Controller, Get, HttpException, HttpStatus } from '@nestjs/common';
+import { Controller, Get, HttpException, HttpStatus, Redirect } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { SkipThrottle } from '@nestjs/throttler';
 
 import { PrismaService } from '../prisma/prisma.service';
 import { HEALTH_ROUTES } from './health.routes';
+
+@SkipThrottle()
+@Controller()
+export class RootController {
+  @Get()
+  @Redirect('/docs', 302)
+  root() { return; }
+}
 
 @SkipThrottle()
 @ApiTags('health')
