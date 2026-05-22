@@ -4,7 +4,7 @@ import { Image } from 'expo-image';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import RazorpayCheckout from 'react-native-razorpay';
+import { openRazorpayCheckout } from '@/lib/razorpay-checkout';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -94,7 +94,7 @@ export default function OrderDetailScreen() {
     setFeedback(null);
     try {
       const { checkout: co } = await api.prepareCheckout(sessionToken, orderId);
-      const payment = await RazorpayCheckout.open({
+      const payment = await openRazorpayCheckout({
         key: co.keyId,
         amount: String(co.amountPaise),
         currency: co.currency,
@@ -117,7 +117,8 @@ export default function OrderDetailScreen() {
       setFeedback('Payment secured. You can now reveal the voucher.');
     } catch (error_) {
       const rzpError = error_ as { code?: number; description?: string };
-      if (rzpError.code === 0) {
+      const isCancelled = rzpError.code === 0 || (error_ instanceof Error && error_.message === 'Payment cancelled.');
+      if (isCancelled) {
         setFeedback('Payment cancelled.');
       } else {
         setFeedback(rzpError.description ?? (error_ instanceof Error ? error_.message : 'Payment failed. Please try again.'));
