@@ -38,11 +38,20 @@ jobs:
 
       - name: Deploy
         run: |
-          ssh -i ~/.ssh/deploy_key ec2-user@"${{ secrets.API_HOST }}" \
-            "cd /opt/vouchrex && \
-             IMAGE_TAG=${{ env.IMAGE_TAG }} docker compose pull && \
-             IMAGE_TAG=${{ env.IMAGE_TAG }} docker compose up -d --remove-orphans && \
-             docker system prune -f"
+          ssh -i ~/.ssh/deploy_key ec2-user@"${{ secrets.API_HOST }}" bash << 'ENDSSH'
+            set -euo pipefail
+            cd /opt/vouchrex
+
+            IMAGE="${{ secrets.DOCKERHUB_USERNAME }}/vouchrex-api:${{ env.IMAGE_TAG }}"
+            echo "Deploying image: $IMAGE"
+
+            # Update image tag in compose file
+            sed -i "s|image: .*/vouchrex-api:.*|image: $IMAGE|" docker-compose.yml
+
+            docker compose pull api
+            docker compose up -d --remove-orphans
+            docker system prune -f
+          ENDSSH
 
       - name: Health check
         run: |
