@@ -32,6 +32,11 @@ export const metadata: Metadata = {
   description: "Admin console for VouchrEx operations",
   manifest: "/manifest.webmanifest",
   applicationName: "VouchrEx Admin",
+  icons: {
+    icon: "/icon.png",
+    shortcut: "/icon.png",
+    apple: "/icon.png",
+  },
   appleWebApp: {
     capable: true,
     title: "VouchrEx Admin",

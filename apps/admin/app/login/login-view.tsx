@@ -58,10 +58,8 @@ export default function LoginView() {
 
         <div className="relative z-10">
           <div className="flex items-center gap-3 mb-10">
-            <div className="w-11 h-11 rounded-xl flex items-center justify-center"
-              style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)' }}>
-              <span className="text-white font-bold text-sm" style={{ fontFamily: 'var(--font-headline)' }}>CB</span>
-            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/icon.png" alt="VouchrEx" width={44} height={44} style={{ width: 44, height: 44, borderRadius: 10, flexShrink: 0 }} />
             <h1 className="text-white" style={{ fontFamily: 'var(--font-headline)', fontSize: '1.5rem', fontWeight: 800 }}>
               VouchrEx
             </h1>
@@ -99,9 +97,9 @@ export default function LoginView() {
 
           {/* Mobile logo */}
           <div className="flex items-center gap-3 mb-8 lg:hidden">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-              style={{ background: 'linear-gradient(135deg, #8856E5, #6E3ACA)' }}>
-              <span className="text-white font-bold text-sm" style={{ fontFamily: 'var(--font-headline)' }}>CB</span>
+            <div className="w-9 h-9 rounded-xl overflow-hidden flex-shrink-0">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/icon.png" alt="VouchrEx" width={36} height={36} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             </div>
             <span className="font-bold text-lg" style={{ fontFamily: 'var(--font-headline)', color: 'var(--color-primary)' }}>
               VouchrEx
@@ -135,6 +133,7 @@ export default function LoginView() {
                     onChange={(e) => { setEmail(e.target.value); }}
                     autoFocus
                     autoComplete="email"
+                    suppressHydrationWarning
                     className="w-full h-14 rounded-2xl px-4 text-sm transition-all outline-none"
                     style={{ backgroundColor: 'var(--color-surface-high)', border: 'none', color: 'var(--color-foreground)', fontFamily: 'var(--font-body)' }}
                     onFocus={(e) => { e.currentTarget.style.boxShadow = '0 0 0 2px var(--color-primary)'; e.currentTarget.style.backgroundColor = 'var(--color-card)'; }}

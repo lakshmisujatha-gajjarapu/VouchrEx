@@ -4,6 +4,8 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ZodValidationPipe, patchNestJsSwagger } from 'nestjs-zod';
 import helmet from 'helmet';
 import { z } from 'zod';
+import { join } from 'path';
+import { static as serveStatic } from 'express';
 
 import { ONE_YEAR_SECONDS } from './common/time.constants';
 import { AppModule } from './modules/app.module';
@@ -102,6 +104,7 @@ async function bootstrap() {
     credentials: false,
   });
 
+  app.use(serveStatic(join(__dirname, '..', 'public')));
   app.useGlobalPipes(new ZodValidationPipe());
 
   const swaggerConfig = new DocumentBuilder()
@@ -124,7 +127,8 @@ async function bootstrap() {
 
   SwaggerModule.setup('docs', app, documentFactory, {
     jsonDocumentUrl: 'docs/json',
-    customSiteTitle: 'VouchrEx API Docs'
+    customSiteTitle: 'VouchrEx API Docs',
+    customfavIcon: '/favicon.png',
   });
 
   const port = Number(process.env.PORT ?? DEFAULT_API_PORT);
