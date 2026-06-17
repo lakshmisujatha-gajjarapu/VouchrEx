@@ -9,7 +9,7 @@ COMPOSE_PROJECT_NAME ?= vouchrex
 
 export COMPOSE_PROJECT_NAME
 
-.PHONY: help install infra-up infra-down up down build ps logs api-dev mobile-dev mobile-all mobile-ios mobile-android mobile-web mobile-build-all admin-dev admin-build mobile-build lint typecheck test check clean reset-infra migrate migrate-deploy push seed studio
+.PHONY: help install infra-up infra-down up down build ps logs api-dev mobile-dev mobile-all mobile-ios mobile-android mobile-web mobile-build-all admin-dev admin-build mobile-build lint typecheck test check clean reset-infra migrate migrate-deploy push seed studio deploy-vercel tf-apply
 
 help: ## Show available targets
 	@awk 'BEGIN {FS = ":.*## "}; /^[a-zA-Z0-9_.-]+:.*## / {printf "\033[36m%-18s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -101,3 +101,14 @@ check: ## Run lint, typecheck, and tests
 
 reset-infra: ## Remove local compose services and volumes for this project
 	$(COMPOSE) down -v
+
+tf-apply: ## Apply staging Terraform (provisions infra + Vercel projects + WAF)
+	cd terraform/staging && terraform apply
+
+deploy-vercel: ## Trigger Vercel deploys via hooks (no commit needed)
+	$(eval VERCEL_TOKEN := $(shell grep vercel_api_token terraform/staging/terraform.tfvars | cut -d'"' -f2))
+	$(eval TEAM_ID := $(shell curl -sf https://api.vercel.com/v2/teams -H "Authorization: Bearer $(VERCEL_TOKEN)" | jq -r '.teams[0].id'))
+	$(eval ADMIN_HOOK := $(shell curl -sf "https://api.vercel.com/v9/projects/vouchrex-admin?teamId=$(TEAM_ID)" -H "Authorization: Bearer $(VERCEL_TOKEN)" | jq -r '.link.deployHooks[0].url'))
+	$(eval MOBILE_HOOK := $(shell curl -sf "https://api.vercel.com/v9/projects/vouchrex-web?teamId=$(TEAM_ID)" -H "Authorization: Bearer $(VERCEL_TOKEN)" | jq -r '.link.deployHooks[0].url'))
+	@curl -sf -X POST "$(ADMIN_HOOK)" > /dev/null && echo "Admin deploy triggered ✓" || echo "Admin hook not found"
+	@curl -sf -X POST "$(MOBILE_HOOK)" > /dev/null && echo "Mobile deploy triggered ✓" || echo "Mobile hook not found"

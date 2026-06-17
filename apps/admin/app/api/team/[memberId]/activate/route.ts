@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { cookies } from 'next/headers';
+import { serverFetch } from '@/lib/server-fetch';
 import { API_CONFIG, ADMIN_HEADER, AUTH_CONFIG } from '@/lib/constants';
 
 export async function POST(
@@ -12,7 +13,7 @@ export async function POST(
   if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { memberId } = await params;
-  const res = await fetch(`${API_CONFIG.BASE_URL}/admin/team/${memberId}/activate`, {
+  const res = await serverFetch(`${API_CONFIG.BASE_URL}/admin/team/${memberId}/activate`, {
     method: 'POST',
     headers: { [ADMIN_HEADER]: token },
   });

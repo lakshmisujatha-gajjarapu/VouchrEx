@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { serverFetch } from '@/lib/server-fetch';
 import { AUTH_CONFIG, API_CONFIG, ADMIN_HEADER } from '@/lib/constants';
 
 export async function POST() {
@@ -8,7 +9,7 @@ export async function POST() {
 
   // Best-effort: revoke server-side session (no-op for bootstrap token)
   if (token) {
-    await fetch(`${API_CONFIG.BASE_URL}/admin/auth/logout`, {
+    await serverFetch(`${API_CONFIG.BASE_URL}/admin/auth/logout`, {
       method: 'POST',
       headers: { [ADMIN_HEADER]: token },
       cache: 'no-store',

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { cookies } from 'next/headers';
+import { serverFetch } from '@/lib/server-fetch';
 import { API_CONFIG, ADMIN_HEADER, AUTH_CONFIG } from '@/lib/constants';
 
 export async function POST(
@@ -13,7 +14,7 @@ export async function POST(
 
   const { orderId } = await params;
   const body = await request.text().catch(() => '');
-  const res = await fetch(`${API_CONFIG.BASE_URL}/admin/orders/${orderId}/complete-payout`, {
+  const res = await serverFetch(`${API_CONFIG.BASE_URL}/admin/orders/${orderId}/complete-payout`, {
     method: 'POST',
     headers: { [ADMIN_HEADER]: token, 'Content-Type': 'application/json' },
     body: body || undefined,

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { serverFetch } from '@/lib/server-fetch';
 import { AUTH_CONFIG, API_CONFIG, ADMIN_HEADER } from '@/lib/constants';
 
 export async function POST(request: NextRequest) {
@@ -11,7 +12,7 @@ export async function POST(request: NextRequest) {
 
   let sessionToken: string;
   try {
-    const res = await fetch(`${API_CONFIG.BASE_URL}/admin/auth/login`, {
+    const res = await serverFetch(`${API_CONFIG.BASE_URL}/admin/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: email.trim(), password }),
@@ -51,13 +52,19 @@ export async function PUT(request: NextRequest) {
   }
 
   try {
-    const res = await fetch(`${API_CONFIG.BASE_URL}/admin/metrics`, {
+    const res = await serverFetch(`${API_CONFIG.BASE_URL}/admin/metrics`, {
       headers: { [ADMIN_HEADER]: token },
       cache: 'no-store',
     });
-    if (!res.ok) return NextResponse.json({ error: 'Invalid admin token.' }, { status: 401 });
-  } catch {
-    return NextResponse.json({ error: 'Could not reach API.' }, { status: 502 });
+    if (!res.ok) {
+      const body = await res.text().catch(() => '(unreadable)');
+      return NextResponse.json({
+        error: 'Invalid admin token.',
+        _debug: { status: res.status, url: API_CONFIG.BASE_URL, body },
+      }, { status: 401 });
+    }
+  } catch (e) {
+    return NextResponse.json({ error: 'Could not reach API.', _debug: String(e) }, { status: 502 });
   }
 
   const response = NextResponse.json({ success: true, bootstrap: true });
